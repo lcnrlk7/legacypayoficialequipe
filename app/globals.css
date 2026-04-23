@@ -1,0 +1,444 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  /* Core palette - Premium dark with warm orange */
+  --background: #050505;
+  --foreground: #ffffff;
+  --card: #0d0d0d;
+  --card-foreground: #ffffff;
+  --popover: #0a0a0a;
+  --popover-foreground: #ffffff;
+  
+  /* Primary - Vibrant orange gradient feel */
+  --primary: #ff6a00;
+  --primary-light: #ff8534;
+  --primary-dark: #cc5500;
+  --primary-foreground: #000000;
+  
+  /* Secondary - Subtle grays */
+  --secondary: #1a1a1a;
+  --secondary-foreground: #ffffff;
+  
+  /* Muted - For less prominent elements */
+  --muted: #151515;
+  --muted-foreground: #888888;
+  
+  /* Accent - Matches primary */
+  --accent: #ff6a00;
+  --accent-foreground: #000000;
+  
+  /* Destructive */
+  --destructive: #ff3333;
+  --destructive-foreground: #ffffff;
+  
+  /* Borders and inputs */
+  --border: #262626;
+  --input: #1a1a1a;
+  --ring: #ff6a00;
+  
+  /* Charts */
+  --chart-1: #ff6a00;
+  --chart-2: #ff8534;
+  --chart-3: #ffab00;
+  --chart-4: #00c853;
+  --chart-5: #00b0ff;
+  
+  /* Radius */
+  --radius: 1rem;
+  
+  /* Sidebar */
+  --sidebar: #080808;
+  --sidebar-foreground: #ffffff;
+  --sidebar-primary: #ff6a00;
+  --sidebar-primary-foreground: #000000;
+  --sidebar-accent: #1a1000;
+  --sidebar-accent-foreground: #ff6a00;
+  --sidebar-border: #1a1a1a;
+  --sidebar-ring: #ff6a00;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  ::selection {
+    background: rgba(255, 106, 0, 0.3);
+    color: #ffffff;
+  }
+}
+
+/* Premium scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 106, 0, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 106, 0, 0.5);
+}
+
+/* Glass morphism - now with solid backgrounds */
+.glass {
+  background: #0a0a0a;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid #1a1a1a;
+}
+
+.glass-orange {
+  background: #0f0800;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid #2a1500;
+}
+
+/* Glow effects */
+.glow-sm {
+  box-shadow: 0 0 20px -5px rgba(255, 106, 0, 0.5);
+}
+
+.glow-md {
+  box-shadow: 0 0 40px -10px rgba(255, 106, 0, 0.6);
+}
+
+.glow-lg {
+  box-shadow: 0 0 60px -15px rgba(255, 106, 0, 0.7);
+}
+
+.glow-text {
+  text-shadow: 0 0 40px rgba(255, 106, 0, 0.5), 0 0 80px rgba(255, 106, 0, 0.3);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #ffffff 0%, #ff6a00 50%, #ff8534 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.gradient-text-orange {
+  background: linear-gradient(135deg, #ff6a00 0%, #ff8534 50%, #ffab00 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Animated gradient border */
+@property --gradient-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes gradient-rotate {
+  0% { --gradient-angle: 0deg; }
+  100% { --gradient-angle: 360deg; }
+}
+
+.gradient-border {
+  position: relative;
+  border-radius: var(--radius);
+}
+
+.gradient-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--gradient-angle),
+    #ff6a00,
+    #ff8534,
+    #ffab00,
+    #ff8534,
+    #ff6a00
+  );
+  animation: gradient-rotate 3s linear infinite;
+  z-index: -1;
+  opacity: 0.6;
+}
+
+.gradient-border::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--background);
+  z-index: -1;
+}
+
+/* Shimmer effect */
+@keyframes shimmer {
+  0% { transform: translateX(-100%) skewX(-15deg); }
+  100% { transform: translateX(200%) skewX(-15deg); }
+}
+
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  animation: shimmer 2.5s ease-in-out infinite;
+}
+
+/* Floating animation */
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-10px) rotate(1deg); }
+  75% { transform: translateY(10px) rotate(-1deg); }
+}
+
+.float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.float-delay-1 { animation-delay: -1s; }
+.float-delay-2 { animation-delay: -2s; }
+.float-delay-3 { animation-delay: -3s; }
+
+/* Pulse glow */
+@keyframes pulse-glow {
+  0%, 100% { 
+    opacity: 0.6;
+    box-shadow: 0 0 20px rgba(255, 106, 0, 0.4);
+  }
+  50% { 
+    opacity: 1;
+    box-shadow: 0 0 40px rgba(255, 106, 0, 0.8);
+  }
+}
+
+.pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Grid pattern */
+.grid-pattern {
+  background-image: 
+    linear-gradient(rgba(255, 106, 0, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 106, 0, 0.015) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+/* Radial gradient spotlight */
+.spotlight {
+  background: radial-gradient(
+    ellipse 80% 50% at 50% -20%,
+    rgba(255, 106, 0, 0.15),
+    transparent 50%
+  );
+}
+
+.spotlight-bottom {
+  background: radial-gradient(
+    ellipse 80% 50% at 50% 120%,
+    rgba(255, 106, 0, 0.1),
+    transparent 50%
+  );
+}
+
+/* Noise texture overlay */
+.noise {
+  position: relative;
+}
+
+.noise::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.02;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Card hover effect */
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px -20px rgba(255, 106, 0, 0.3);
+  border-color: rgba(255, 106, 0, 0.2);
+}
+
+/* Button press effect */
+.btn-press {
+  transition: all 0.15s ease;
+}
+
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* Line animation */
+@keyframes line-flow {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 0%; }
+}
+
+.line-flow {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 106, 0, 0.5),
+    transparent
+  );
+  background-size: 200% 100%;
+  animation: line-flow 2s linear infinite;
+}
+
+/* Orbit animation for decorative elements */
+@keyframes orbit {
+  0% { transform: rotate(0deg) translateX(100px) rotate(0deg); }
+  100% { transform: rotate(360deg) translateX(100px) rotate(-360deg); }
+}
+
+.orbit {
+  animation: orbit 20s linear infinite;
+}
+
+/* Counter animation for stats */
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.count-up {
+  animation: count-up 0.6s ease-out forwards;
+}
+
+/* Stagger animation helper */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+.stagger-5 { animation-delay: 0.5s; }
+
+/* Focus ring */
+.focus-ring:focus-visible {
+  outline: none;
+  ring: 2px;
+  ring-color: rgba(255, 106, 0, 0.5);
+  ring-offset: 2px;
+  ring-offset-color: var(--background);
+}
+
+/* Solid background colors for modals/overlays */
+.bg-modal {
+  background-color: #1a1a1a;
+}
+
+.bg-modal-dark {
+  background-color: #0d0d0d;
+}
+
+.bg-input-solid {
+  background-color: #151515;
+}
+
+.bg-hover-solid {
+  background-color: #1f1f1f;
+}
+
+.bg-overlay {
+  background-color: rgba(0, 0, 0, 0.85);
+}
+
+.border-subtle {
+  border-color: #2a2a2a;
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Safe area padding for mobile devices */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

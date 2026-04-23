@@ -1,0 +1,61 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { sql } from '@/lib/db'
+
+export async function GET() {
+  try {
+    const result = await sql`
+      SELECT key, value FROM system_settings
+    `
+    
+    const settings: Record<string, string> = {}
+    result.forEach((row: { key: string; value: string }) => {
+      settings[row.key] = typeof row.value === 'string' ? row.value : JSON.stringify(row.value)
+    })
+    
+    return NextResponse.json(settings)
+  } catch (error) {
+    console.error('Error fetching settings:', error)
+    return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { settings } = body
+
+    for (const [key, value] of Object.entries(settings)) {
+      const description = getSettingDescription(key)
+      await sql`
+        INSERT INTO system_settings (key, value, description, updated_at)
+        VALUES (${key}, ${JSON.stringify(value)}, ${description}, NOW())
+        ON CONFLICT (key) DO UPDATE SET value = ${JSON.stringify(value)}, updated_at = NOW()
+      `
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error saving settings:', error)
+    return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 })
+  }
+}
+
+function getSettingDescription(key: string): string {
+  const descriptions: Record<string, string> = {
+    pix_fee_percentage: "Taxa percentual padrão para transações PIX",
+    min_deposit: "Valor mínimo para depósito",
+    max_deposit: "Valor máximo para depósito por transação",
+    min_withdrawal: "Valor mínimo para saque",
+    max_withdrawal: "Valor máximo para saque por transação",
+    daily_withdrawal_limit: "Limite diário de saque",
+    auto_withdrawal_limit: "Saques até este valor são automáticos",
+    withdrawal_fee_percentage: "Taxa percentual da LegacyPay sobre saques",
+    withdrawal_fee_fixed: "Taxa fixa da LegacyPay por saque",
+    acquirer_withdrawal_fee: "Taxa fixa da MisticPay por saque",
+    white_route_percentage: "Taxa percentual da Rota White",
+    white_route_fixed: "Valor fixo da Rota White",
+    black_route_percentage: "Taxa percentual da Rota Black",
+    black_route_fixed: "Valor fixo da Rota Black",
+  }
+  return descriptions[key] || ""
+}
