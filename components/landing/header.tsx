@@ -33,8 +33,8 @@ export function Header() {
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           isScrolled
-            ? "py-3 bg-[#0a0a0a] border-b border-[#1a1a1a]"
-            : "py-5 bg-[#050505]"
+            ? "py-3 bg-black border-b border-[#1a1a1a]"
+            : "py-5 bg-black"
         }`}
       >
         <div className="max-w-7xl mx-auto px-6">
