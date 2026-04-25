@@ -1,0 +1,168 @@
+import { NextRequest, NextResponse } from "next/server";
+import { sql } from "@/lib/db";
+import { notifyTransactionApproved } from "@/lib/push-notifications";
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.text();
+    const payload = JSON.parse(body);
+    const event = payload.event || payload.type;
+    const data = payload.data || payload;
+
+    console.log("[Payment Webhook] Event received:", event, "| Transaction ID:", data?.id || data?.transactionId);
+
+    switch (event) {
+      case "pix.charge.paid":
+      case "charge.paid":
+      case "COMPLETO": {
+        const transactionId = data.id || data.transactionId || data.transaction_id;
+        
+        // Buscar transação
+        let txResult = await sql`
+          SELECT t.*, p.id as profile_id, p.email as profile_email, p.name as profile_name, p.balance as profile_balance
+          FROM transactions t
+          LEFT JOIN profiles p ON t.user_id = p.id
+          WHERE t.acquirer_transaction_id = ${String(transactionId)}
+        `;
+
+        if (txResult.length === 0) {
+          txResult = await sql`
+            SELECT t.*, p.id as profile_id, p.email as profile_email, p.name as profile_name, p.balance as profile_balance
+            FROM transactions t
+            LEFT JOIN profiles p ON t.user_id = p.id
+            WHERE t.external_id = ${String(transactionId)}
+          `;
+        }
+
+        if (txResult.length > 0) {
+          const transaction = txResult[0];
+
+          await sql`
+            UPDATE transactions
+            SET status = 'completed', paid_at = ${data.paid_at || new Date().toISOString()}, payer_name = ${data.payer?.name}, payer_document = ${data.payer?.document}
+            WHERE id = ${transaction.id}
+          `;
+
+          const newBalance = (Number(transaction.profile_balance) || 0) + Number(transaction.net_amount);
+          await sql`
+            UPDATE profiles SET balance = ${newBalance}, updated_at = NOW() WHERE id = ${transaction.user_id}
+          `;
+
+          await sql`
+            INSERT INTO audit_logs (id, user_id, user_email, user_name, action, action_type, description, metadata, created_at)
+            VALUES (${crypto.randomUUID()}, ${transaction.user_id}, ${transaction.profile_email}, ${transaction.profile_name}, ${'Pagamento PIX confirmado'}, ${'transaction'}, ${`Pagamento de R$ ${transaction.amount.toFixed(2)} confirmado`}, ${JSON.stringify({ transaction_id: transaction.id, payer: data.payer })}, NOW())
+          `;
+
+          await sql`
+            INSERT INTO user_notifications (id, user_id, title, message, type, created_at)
+            VALUES (${crypto.randomUUID()}, ${transaction.user_id}, ${'Pagamento Recebido!'}, ${`Você recebeu R$ ${transaction.net_amount.toFixed(2)} via PIX.`}, ${'success'}, NOW())
+          `;
+
+          await notifyTransactionApproved(transaction.user_id, transaction.net_amount, transaction.id);
+        }
+        break;
+      }
+
+      case "pix.charge.expired":
+      case "charge.expired":
+      case "EXPIRADO": {
+        const expiredId = data.id || data.transactionId;
+        await sql`
+          UPDATE transactions SET status = 'expired'
+          WHERE acquirer_transaction_id = ${String(expiredId)} OR external_id = ${String(expiredId)}
+        `;
+        break;
+      }
+
+      case "pix.charge.cancelled":
+      case "charge.cancelled":
+      case "CANCELADO":
+      case "FALHA": {
+        const cancelledId = data.id || data.transactionId;
+        await sql`
+          UPDATE transactions SET status = 'failed'
+          WHERE acquirer_transaction_id = ${String(cancelledId)} OR external_id = ${String(cancelledId)}
+        `;
+        break;
+      }
+
+      case "pix.withdrawal.completed":
+      case "withdrawal.completed": {
+        const withdrawalId = data.id || data.transactionId;
+        
+        // Buscar o saque
+        const completedWdResult = await sql`
+          SELECT w.*, p.name as profile_name
+          FROM withdrawals w
+          LEFT JOIN profiles p ON w.user_id = p.id
+          WHERE w.acquirer_withdrawal_id = ${String(withdrawalId)}
+        `;
+
+        if (completedWdResult.length > 0) {
+          const withdrawal = completedWdResult[0];
+          
+          await sql`
+            UPDATE withdrawals SET status = 'completed', processed_at = NOW()
+            WHERE id = ${withdrawal.id}
+          `;
+
+          // Notificar usuário
+          await sql`
+            INSERT INTO user_notifications (user_id, title, message, type)
+            VALUES (${withdrawal.user_id}, 'Saque Concluído!', ${`Seu saque de R$ ${withdrawal.net_amount.toFixed(2)} foi processado e enviado para sua conta PIX.`}, 'success')
+          `;
+
+          // Log de auditoria
+          await sql`
+            INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value)
+            VALUES (${withdrawal.user_id}, 'WITHDRAWAL_COMPLETED', 'withdrawal', ${withdrawal.id}, ${JSON.stringify({ amount: withdrawal.net_amount, status: 'completed' })})
+          `;
+        }
+        break;
+      }
+
+      case "pix.withdrawal.failed":
+      case "withdrawal.failed": {
+        const failedWithdrawalId = data.id || data.transactionId;
+        const wdResult = await sql`
+          SELECT w.*, p.balance as profile_balance
+          FROM withdrawals w
+          LEFT JOIN profiles p ON w.user_id = p.id
+          WHERE w.acquirer_withdrawal_id = ${String(failedWithdrawalId)}
+        `;
+
+        if (wdResult.length > 0) {
+          const withdrawal = wdResult[0];
+          await sql`
+            UPDATE withdrawals SET status = 'failed', admin_notes = ${data.failure_reason || 'Falha no processamento'}
+            WHERE id = ${withdrawal.id}
+          `;
+
+          // Devolver saldo ao usuário
+          const newBalance = (Number(withdrawal.profile_balance) || 0) + Number(withdrawal.amount);
+          await sql`
+            UPDATE profiles SET balance = ${newBalance} WHERE id = ${withdrawal.user_id}
+          `;
+
+          // Notificar usuário
+          await sql`
+            INSERT INTO user_notifications (user_id, title, message, type)
+            VALUES (${withdrawal.user_id}, 'Saque Falhou', ${`Seu saque de R$ ${withdrawal.amount.toFixed(2)} falhou. O valor foi devolvido ao seu saldo.`}, 'error')
+          `;
+        }
+        break;
+      }
+
+      default:
+        console.log("[Payment Webhook] Unknown event:", event);
+    }
+
+    return NextResponse.json({ received: true });
+  } catch (error) {
+    console.error("[Payment Webhook] Error:", error);
+    return NextResponse.json(
+      { error: "Webhook processing failed" },
+      { status: 500 }
+    );
+  }
+}

@@ -1,0 +1,168 @@
+import { jwtVerify } from 'jose'
+import { NextResponse, type NextRequest } from 'next/server'
+
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'fallback-secret-change-in-production'
+)
+
+const AUTH_COOKIE_NAME = 'auth-token'
+const TEAM_COOKIE_NAME = 'team_session'
+
+interface SessionUser {
+  id: string
+  email: string
+  name: string | null
+  role: string
+  kyc_status: string
+}
+
+// Verificar token de usuário normal
+async function verifyUserToken(request: NextRequest): Promise<SessionUser | null> {
+  const token = request.cookies.get(AUTH_COOKIE_NAME)?.value
+  
+  if (!token) return null
+
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET)
+    return {
+      id: payload.id as string,
+      email: payload.email as string,
+      name: payload.name as string | null,
+      role: payload.role as string,
+      kyc_status: payload.kyc_status as string,
+    }
+  } catch {
+    return null
+  }
+}
+
+// Verificar token de equipe interna (CEO, manager, etc)
+async function verifyTeamToken(request: NextRequest): Promise<SessionUser | null> {
+  const token = request.cookies.get(TEAM_COOKIE_NAME)?.value
+  
+  if (!token) return null
+
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET)
+    return {
+      id: payload.id as string,
+      email: payload.email as string,
+      name: payload.name as string | null,
+      role: payload.role as string,
+      kyc_status: 'approved', // Team members don't have KYC
+    }
+  } catch {
+    return null
+  }
+}
+
+// Verificar qualquer token válido (usuário ou equipe)
+async function verifyAnyToken(request: NextRequest): Promise<SessionUser | null> {
+  // Primeiro tenta token de equipe
+  const teamUser = await verifyTeamToken(request)
+  if (teamUser) return teamUser
+  
+  // Depois tenta token de usuário normal
+  return verifyUserToken(request)
+}
+
+export async function handleAuth(request: NextRequest) {
+  const response = NextResponse.next({ request })
+  
+  const pathname = request.nextUrl.pathname
+
+  // Public routes - no auth required
+  const publicPaths = [
+    '/',
+    '/auth/login',
+    '/auth/register',
+    '/docs',
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/send-code',
+    '/api/auth/verify-code',
+    '/api/auth/password-reset',
+    '/api/v1', // Public API with API key auth (matches /api/v1 and /api/v1/*)
+    '/api/webhooks',
+  ]
+
+  const isPublicPath = publicPaths.some(path => 
+    pathname === path || pathname.startsWith(path)
+  )
+
+  // Static files and assets
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/icons') ||
+    pathname.includes('.') // files with extensions
+  ) {
+    return response
+  }
+
+  // Public paths don't need auth
+  if (isPublicPath) {
+    return response
+  }
+
+  // Protected paths
+  const protectedPaths = ['/dashboard', '/admin', '/lp-x7k9m2-internal']
+  const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path))
+
+  if (isProtectedPath) {
+    // Para rotas do painel interno, verificar primeiro token de equipe
+    if (pathname.startsWith('/admin') || pathname.startsWith('/lp-x7k9m2-internal')) {
+      const teamUser = await verifyTeamToken(request)
+      
+      if (!teamUser) {
+        // Se não tem token de equipe, redireciona para login interno
+        const url = request.nextUrl.clone()
+        url.pathname = '/lp-x7k9m2-internal'
+        return NextResponse.redirect(url)
+      }
+      
+      const allowedRoles = ['admin', 'ceo', 'manager', 'attendant', 'finance']
+      if (!allowedRoles.includes(teamUser.role.toLowerCase())) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/lp-x7k9m2-internal'
+        return NextResponse.redirect(url)
+      }
+    } else {
+      // Para rotas normais do dashboard, verificar token de usuário
+      const user = await verifyUserToken(request)
+
+      if (!user) {
+        const url = request.nextUrl.clone()
+        url.pathname = '/auth/login'
+        url.searchParams.set('redirect', pathname)
+        return NextResponse.redirect(url)
+      }
+    }
+  }
+
+  // Protected API routes (not public v1 API)
+  if (pathname.startsWith('/api/') && !isPublicPath) {
+    // Para APIs admin, verificar token de equipe
+    if (pathname.startsWith('/api/admin/')) {
+      const teamUser = await verifyTeamToken(request)
+      
+      if (!teamUser) {
+        return NextResponse.json(
+          { error: 'Não autorizado' },
+          { status: 401 }
+        )
+      }
+    } else {
+      // Para outras APIs protegidas, verificar qualquer token válido
+      const user = await verifyAnyToken(request)
+      
+      if (!user) {
+        return NextResponse.json(
+          { error: 'Não autorizado' },
+          { status: 401 }
+        )
+      }
+    }
+  }
+
+  return response
+}

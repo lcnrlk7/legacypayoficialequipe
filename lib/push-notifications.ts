@@ -1,0 +1,196 @@
+import webpush from "web-push";
+import { sql } from "@/lib/db";
+
+// Configurar VAPID keys (você precisa gerar essas chaves)
+// Para gerar: npx web-push generate-vapid-keys
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:contato@legacypay.shop";
+
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+}
+
+export interface PushNotificationPayload {
+  title: string;
+  body: string;
+  icon?: string;
+  badge?: string;
+  tag?: string;
+  data?: Record<string, unknown>;
+  actions?: Array<{
+    action: string;
+    title: string;
+    icon?: string;
+  }>;
+}
+
+/**
+ * Enviar notificação push para um usuário específico
+ */
+export async function sendPushNotification(
+  userId: string,
+  payload: PushNotificationPayload
+): Promise<{ success: boolean; sent: number; failed: number }> {
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    console.log("[v0] VAPID keys not configured, skipping push notification");
+    return { success: false, sent: 0, failed: 0 };
+  }
+
+  // Buscar todas as subscriptions do usuário
+  const subscriptions = await sql`
+    SELECT * FROM push_subscriptions WHERE user_id = ${userId}
+  `;
+
+  if (!subscriptions || subscriptions.length === 0) {
+    console.log("[v0] No push subscriptions found for user:", userId);
+    return { success: false, sent: 0, failed: 0 };
+  }
+
+  const notificationPayload = JSON.stringify({
+    title: payload.title,
+    body: payload.body,
+    icon: payload.icon || "/icon-192x192.png",
+    badge: payload.badge || "/icon-192x192.png",
+    tag: payload.tag,
+    data: payload.data,
+    actions: payload.actions,
+  });
+
+  let sent = 0;
+  let failed = 0;
+
+  // Enviar para todas as subscriptions do usuário
+  for (const sub of subscriptions) {
+    try {
+      await webpush.sendNotification(
+        {
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: sub.p256dh,
+            auth: sub.auth,
+          },
+        },
+        notificationPayload
+      );
+      sent++;
+    } catch (err: unknown) {
+      const error = err as { statusCode?: number };
+      console.error("[v0] Push notification failed:", error);
+      failed++;
+
+      // Se a subscription expirou ou é inválida, remover
+      if (error.statusCode === 410 || error.statusCode === 404) {
+        await sql`DELETE FROM push_subscriptions WHERE id = ${sub.id}`;
+        console.log("[v0] Removed expired subscription:", sub.id);
+      }
+    }
+  }
+
+  return { success: sent > 0, sent, failed };
+}
+
+/**
+ * Enviar notificação de nova transação PIX gerada
+ */
+export async function notifyNewTransaction(
+  userId: string,
+  amount: number,
+  transactionId: string
+): Promise<void> {
+  const formattedAmount = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(amount);
+
+  await sendPushNotification(userId, {
+    title: "Nova cobranca PIX",
+    body: `Uma cobranca de ${formattedAmount} foi gerada`,
+    tag: `transaction-${transactionId}`,
+    data: {
+      type: "new_transaction",
+      transactionId,
+      amount,
+      url: "/dashboard/transactions",
+    },
+    actions: [
+      {
+        action: "view",
+        title: "Ver detalhes",
+      },
+    ],
+  });
+}
+
+/**
+ * Enviar notificação de transação aprovada/paga
+ */
+export async function notifyTransactionApproved(
+  userId: string,
+  amount: number,
+  transactionId: string
+): Promise<void> {
+  const formattedAmount = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(amount);
+
+  await sendPushNotification(userId, {
+    title: "Pagamento recebido!",
+    body: `Voce recebeu ${formattedAmount} via PIX`,
+    tag: `transaction-approved-${transactionId}`,
+    data: {
+      type: "transaction_approved",
+      transactionId,
+      amount,
+      url: "/dashboard",
+    },
+    actions: [
+      {
+        action: "view",
+        title: "Ver saldo",
+      },
+    ],
+  });
+}
+
+/**
+ * Enviar notificação de saque aprovado
+ */
+export async function notifyWithdrawalApproved(
+  userId: string,
+  amount: number,
+  withdrawalId: string
+): Promise<void> {
+  const formattedAmount = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(amount);
+
+  await sendPushNotification(userId, {
+    title: "Saque aprovado!",
+    body: `Seu saque de ${formattedAmount} foi aprovado e esta sendo processado`,
+    tag: `withdrawal-${withdrawalId}`,
+    data: {
+      type: "withdrawal_approved",
+      withdrawalId,
+      amount,
+      url: "/dashboard/wallet",
+    },
+  });
+}
+
+/**
+ * Enviar notificação de KYC aprovado
+ */
+export async function notifyKYCApproved(userId: string): Promise<void> {
+  await sendPushNotification(userId, {
+    title: "KYC Aprovado!",
+    body: "Parabens! Sua conta foi verificada e esta pronta para uso",
+    tag: "kyc-approved",
+    data: {
+      type: "kyc_approved",
+      url: "/dashboard",
+    },
+  });
+}

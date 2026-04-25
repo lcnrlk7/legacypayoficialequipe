@@ -1,0 +1,960 @@
+"use client";
+
+import { useState, useEffect, useMemo } from "react";
+import { motion } from "framer-motion";
+import {
+  Search,
+  User,
+  Ban,
+  CheckCircle,
+  Edit,
+  Loader2,
+  Filter,
+  X,
+  DollarSign,
+  ArrowUpDown,
+  Plus,
+  Minus,
+} from "lucide-react";
+
+interface UserProfile {
+  id: string;
+  email: string;
+  name: string | null;
+  phone: string | null;
+  cpf: string | null;
+  balance: number;
+  kyc_status: string;
+  is_active: boolean;
+  role: string;
+  route_type: string;
+  daily_limit: number;
+  fee_percentage: number | null;
+  fixed_fee: number | null;
+  withdrawal_fee: number | null;
+  created_at: string;
+}
+
+interface Filters {
+  kyc: "all" | "approved" | "pending" | "submitted" | "rejected";
+  route: "all" | "black" | "white";
+  sortBalance: "none" | "desc" | "asc";
+}
+
+export default function UsersPage() {
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [showBalanceModal, setShowBalanceModal] = useState(false);
+  const [balanceOperation, setBalanceOperation] = useState<"add" | "remove">("add");
+  const [balanceAmount, setBalanceAmount] = useState("");
+  const [balanceReason, setBalanceReason] = useState("");
+  const [isUpdatingBalance, setIsUpdatingBalance] = useState(false);
+  const [editForm, setEditForm] = useState({
+    daily_limit: 0,
+    fee_percentage: "",
+    fixed_fee: "",
+    withdrawal_fee: "",
+    route_type: "white",
+    is_active: true,
+  });
+  
+  // Filtros
+  const [filters, setFilters] = useState<Filters>({
+    kyc: "all",
+    route: "all",
+    sortBalance: "none",
+  });
+  const [showFilters, setShowFilters] = useState(false);
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  // Filtrar e ordenar usuários
+  const filteredUsers = useMemo(() => {
+    let result = [...users];
+
+    // Filtro de busca
+    if (searchTerm) {
+      result = result.filter(
+        (user) =>
+          user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Filtro KYC
+    if (filters.kyc !== "all") {
+      result = result.filter((user) => user.kyc_status === filters.kyc);
+    }
+
+    // Filtro Rota
+    if (filters.route !== "all") {
+      result = result.filter((user) => user.route_type === filters.route);
+    }
+
+    // Ordenação por saldo
+    if (filters.sortBalance === "desc") {
+      result.sort((a, b) => (b.balance || 0) - (a.balance || 0));
+    } else if (filters.sortBalance === "asc") {
+      result.sort((a, b) => (a.balance || 0) - (b.balance || 0));
+    }
+
+    return result;
+  }, [users, searchTerm, filters]);
+
+  // Verificar se há filtros ativos
+  const hasActiveFilters = filters.kyc !== "all" || filters.route !== "all" || filters.sortBalance !== "none";
+
+  // Limpar todos os filtros
+  const clearFilters = () => {
+    setFilters({
+      kyc: "all",
+      route: "all",
+      sortBalance: "none",
+    });
+  };
+
+  async function loadUsers() {
+    try {
+      const response = await fetch("/api/admin/users");
+      const data = await response.json();
+      
+      if (data.users) {
+        setUsers(data.users);
+      }
+    } catch (error) {
+      console.error("Error loading users:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  const [isUpdatingUser, setIsUpdatingUser] = useState(false);
+
+  async function updateUser() {
+    if (!selectedUser) return;
+
+    // Validações
+    const feeValue = editForm.fee_percentage ? parseFloat(editForm.fee_percentage) : 2.5;
+    if (feeValue < 0 || feeValue > 100) {
+      alert("A taxa deve estar entre 0% e 100%");
+      return;
+    }
+
+    // Taxa de saque: usar valor informado ou padrão baseado na rota
+    const defaultWithdrawalFee = editForm.route_type === "white" ? 2 : 5;
+    const withdrawalFeeValue = editForm.withdrawal_fee ? parseFloat(editForm.withdrawal_fee) : defaultWithdrawalFee;
+    if (withdrawalFeeValue < 0) {
+      alert("A taxa de saque não pode ser negativa");
+      return;
+    }
+
+    // Taxa fixa: usar valor informado ou padrão baseado na rota
+    const defaultFixedFee = editForm.route_type === "white" ? 1.50 : 1.00;
+    const fixedFeeValue = editForm.fixed_fee ? parseFloat(editForm.fixed_fee) : defaultFixedFee;
+    if (fixedFeeValue < 0) {
+      alert("A taxa fixa não pode ser negativa");
+      return;
+    }
+
+    const limitValue = Number(editForm.daily_limit);
+    if (limitValue <= 0) {
+      alert("O limite diário deve ser maior que zero");
+      return;
+    }
+
+    setIsUpdatingUser(true);
+    try {
+      const response = await fetch("/api/admin/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          action: "update",
+          data: {
+            daily_limit: limitValue,
+            fee_percentage: feeValue,
+            fixed_fee: fixedFeeValue,
+            withdrawal_fee: withdrawalFeeValue,
+            route_type: editForm.route_type,
+            is_active: editForm.is_active,
+          },
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        await loadUsers();
+        setShowModal(false);
+        setSelectedUser(null);
+        alert("Usuário atualizado com sucesso!");
+      } else {
+        alert(result.error || "Erro ao atualizar usuário");
+      }
+    } catch (error) {
+      console.error("Error updating user:", error);
+      alert("Erro ao atualizar usuário");
+    } finally {
+      setIsUpdatingUser(false);
+    }
+  }
+
+  async function toggleUserStatus(user: UserProfile) {
+    try {
+      await fetch("/api/admin/users", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          action: "toggle_status",
+        }),
+      });
+      loadUsers();
+    } catch (error) {
+      console.error("Error toggling user status:", error);
+    }
+  }
+
+  async function updateUserBalance() {
+    if (!selectedUser || !balanceAmount) return;
+
+    setIsUpdatingBalance(true);
+    try {
+      const amount = parseFloat(balanceAmount);
+      if (isNaN(amount) || amount <= 0) {
+        alert("Digite um valor válido");
+        setIsUpdatingBalance(false);
+        return;
+      }
+
+      const currentBalance = Number(selectedUser.balance) || 0;
+      const newBalance = balanceOperation === "add" 
+        ? currentBalance + amount 
+        : Math.max(0, currentBalance - amount);
+
+      const response = await fetch("/api/admin/users/balance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: selectedUser.id,
+          operation: balanceOperation,
+          amount: amount,
+          newBalance: newBalance,
+          reason: balanceReason || (balanceOperation === "add" ? "Crédito manual pelo admin" : "Débito manual pelo admin"),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        loadUsers();
+        setShowBalanceModal(false);
+        setSelectedUser(null);
+        setBalanceAmount("");
+        setBalanceReason("");
+        alert(`Saldo atualizado com sucesso! Novo saldo: R$ ${Number(data.newBalance).toFixed(2)}`);
+      } else {
+        const errorMsg = data.details ? `${data.error}: ${data.details}` : (data.error || "Erro ao atualizar saldo");
+        alert(errorMsg);
+      }
+    } catch (error) {
+      console.error("Error updating balance:", error);
+      alert("Erro ao atualizar saldo");
+    } finally {
+      setIsUpdatingBalance(false);
+    }
+  }
+
+  const openBalanceModal = (user: UserProfile) => {
+    setSelectedUser(user);
+    setBalanceAmount("");
+    setBalanceReason("");
+    setBalanceOperation("add");
+    setShowBalanceModal(true);
+  };
+
+  const openEditModal = (user: UserProfile) => {
+    setSelectedUser(user);
+    const defaultWithdrawalFee = user.route_type === "white" ? 2 : 5;
+    const defaultFixedFee = user.route_type === "white" ? 1.50 : 1.00;
+    setEditForm({
+      daily_limit: user.daily_limit || 10000,
+      fee_percentage: user.fee_percentage?.toString() || "2.5",
+      fixed_fee: user.fixed_fee?.toString() || defaultFixedFee.toString(),
+      withdrawal_fee: user.withdrawal_fee?.toString() || defaultWithdrawalFee.toString(),
+      route_type: user.route_type || "white",
+      is_active: user.is_active,
+    });
+    setShowModal(true);
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+  };
+
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleDateString("pt-BR");
+  };
+
+  const formatCPF = (cpf: string | null) => {
+    if (!cpf) return "-";
+    const cleaned = cpf.replace(/\D/g, "");
+    return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+  };
+
+  const formatPhone = (phone: string | null) => {
+    if (!phone) return "-";
+    const cleaned = phone.replace(/\D/g, "");
+    if (cleaned.length === 11) {
+      return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3");
+    }
+    return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-6 lg:p-8">
+        <div className="animate-pulse space-y-6">
+          <div className="h-8 w-48 bg-secondary rounded-lg" />
+          <div className="h-12 w-full bg-muted rounded-xl" />
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-20 bg-muted rounded-xl" />
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 lg:p-8 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white mb-2">Usuários</h1>
+          <p className="text-muted-foreground">
+            Gerencie todos os usuários do sistema
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Buscar usuário..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 w-64"
+            />
+          </div>
+          <button
+            onClick={() => setShowFilters(!showFilters)}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border transition-colors ${
+              hasActiveFilters 
+                ? "bg-primary/10 border-primary text-primary" 
+                : "bg-secondary border-border text-white hover:border-primary/50"
+            }`}
+          >
+            <Filter className="w-4 h-4" />
+            Filtros
+            {hasActiveFilters && (
+              <span className="w-2 h-2 bg-primary rounded-full" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Filtros */}
+      {showFilters && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: "auto" }}
+          exit={{ opacity: 0, height: 0 }}
+          className="glass rounded-xl p-4"
+        >
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Filtro KYC */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">KYC</label>
+              <select
+                value={filters.kyc}
+                onChange={(e) => setFilters({ ...filters, kyc: e.target.value as Filters["kyc"] })}
+                className="px-3 py-2 bg-secondary border border-border rounded-lg text-white text-sm focus:outline-none focus:border-primary/50"
+              >
+                <option value="all" className="bg-card">Todos</option>
+                <option value="approved" className="bg-card">Aprovado</option>
+                <option value="pending" className="bg-card">Pendente</option>
+                <option value="submitted" className="bg-card">Enviado</option>
+                <option value="rejected" className="bg-card">Reprovado</option>
+              </select>
+            </div>
+
+            {/* Filtro Rota */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Rota</label>
+              <select
+                value={filters.route}
+                onChange={(e) => setFilters({ ...filters, route: e.target.value as Filters["route"] })}
+                className="px-3 py-2 bg-secondary border border-border rounded-lg text-white text-sm focus:outline-none focus:border-primary/50"
+              >
+                <option value="all" className="bg-card">Todas</option>
+                <option value="black" className="bg-card">Black</option>
+                <option value="white" className="bg-card">White</option>
+              </select>
+            </div>
+
+            {/* Ordenar por Saldo */}
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted-foreground">Ordenar por Saldo</label>
+              <select
+                value={filters.sortBalance}
+                onChange={(e) => setFilters({ ...filters, sortBalance: e.target.value as Filters["sortBalance"] })}
+                className="px-3 py-2 bg-secondary border border-border rounded-lg text-white text-sm focus:outline-none focus:border-primary/50"
+              >
+                <option value="none" className="bg-card">Sem ordenação</option>
+                <option value="desc" className="bg-card">Maior saldo primeiro</option>
+                <option value="asc" className="bg-card">Menor saldo primeiro</option>
+              </select>
+            </div>
+
+            {/* Botão Limpar Filtros */}
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-2 px-3 py-2 mt-auto text-sm text-red-400 hover:text-red-300 transition-colors"
+              >
+                <X className="w-4 h-4" />
+                Limpar filtros
+              </button>
+            )}
+          </div>
+
+          {/* Indicadores de filtros ativos */}
+          {hasActiveFilters && (
+            <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-border">
+              <span className="text-xs text-muted-foreground">Filtros ativos:</span>
+              {filters.kyc !== "all" && (
+                <span className="px-2 py-1 text-xs bg-primary/10 text-primary rounded-full">
+                  KYC: {filters.kyc === "approved" ? "Aprovado" : filters.kyc === "pending" ? "Pendente" : filters.kyc === "submitted" ? "Enviado" : "Reprovado"}
+                </span>
+              )}
+              {filters.route !== "all" && (
+                <span className="px-2 py-1 text-xs bg-primary/10 text-primary rounded-full">
+                  Rota: {filters.route === "black" ? "Black" : "White"}
+                </span>
+              )}
+              {filters.sortBalance !== "none" && (
+                <span className="px-2 py-1 text-xs bg-primary/10 text-primary rounded-full">
+                  Saldo: {filters.sortBalance === "desc" ? "Maior primeiro" : "Menor primeiro"}
+                </span>
+              )}
+            </div>
+          )}
+        </motion.div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="glass rounded-xl p-4">
+          <p className="text-2xl font-bold text-white">{users.length}</p>
+          <p className="text-sm text-muted-foreground">Total de Usuários</p>
+        </div>
+        <div className="glass rounded-xl p-4">
+          <p className="text-2xl font-bold text-green-400">
+            {users.filter((u) => u.is_active).length}
+          </p>
+          <p className="text-sm text-muted-foreground">Ativos</p>
+        </div>
+        <div className="glass rounded-xl p-4">
+          <p className="text-2xl font-bold text-yellow-400">
+            {users.filter((u) => u.kyc_status === "pending").length}
+          </p>
+          <p className="text-sm text-muted-foreground">KYC Pendente</p>
+        </div>
+        <div className="glass rounded-xl p-4">
+          <p className="text-2xl font-bold text-primary">
+            {users.filter((u) => u.kyc_status === "approved").length}
+          </p>
+          <p className="text-sm text-muted-foreground">KYC Aprovado</p>
+        </div>
+      </div>
+
+      {/* Users Table */}
+      <div className="glass rounded-2xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">
+                  Usuário
+                </th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">
+                  Saldo Líquido
+                </th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">
+                  Taxa
+                </th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">
+                  KYC
+                </th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">
+                  Rota
+                </th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">
+                  Status
+                </th>
+                <th className="text-left p-4 text-sm font-medium text-muted-foreground">
+                  Cadastro
+                </th>
+                <th className="text-right p-4 text-sm font-medium text-muted-foreground">
+                  Ações
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {filteredUsers.map((user) => (
+                <tr key={user.id} className="hover:bg-secondary transition-colors">
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-white">
+                          {user.name || "Sem nome"}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {user.email}
+                        </p>
+                        <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
+                          <span>CPF: {formatCPF(user.cpf)}</span>
+                          <span>Tel: {formatPhone(user.phone)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-4">
+                    <p className="font-medium text-primary">
+                      {formatCurrency(Number(user.balance) || 0)}
+                    </p>
+                  </td>
+                  <td className="p-4">
+                    <p className="font-medium text-yellow-400">
+                      {user.fee_percentage ? `${Number(user.fee_percentage).toFixed(2)}%` : "Padrão"}
+                    </p>
+                  </td>
+                  <td className="p-4">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        user.kyc_status === "approved"
+                          ? "bg-green-400/10 text-green-400"
+                          : user.kyc_status === "pending"
+                          ? "bg-yellow-400/10 text-yellow-400"
+                          : user.kyc_status === "submitted"
+                          ? "bg-blue-400/10 text-blue-400"
+                          : "bg-red-400/10 text-red-400"
+                      }`}
+                    >
+                      {user.kyc_status === "approved"
+                        ? "Aprovado"
+                        : user.kyc_status === "pending"
+                        ? "Pendente"
+                        : user.kyc_status === "submitted"
+                        ? "Enviado"
+                        : "Reprovado"}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        user.route_type === "black"
+                          ? "bg-primary/10 text-primary"
+                          : "bg-zinc-400/10 text-zinc-400"
+                      }`}
+                    >
+                      {user.route_type === "black" ? "Black" : "White"}
+                    </span>
+                  </td>
+                  <td className="p-4">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        user.is_active
+                          ? "bg-green-400/10 text-green-400"
+                          : "bg-red-400/10 text-red-400"
+                      }`}
+                    >
+                      {user.is_active ? "Ativo" : "Bloqueado"}
+                    </span>
+                  </td>
+                  <td className="p-4 text-muted-foreground">
+                    {formatDate(user.created_at)}
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center justify-end gap-2">
+                      <button
+                        onClick={() => openBalanceModal(user)}
+                        className="p-2 rounded-lg hover:bg-green-500/10 transition-colors text-muted-foreground hover:text-green-400"
+                        title="Editar Saldo"
+                      >
+                        <DollarSign className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => openEditModal(user)}
+                        className="p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-white"
+                        title="Editar"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => toggleUserStatus(user)}
+                        className={`p-2 rounded-lg transition-colors ${
+                          user.is_active
+                            ? "hover:bg-red-500/10 text-muted-foreground hover:text-red-400"
+                            : "hover:bg-green-500/10 text-muted-foreground hover:text-green-400"
+                        }`}
+                        title={user.is_active ? "Bloquear" : "Desbloquear"}
+                      >
+                        {user.is_active ? (
+                          <Ban className="w-4 h-4" />
+                        ) : (
+                          <CheckCircle className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Edit Modal */}
+      {showModal && selectedUser && (
+        <div className="fixed inset-0 bg-overlay flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass rounded-2xl p-6 w-full max-w-md"
+          >
+            <h2 className="text-xl font-semibold text-white mb-6">
+              Editar Usuário
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  Email
+                </label>
+                <input
+                  type="text"
+                  value={selectedUser.email}
+                  disabled
+                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-muted-foreground"
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  Limite Diário
+                </label>
+                <input
+                  type="number"
+                  value={editForm.daily_limit}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      daily_limit: Number(e.target.value),
+                    })
+                  }
+                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Taxa Percentual (%)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    placeholder={editForm.route_type === "white" ? "0" : "5"}
+                    value={editForm.fee_percentage}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        fee_percentage: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    White: 0% | Black: 5%
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Taxa Fixa (R$)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    placeholder={editForm.route_type === "white" ? "1.50" : "1.00"}
+                    value={editForm.fixed_fee}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        fixed_fee: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    White: R$ 1,50 | Black: R$ 1,00
+                  </p>
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  Taxa de Saque (R$)
+                </label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  placeholder={editForm.route_type === "white" ? "2.00" : "5.00"}
+                  value={editForm.withdrawal_fee}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      withdrawal_fee: e.target.value,
+                    })
+                  }
+                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Padrão Rota White: R$ 2,00 | Padrão Rota Black: R$ 5,00
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  Rota
+                </label>
+                <select
+                  value={editForm.route_type}
+                  onChange={(e) => {
+                    const newRoute = e.target.value;
+                    const newWithdrawalFee = newRoute === "white" ? "2" : "5";
+                    const newFixedFee = newRoute === "white" ? "1.50" : "1.00";
+                    const newFeePercentage = newRoute === "white" ? "0" : "5";
+                    setEditForm({ 
+                      ...editForm, 
+                      route_type: newRoute,
+                      withdrawal_fee: newWithdrawalFee,
+                      fixed_fee: newFixedFee,
+                      fee_percentage: newFeePercentage,
+                    });
+                  }}
+                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
+                >
+                  <option value="white" className="bg-card">
+                    Rota White (MisticPay) - Taxa: R$ 1,50 fixo | Saque: R$ 2,00
+                  </option>
+                  <option value="black" className="bg-card">
+                    Rota Black (Medusa) - Taxa: 5% + R$ 1,00 | Saque: R$ 5,00
+                  </option>
+                </select>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {editForm.route_type === "white" 
+                    ? "Rota White (MisticPay): Taxa fixa de R$ 1,50 por transação + R$ 2,00 por saque" 
+                    : "Rota Black (Medusa): Taxa de 5% + R$ 1,00 por transação + R$ 5,00 por saque"}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="is_active"
+                  checked={editForm.is_active}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, is_active: e.target.checked })
+                  }
+                  className="w-4 h-4 rounded border-border bg-secondary text-primary focus:ring-primary/50"
+                />
+                <label htmlFor="is_active" className="text-sm text-white">
+                  Usuário ativo
+                </label>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => setShowModal(false)}
+                disabled={isUpdatingUser}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-border text-white hover:bg-secondary transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={updateUser}
+                disabled={isUpdatingUser}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isUpdatingUser ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Salvar"
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Balance Modal */}
+      {showBalanceModal && selectedUser && (
+        <div className="fixed inset-0 bg-overlay flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass rounded-2xl p-6 w-full max-w-md"
+          >
+            <h2 className="text-xl font-semibold text-white mb-2">
+              Editar Saldo
+            </h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              Usuário: <span className="text-white">{selectedUser.name || selectedUser.email}</span>
+            </p>
+            
+            {/* Saldo atual */}
+            <div className="glass rounded-xl p-4 mb-6">
+              <p className="text-sm text-muted-foreground mb-1">Saldo Atual</p>
+              <p className="text-2xl font-bold text-white">
+                {formatCurrency(selectedUser.balance || 0)}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Operação */}
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  Operação
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setBalanceOperation("add")}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-colors ${
+                      balanceOperation === "add"
+                        ? "bg-green-500/10 border-green-500 text-green-400"
+                        : "bg-secondary border-border text-white hover:border-green-500/50"
+                    }`}
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar
+                  </button>
+                  <button
+                    onClick={() => setBalanceOperation("remove")}
+                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-colors ${
+                      balanceOperation === "remove"
+                        ? "bg-red-500/10 border-red-500 text-red-400"
+                        : "bg-secondary border-border text-white hover:border-red-500/50"
+                    }`}
+                  >
+                    <Minus className="w-4 h-4" />
+                    Remover
+                  </button>
+                </div>
+              </div>
+
+              {/* Valor */}
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  Valor (R$)
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="0,00"
+                  value={balanceAmount}
+                  onChange={(e) => setBalanceAmount(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                />
+              </div>
+
+              {/* Motivo */}
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  Motivo (opcional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ex: Correção de saldo, bônus, etc."
+                  value={balanceReason}
+                  onChange={(e) => setBalanceReason(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                />
+              </div>
+
+              {/* Preview do novo saldo */}
+              {balanceAmount && (
+                <div className="glass rounded-xl p-4">
+                  <p className="text-sm text-muted-foreground mb-1">Novo Saldo</p>
+                  <p className={`text-xl font-bold ${balanceOperation === "add" ? "text-green-400" : "text-red-400"}`}>
+                    {formatCurrency(
+                      balanceOperation === "add"
+                        ? (selectedUser.balance || 0) + parseFloat(balanceAmount || "0")
+                        : Math.max(0, (selectedUser.balance || 0) - parseFloat(balanceAmount || "0"))
+                    )}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {balanceOperation === "add" ? "+" : "-"}{formatCurrency(parseFloat(balanceAmount || "0"))}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowBalanceModal(false);
+                  setSelectedUser(null);
+                  setBalanceAmount("");
+                  setBalanceReason("");
+                }}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-border text-white hover:bg-secondary transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={updateUserBalance}
+                disabled={!balanceAmount || isUpdatingBalance}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isUpdatingBalance ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Confirmar"
+                )}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,108 @@
+import { sql } from "@/lib/db"
+import { getSession } from "@/lib/auth"
+import { NextResponse } from "next/server"
+import crypto from "crypto"
+
+// Testar webhook do usuario
+export async function POST() {
+  try {
+    const session = await getSession()
+
+    if (!session) {
+      return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
+    }
+
+    const profiles = await sql`
+      SELECT webhook_url, webhook_secret FROM profiles WHERE id = ${session.userId}
+    `
+    const profile = profiles[0]
+
+    if (!profile?.webhook_url) {
+      return NextResponse.json(
+        { error: "Webhook URL nao configurada" },
+        { status: 400 }
+      )
+    }
+
+    // Criar payload de teste
+    const testPayload = {
+      event: "payment.test",
+      timestamp: new Date().toISOString(),
+      data: {
+        id: "test_" + crypto.randomBytes(8).toString("hex"),
+        external_id: "test_payment",
+        amount: 100.00,
+        fee: 2.50,
+        net_amount: 97.50,
+        status: "completed",
+        payer_name: "Teste LegacyPay",
+        payer_document: "12345678900",
+        paid_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+      },
+    }
+
+    // Gerar assinatura
+    const signature = crypto
+      .createHmac("sha256", profile.webhook_secret || "")
+      .update(JSON.stringify(testPayload))
+      .digest("hex")
+
+    // Enviar para o webhook
+    const startTime = Date.now()
+    let webhookResponse
+    let webhookError = null
+    let responseTime = 0
+    let responseStatus = 0
+    let responseBody = ""
+
+    try {
+      webhookResponse = await fetch(profile.webhook_url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-LegacyPay-Signature": signature,
+          "X-LegacyPay-Event": "payment.test",
+          "X-LegacyPay-Timestamp": testPayload.timestamp,
+        },
+        body: JSON.stringify(testPayload),
+      })
+
+      responseTime = Date.now() - startTime
+      responseStatus = webhookResponse.status
+      
+      try {
+        responseBody = await webhookResponse.text()
+        if (responseBody.length > 500) {
+          responseBody = responseBody.substring(0, 500) + "..."
+        }
+      } catch {
+        responseBody = "[Nao foi possivel ler a resposta]"
+      }
+    } catch (error) {
+      responseTime = Date.now() - startTime
+      webhookError = error instanceof Error ? error.message : "Erro desconhecido"
+    }
+
+    const success = responseStatus >= 200 && responseStatus < 300
+
+    return NextResponse.json({
+      success,
+      message: success 
+        ? "Webhook recebeu a requisicao com sucesso!" 
+        : "Webhook nao respondeu corretamente",
+      data: {
+        webhook_url: profile.webhook_url,
+        response_time_ms: responseTime,
+        response_status: responseStatus || null,
+        response_body: responseBody || null,
+        error: webhookError,
+        test_payload: testPayload,
+        signature_header: "X-LegacyPay-Signature",
+      },
+    })
+  } catch (error) {
+    console.error("[v0] Error testing webhook:", error)
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 })
+  }
+}

@@ -1,0 +1,261 @@
+import { SignJWT, jwtVerify } from 'jose'
+import { cookies } from 'next/headers'
+import { sql } from './db'
+import bcrypt from 'bcryptjs'
+
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'fallback-secret-change-in-production'
+)
+
+const COOKIE_NAME = 'auth-token'
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 7 // 7 days
+
+export interface User {
+  id: string
+  email: string
+  name: string | null
+  phone: string | null
+  document: string | null
+  document_type: string | null
+  role: string
+  kyc_status: string
+  created_at: string
+  api_key?: string
+  api_secret?: string
+  webhook_url?: string
+}
+
+export interface SessionUser {
+  id: string
+  email: string
+  name: string | null
+  role: string
+  kyc_status: string
+}
+
+// Hash password
+export async function hashPassword(password: string): Promise<string> {
+  return bcrypt.hash(password, 12)
+}
+
+// Verify password
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return bcrypt.compare(password, hash)
+}
+
+// Create JWT token
+export async function createToken(user: SessionUser): Promise<string> {
+  return new SignJWT({ 
+    id: user.id, 
+    email: user.email, 
+    name: user.name,
+    role: user.role,
+    kyc_status: user.kyc_status
+  })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('7d')
+    .sign(JWT_SECRET)
+}
+
+// Verify JWT token
+export async function verifyToken(token: string): Promise<SessionUser | null> {
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET)
+    return {
+      id: payload.id as string,
+      email: payload.email as string,
+      name: payload.name as string | null,
+      role: payload.role as string,
+      kyc_status: payload.kyc_status as string,
+    }
+  } catch {
+    return null
+  }
+}
+
+// Set auth cookie
+export async function setAuthCookie(token: string) {
+  const cookieStore = await cookies()
+  // Note: secure deve ser false no ambiente v0 preview para funcionar corretamente
+  const isSecure = process.env.NODE_ENV === 'production' && !process.env.VERCEL_URL?.includes('v0.dev')
+  cookieStore.set(COOKIE_NAME, token, {
+    httpOnly: true,
+    secure: isSecure,
+    sameSite: 'lax',
+    maxAge: COOKIE_MAX_AGE,
+    path: '/',
+  })
+}
+
+// Remove auth cookie
+export async function removeAuthCookie() {
+  const cookieStore = await cookies()
+  cookieStore.delete(COOKIE_NAME)
+}
+
+// Get current user from cookie (for Server Components)
+export async function getCurrentUser(): Promise<SessionUser | null> {
+  const cookieStore = await cookies()
+  const token = cookieStore.get(COOKIE_NAME)?.value
+  
+  if (!token) return null
+  
+  return verifyToken(token)
+}
+
+// Get session (alias for getCurrentUser with userId format)
+export async function getSession(): Promise<{ userId: string; user: SessionUser } | null> {
+  const user = await getCurrentUser()
+  if (!user) return null
+  return { userId: user.id, user }
+}
+
+// Verify auth token and return session data (for layouts that receive token directly)
+export async function verifyAuth(token: string): Promise<{ userId: string; email: string; name: string | null; role: string } | null> {
+  const user = await verifyToken(token)
+  if (!user) return null
+  return { 
+    userId: user.id, 
+    email: user.email, 
+    name: user.name,
+    role: user.role
+  }
+}
+
+// Get full user data from database
+export async function getFullUser(userId: string): Promise<User | null> {
+  try {
+    const result = await sql`
+      SELECT id, email, name, phone, cpf_cnpj as document, 'cpf' as document_type, 
+             CASE WHEN is_admin THEN 'admin' ELSE 'user' END as role, kyc_status, 
+             created_at, api_key, client_secret as api_secret, webhook_url
+      FROM profiles
+      WHERE id = ${userId}
+    `
+    return result[0] as User || null
+  } catch {
+    return null
+  }
+}
+
+// Register new user
+export async function registerUser(
+  email: string, 
+  password: string, 
+  name: string,
+  phone?: string,
+  document?: string,
+  documentType?: string
+): Promise<{ user: User | null; error: string | null }> {
+  try {
+    // Check if user exists
+    const existing = await sql`SELECT id FROM profiles WHERE email = ${email}`
+    if (existing.length > 0) {
+      return { user: null, error: 'Email já cadastrado' }
+    }
+
+    const hashedPassword = await hashPassword(password)
+    const id = crypto.randomUUID()
+    const clientId = `lp_${crypto.randomUUID().replace(/-/g, '')}`
+    const clientSecret = `sk_${crypto.randomUUID().replace(/-/g, '')}${crypto.randomUUID().replace(/-/g, '')}`
+
+    const result = await sql`
+      INSERT INTO profiles (id, email, password_hash, name, phone, cpf_cnpj, kyc_status, api_key, client_id, client_secret, is_admin, is_active, balance, route_type, created_at, updated_at)
+      VALUES (${id}, ${email}, ${hashedPassword}, ${name}, ${phone || null}, ${document || null}, 'pending', ${clientId}, ${clientId}, ${clientSecret}, false, true, 0, 'black', NOW(), NOW())
+      RETURNING id, email, name, phone, cpf_cnpj as document, 'cpf' as document_type, 'user' as role, kyc_status, created_at, api_key, client_secret as api_secret, webhook_url
+    `
+
+    return { user: result[0] as User, error: null }
+  } catch (error) {
+    console.error('Register error:', error)
+    return { user: null, error: 'Erro ao criar conta' }
+  }
+}
+
+// Login user
+export async function loginUser(
+  email: string, 
+  password: string
+): Promise<{ user: SessionUser | null; error: string | null }> {
+  try {
+    const result = await sql`
+      SELECT id, email, name, CASE WHEN is_admin THEN 'admin' ELSE 'user' END as role, kyc_status, password_hash, is_active
+      FROM profiles
+      WHERE email = ${email}
+    `
+
+    if (result.length === 0) {
+      return { user: null, error: 'Credenciais inválidas' }
+    }
+
+    const user = result[0] as User & { password_hash: string; is_active: boolean }
+    
+    // Verificar se a conta está ativa
+    if (!user.is_active) {
+      return { user: null, error: 'Conta desativada. Entre em contato com o suporte.' }
+    }
+
+    const isValid = await verifyPassword(password, user.password_hash)
+
+    if (!isValid) {
+      return { user: null, error: 'Credenciais inválidas' }
+    }
+
+    const sessionUser: SessionUser = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      kyc_status: user.kyc_status,
+    }
+
+    return { user: sessionUser, error: null }
+  } catch (error) {
+    console.error('Login error:', error)
+    return { user: null, error: 'Erro ao fazer login' }
+  }
+}
+
+// Validate API key for external API access
+export async function validateApiKey(apiKey: string): Promise<User | null> {
+  try {
+    const result = await sql`
+      SELECT id, email, name, phone, cpf_cnpj as document, 'cpf' as document_type, 
+             CASE WHEN is_admin THEN 'admin' ELSE 'user' END as role, kyc_status, 
+             created_at, api_key, client_secret as api_secret, webhook_url
+      FROM profiles
+      WHERE api_key = ${apiKey} OR client_id = ${apiKey}
+    `
+    return result[0] as User || null
+  } catch {
+    return null
+  }
+}
+
+// Get user from request headers (for API routes)
+export async function getUserFromRequest(request: Request): Promise<SessionUser | null> {
+  // Try cookie first
+  const cookieHeader = request.headers.get('cookie')
+  if (cookieHeader) {
+    const cookies = Object.fromEntries(
+      cookieHeader.split('; ').map(c => {
+        const [key, ...v] = c.split('=')
+        return [key, v.join('=')]
+      })
+    )
+    const token = cookies[COOKIE_NAME]
+    if (token) {
+      return verifyToken(token)
+    }
+  }
+
+  // Try Authorization header (Bearer token)
+  const authHeader = request.headers.get('authorization')
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7)
+    return verifyToken(token)
+  }
+
+  return null
+}
