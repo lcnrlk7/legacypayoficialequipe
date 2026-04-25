@@ -89,9 +89,9 @@ export function InteractiveMeshGrid() {
         }
       }
 
-      // Draw grid lines with color based on distortion
-      ctx.strokeStyle = 'rgba(100, 200, 255, 0.15)';
-      ctx.lineWidth = 1;
+      // Draw grid lines with laranja color - more subtle
+      ctx.strokeStyle = 'rgba(255, 140, 0, 0.08)';
+      ctx.lineWidth = 0.8;
 
       // Horizontal lines
       for (let i = 0; i < grid.length; i++) {
@@ -115,7 +115,7 @@ export function InteractiveMeshGrid() {
         ctx.stroke();
       }
 
-      // Draw intersection points
+      // Draw intersection points - laranja subtle
       for (let i = 0; i < grid.length; i++) {
         for (let j = 0; j < grid[i].length; j++) {
           const point = grid[i][j];
@@ -124,9 +124,9 @@ export function InteractiveMeshGrid() {
           const distance = Math.sqrt(dx * dx + dy * dy);
           const influence = Math.max(0, 1 - distance / influenceRadius);
 
-          ctx.fillStyle = `rgba(100, 200, 255, ${0.3 + influence * 0.5})`;
+          ctx.fillStyle = `rgba(255, 140, 0, ${0.1 + influence * 0.2})`;
           ctx.beginPath();
-          ctx.arc(point.x, point.y, 2 + influence * 3, 0, Math.PI * 2);
+          ctx.arc(point.x, point.y, 1 + influence * 2, 0, Math.PI * 2);
           ctx.fill();
         }
       }
