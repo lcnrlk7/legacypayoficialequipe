@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { WithdrawModal } from "@/components/wallet/withdraw-modal";
 
 interface PixTransaction {
   id: string;
@@ -55,8 +56,6 @@ export default function WalletPage() {
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
   const [savedPixKeys, setSavedPixKeys] = useState<PixKey[]>([]);
-  const [selectedPixKeyId, setSelectedPixKeyId] = useState<string>("");
-  const [useCustomPixKey, setUseCustomPixKey] = useState(false);
   const [systemSettings, setSystemSettings] = useState({
     minDeposit: 5,
     maxDeposit: 100000,
@@ -106,15 +105,6 @@ export default function WalletPage() {
       const data = await response.json();
       if (data.pixKeys) {
         setSavedPixKeys(data.pixKeys);
-        // Selecionar a chave primária por padrão
-        const primaryKey = data.pixKeys.find((k: PixKey) => k.is_primary);
-        if (primaryKey) {
-          setSelectedPixKeyId(primaryKey.id);
-          setWithdrawPixKey(primaryKey.key_value);
-        } else if (data.pixKeys.length > 0) {
-          setSelectedPixKeyId(data.pixKeys[0].id);
-          setWithdrawPixKey(data.pixKeys[0].key_value);
-        }
       }
     } catch (err) {
       console.error("Error loading pix keys:", err);
@@ -123,12 +113,8 @@ export default function WalletPage() {
 
   function handlePixKeySelect(keyId: string) {
     if (keyId === "custom") {
-      setUseCustomPixKey(true);
-      setSelectedPixKeyId("");
       setWithdrawPixKey("");
     } else {
-      setUseCustomPixKey(false);
-      setSelectedPixKeyId(keyId);
       const key = savedPixKeys.find(k => k.id === keyId);
       if (key) {
         setWithdrawPixKey(key.key_value);
@@ -493,159 +479,26 @@ const handleDeposit = async () => {
                 Sacar
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-card border-border">
+            <DialogContent className="bg-card border-border max-w-md sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Sacar via PIX</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 pt-4">
-                {error && (
-                  <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    {error}
-                  </div>
-                )}
-
-                {withdrawSuccess ? (
-                  <div className="text-center space-y-4 py-6">
-                    <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
-                      <CheckCircle className="w-8 h-8 text-green-500" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">Saque Solicitado!</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Seu saque está sendo processado e será enviado em breve.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {/* Info de saldo disponível */}
-                    <div className="p-4 bg-secondary/50 rounded-xl border border-border">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-foreground">Saldo disponível:</span>
-                        <span className="font-bold text-primary">
-                          {formatCurrency(balance)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Chave PIX de destino
-                      </label>
-                      
-                      {savedPixKeys.length > 0 && (
-                        <div className="space-y-3">
-                          <div className="relative">
-                            <select
-                              value={useCustomPixKey ? "custom" : selectedPixKeyId}
-                              onChange={(e) => handlePixKeySelect(e.target.value)}
-                              className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-foreground appearance-none cursor-pointer focus:outline-none focus:border-primary/50"
-                            >
-                              <option value="" disabled>Selecione uma chave</option>
-                              {savedPixKeys.map((key) => (
-                                <option key={key.id} value={key.id} className="bg-card">
-                                  {key.key_type.toUpperCase()}: {key.key_value} {key.is_primary && "(Principal)"}
-                                </option>
-                              ))}
-                              <option value="custom" className="bg-card">
-                                Usar outra chave PIX
-                              </option>
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
-                          </div>
-                          
-                          {!useCustomPixKey && selectedPixKeyId && (
-                            <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg">
-                              <Key className="w-4 h-4 text-primary" />
-                              <span className="text-sm text-foreground truncate">
-                                {savedPixKeys.find(k => k.id === selectedPixKeyId)?.key_value}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      
-                      {(useCustomPixKey || savedPixKeys.length === 0) && (
-                        <Input
-                          placeholder="CPF, email, telefone ou chave aleatória"
-                          value={withdrawPixKey}
-                          onChange={(e) => setWithdrawPixKey(e.target.value)}
-                          className="bg-secondary border-border"
-                        />
-                      )}
-                      
-                      {savedPixKeys.length === 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          Cadastre chaves PIX em &quot;Chaves PIX&quot; para selecioná-las aqui
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Valor do saque
-                      </label>
-                      <Input
-                        type="number"
-                        placeholder="0,00"
-                        min={systemSettings.minWithdrawal}
-                        max={balance}
-                        value={withdrawAmount}
-                        onChange={(e) => setWithdrawAmount(e.target.value)}
-                        className={`bg-secondary border-border ${Number(withdrawAmount) > balance ? "border-red-500" : ""}`}
-                      />
-                      {Number(withdrawAmount) > balance && (
-                        <p className="text-xs text-red-500">
-                          Valor excede o saldo disponível de {formatCurrency(balance)}
-                        </p>
-                      )}
-                      {Number(withdrawAmount) > 0 && Number(withdrawAmount) < systemSettings.minWithdrawal && (
-                        <p className="text-xs text-red-500">
-                          Valor mínimo para saque: R$ {systemSettings.minWithdrawal.toFixed(2).replace('.', ',')}
-                        </p>
-                      )}
-                      {Number(withdrawAmount) > systemSettings.maxWithdrawal && (
-                        <p className="text-xs text-red-500">
-                          Valor máximo para saque: R$ {systemSettings.maxWithdrawal.toFixed(2).replace('.', ',')}
-                        </p>
-                      )}
-                      {Number(withdrawAmount) > systemSettings.autoWithdrawalLimit && Number(withdrawAmount) <= systemSettings.maxWithdrawal && (
-                        <p className="text-xs text-yellow-500">
-                          Saques acima de R$ {systemSettings.autoWithdrawalLimit.toFixed(2).replace('.', ',')} requerem aprovação do administrador
-                        </p>
-                      )}
-                    </div>
-                    {Number(withdrawAmount) > 0 && (
-                      <div className="bg-secondary/50 rounded-lg p-3 text-sm text-muted-foreground space-y-2">
-                        <div className="flex justify-between">
-                          <span>Taxa de saque:</span>
-                          <span>-{formatCurrency(withdrawalFee)}</span>
-                        </div>
-                        <div className="flex justify-between pt-2 border-t border-border font-medium text-foreground">
-                          <span>Você receberá:</span>
-                          <span className="text-primary">
-                            {formatCurrency(Math.max(0, Number(withdrawAmount) - withdrawalFee))}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    <Button
-                      onClick={handleWithdraw}
-                      disabled={loading || !withdrawAmount || !withdrawPixKey || Number(withdrawAmount) > balance || Number(withdrawAmount) < systemSettings.minWithdrawal || Number(withdrawAmount) > systemSettings.maxWithdrawal}
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          Processando...
-                        </>
-                      ) : (
-                        "Confirmar Saque"
-                      )}
-                    </Button>
-                  </>
-                )}
-              </div>
+              <WithdrawModal
+                balance={balance}
+                savedPixKeys={savedPixKeys}
+                systemSettings={systemSettings}
+                loading={loading}
+                error={error}
+                withdrawSuccess={withdrawSuccess}
+                onWithdraw={handleWithdraw}
+                onClose={() => {
+                  setWithdrawDialogOpen(false);
+                  setError(null);
+                  setWithdrawSuccess(false);
+                  setWithdrawAmount("");
+                  setWithdrawPixKey("");
+                }}
+              />
             </DialogContent>
           </Dialog>
 
