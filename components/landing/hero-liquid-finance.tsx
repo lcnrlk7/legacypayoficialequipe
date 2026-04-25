@@ -6,16 +6,12 @@ import Link from 'next/link';
 
 export function HeroLiquidFinance() {
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [transactionCount, setTransactionCount] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
       const scrollHeight = document.documentElement.scrollHeight - window.innerHeight;
       const scrolled = window.scrollY / scrollHeight;
       setScrollProgress(Math.min(scrolled, 1));
-      
-      // Animate transaction counter based on scroll
-      setTransactionCount(Math.floor(scrolled * 2500000));
     };
 
     window.addEventListener('scroll', handleScroll);
@@ -29,42 +25,25 @@ export function HeroLiquidFinance() {
         <div className="absolute -top-40 -left-40 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl animate-blob"></div>
         <div className="absolute -bottom-40 -right-40 w-80 h-80 bg-purple-500/10 rounded-full blur-3xl animate-blob animation-delay-2000"></div>
 
-        {/* Main title with animated gradient */}
-        <div className="mb-8 space-y-6">
-          <h1 className="text-6xl md:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 animate-gradient-shift leading-tight">
-            Transferências Mais Rápidas da História
-          </h1>
-
-          <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
-            A tecnologia de transferência financeira que não precisa de intermediários. Tudo em tempo real, com a menor taxa do mercado.
-          </p>
+        {/* Badge/Pill */}
+        <div className="inline-block mb-8">
+          <div className="px-4 py-2 rounded-full border border-blue-500/30 bg-blue-500/5 backdrop-blur-sm">
+            <span className="flex items-center gap-2 text-blue-300 text-sm font-medium">
+              <span className="flex items-center justify-center w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
+              Novo jeito de transferir dinheiro
+            </span>
+          </div>
         </div>
 
-        {/* Stats with falling animation */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 my-16">
-          {/* Transaction counter */}
-          <div className="p-6 rounded-xl bg-gradient-to-br from-blue-900/20 to-blue-900/5 border border-blue-500/20 backdrop-blur-xl">
-            <div className="text-4xl font-bold text-blue-400 mb-2">
-              {transactionCount.toLocaleString('pt-BR')}+
-            </div>
-            <p className="text-gray-400">Transações Processadas</p>
-          </div>
+        {/* Main title with animated gradient - Textos Originais */}
+        <div className="mb-8 space-y-6">
+          <h1 className="text-5xl md:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 animate-gradient-shift leading-tight">
+            Transferências PIX<br />Instantâneas e Seguras
+          </h1>
 
-          {/* Active users */}
-          <div className="p-6 rounded-xl bg-gradient-to-br from-purple-900/20 to-purple-900/5 border border-purple-500/20 backdrop-blur-xl">
-            <div className="text-4xl font-bold text-purple-400 mb-2">
-              500K+
-            </div>
-            <p className="text-gray-400">Usuários Ativos</p>
-          </div>
-
-          {/* Lowest fee */}
-          <div className="p-6 rounded-xl bg-gradient-to-br from-pink-900/20 to-pink-900/5 border border-pink-500/20 backdrop-blur-xl">
-            <div className="text-4xl font-bold text-pink-400 mb-2">
-              0.5%
-            </div>
-            <p className="text-gray-400">Menor Taxa do Mercado</p>
-          </div>
+          <p className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
+            Faça transferências PIX com segurança, velocidade e a melhor taxa do mercado. Sem complicações, sem burocracias.
+          </p>
         </div>
 
         {/* CTA Buttons */}
