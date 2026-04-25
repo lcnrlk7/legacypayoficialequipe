@@ -9,9 +9,13 @@ export interface PIXKeyValidation {
 
 export interface PIXQRCodeData {
   pixKey: string;
+  keyType: string;
   name?: string;
+  city?: string;
   amount?: number;
   description?: string;
+  txId?: string;
+  isValid: boolean;
 }
 
 /**
@@ -195,34 +199,115 @@ function validateRandomKey(key: string): PIXKeyValidation {
 }
 
 /**
+ * Parses EMV TLV format used in PIX QR Codes
+ */
+function parseEMV(data: string): Map<string, string> {
+  const result = new Map<string, string>();
+  let position = 0;
+  
+  while (position < data.length - 4) {
+    const id = data.substring(position, position + 2);
+    const length = parseInt(data.substring(position + 2, position + 4), 10);
+    
+    if (isNaN(length) || length <= 0 || position + 4 + length > data.length) {
+      break;
+    }
+    
+    const value = data.substring(position + 4, position + 4 + length);
+    result.set(id, value);
+    position += 4 + length;
+  }
+  
+  return result;
+}
+
+/**
+ * Parses a complete PIX QR Code and extracts all data
+ */
+export function parsePixQRCode(qrCode: string): PIXQRCodeData {
+  const defaultResult: PIXQRCodeData = {
+    pixKey: '',
+    keyType: 'DESCONHECIDO',
+    isValid: false,
+  };
+  
+  try {
+    const cleaned = qrCode.trim();
+    
+    // Check if it's a valid PIX QR Code (starts with 00020126)
+    if (!cleaned.startsWith('000201')) {
+      // Maybe it's just a PIX key
+      const keyType = detectPixKeyType(cleaned);
+      if (keyType !== 'PIX') {
+        return {
+          pixKey: cleaned,
+          keyType,
+          isValid: true,
+        };
+      }
+      return defaultResult;
+    }
+    
+    const emv = parseEMV(cleaned);
+    
+    // Field 26 or 27 contains PIX data
+    const pixData = emv.get('26') || emv.get('27') || '';
+    const pixFields = parseEMV(pixData);
+    
+    // Field 00 in PIX data = GUI (br.gov.bcb.pix)
+    // Field 01 = PIX Key
+    // Field 02 = Description (optional)
+    // Field 25 = URL for dynamic QR (optional)
+    
+    let pixKey = pixFields.get('01') || '';
+    const description = pixFields.get('02') || '';
+    
+    // If no key in field 01, check if it's a URL-based dynamic QR
+    if (!pixKey && pixFields.get('25')) {
+      pixKey = pixFields.get('25') || '';
+    }
+    
+    // Field 52 = Merchant Category Code
+    // Field 53 = Currency (986 = BRL)
+    // Field 54 = Amount
+    const amountStr = emv.get('54') || '';
+    const amount = amountStr ? parseFloat(amountStr) : undefined;
+    
+    // Field 59 = Merchant Name
+    const name = emv.get('59') || '';
+    
+    // Field 60 = Merchant City
+    const city = emv.get('60') || '';
+    
+    // Field 62 = Additional Data
+    const additionalData = emv.get('62') || '';
+    const additionalFields = parseEMV(additionalData);
+    const txId = additionalFields.get('05') || '';
+    
+    // Detect key type
+    const keyType = detectPixKeyType(pixKey);
+    
+    return {
+      pixKey,
+      keyType,
+      name: name || undefined,
+      city: city || undefined,
+      amount: amount || undefined,
+      description: description || undefined,
+      txId: txId || undefined,
+      isValid: !!pixKey,
+    };
+  } catch (error) {
+    return defaultResult;
+  }
+}
+
+/**
  * Extracts PIX key from a complete QR code string
  */
 export function extractPixKeyFromQRCode(qrCode: string): string | null {
-  try {
-    // PIX QR Code structure - this is a simplified extraction
-    // Real implementation would need full EMV parsing
-    // For now, we'll look for common patterns
-
-    // Look for key pattern after specific identifiers
-    const patterns = [
-      /0136\d+(.+?)00/,
-      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
-      /\d{3}\.\d{3}\.\d{3}-\d{2}/,
-      /\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/,
-      /[^\s@]+@[^\s@]+\.[^\s@]+/,
-    ];
-
-    for (const pattern of patterns) {
-      const match = qrCode.match(pattern);
-      if (match) {
-        return match[1] || match[0];
-      }
-    }
-
-    return null;
-  } catch (error) {
-    return null;
-  }
+  const parsed = parsePixQRCode(qrCode);
+  return parsed.isValid ? parsed.pixKey : null;
 }
 
 /**

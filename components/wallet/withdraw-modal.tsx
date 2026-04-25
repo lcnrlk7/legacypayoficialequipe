@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Loader2, AlertCircle, CheckCircle, QrCode, Copy, Key, ArrowLeft, Wallet } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, QrCode, Copy, Key, ArrowLeft, Wallet, User, MapPin, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { QRScanner } from './qr-scanner';
 import { CopyPasteInput } from './copy-paste-input';
-import { calculateWithdrawalFee, formatCurrency, detectPixKeyType } from '@/lib/pix-validator';
+import { calculateWithdrawalFee, formatCurrency, detectPixKeyType, parsePixQRCode, PIXQRCodeData } from '@/lib/pix-validator';
 
 interface PixKey {
   id: string;
@@ -44,6 +44,7 @@ export function WithdrawModal({
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawPixKey, setWithdrawPixKey] = useState('');
   const [pixKeyType, setPixKeyType] = useState('');
+  const [pixData, setPixData] = useState<PIXQRCodeData | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
 
   // Calculate fee when amount changes
@@ -55,24 +56,80 @@ export function WithdrawModal({
   const handleSavedKeySelect = (key: PixKey) => {
     setWithdrawPixKey(key.key_value);
     setPixKeyType(key.key_type.toUpperCase());
+    setPixData(null);
     setLocalError(null);
     setStep('confirm');
   };
 
-  // Handle QR scan - go directly to confirm
-  const handleQRScan = (pixKey: string) => {
-    console.log('[v0] QR scanned:', pixKey);
-    setWithdrawPixKey(pixKey);
-    setPixKeyType(detectPixKeyType(pixKey) || 'PIX');
-    setLocalError(null);
-    setStep('confirm');
+  // Handle QR scan - parse QR code and go to confirm
+  const handleQRScan = (qrCodeData: string) => {
+    console.log('[v0] QR scanned:', qrCodeData);
+    
+    // Parse the QR code
+    const parsed = parsePixQRCode(qrCodeData);
+    console.log('[v0] Parsed QR:', parsed);
+    
+    if (parsed.isValid) {
+      setWithdrawPixKey(parsed.pixKey);
+      setPixKeyType(parsed.keyType);
+      setPixData(parsed);
+      
+      // If QR has amount, pre-fill it
+      if (parsed.amount && parsed.amount > 0) {
+        setWithdrawAmount(parsed.amount.toString());
+      }
+      
+      setLocalError(null);
+      setStep('confirm');
+    } else {
+      // Maybe it's just a PIX key
+      const keyType = detectPixKeyType(qrCodeData);
+      if (keyType && keyType !== 'DESCONHECIDO') {
+        setWithdrawPixKey(qrCodeData);
+        setPixKeyType(keyType);
+        setPixData(null);
+        setLocalError(null);
+        setStep('confirm');
+      } else {
+        setLocalError('QR Code invalido. Tente novamente.');
+      }
+    }
   };
 
-  // Handle paste - go directly to confirm
-  const handlePasteSubmit = (pixKey: string) => {
-    console.log('[v0] PIX key pasted:', pixKey);
-    setWithdrawPixKey(pixKey);
-    setPixKeyType(detectPixKeyType(pixKey) || 'PIX');
+  // Handle paste - parse and go to confirm
+  const handlePasteSubmit = (pastedData: string) => {
+    console.log('[v0] PIX data pasted:', pastedData);
+    
+    // Check if it's a QR code string or just a key
+    if (pastedData.startsWith('000201')) {
+      // It's a QR code string
+      const parsed = parsePixQRCode(pastedData);
+      console.log('[v0] Parsed pasted QR:', parsed);
+      
+      if (parsed.isValid) {
+        setWithdrawPixKey(parsed.pixKey);
+        setPixKeyType(parsed.keyType);
+        setPixData(parsed);
+        
+        if (parsed.amount && parsed.amount > 0) {
+          setWithdrawAmount(parsed.amount.toString());
+        }
+        
+        setLocalError(null);
+        setStep('confirm');
+        return;
+      }
+    }
+    
+    // It's just a PIX key
+    const keyType = detectPixKeyType(pastedData);
+    setWithdrawPixKey(pastedData);
+    setPixKeyType(keyType || 'PIX');
+    setPixData({
+      pixKey: pastedData,
+      keyType: keyType || 'PIX',
+      isValid: true,
+    });
     setLocalError(null);
     setStep('confirm');
   };
@@ -81,6 +138,7 @@ export function WithdrawModal({
   const handleBack = () => {
     setStep('select');
     setWithdrawAmount('');
+    setPixData(null);
     setLocalError(null);
   };
 
@@ -269,20 +327,81 @@ export function WithdrawModal({
             Voltar
           </button>
 
-          {/* Selected Key */}
-          <div className="p-4 bg-secondary rounded-xl border border-border">
-            <p className="text-xs text-muted-foreground mb-1">Chave PIX de destino</p>
-            <div className="flex items-center gap-2">
+          {/* PIX Data Card - Similar to receipt */}
+          <div className="p-4 bg-secondary rounded-xl border border-border space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <span className="text-sm font-medium text-foreground">Dados do Destinatario</span>
               <span className="text-xs font-semibold bg-primary/20 text-primary px-2 py-0.5 rounded">
                 {pixKeyType}
               </span>
-              <p className="font-mono text-sm text-foreground truncate">{withdrawPixKey}</p>
             </div>
+            
+            {/* Beneficiary Name */}
+            {pixData?.name && (
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="w-4 h-4 text-primary" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Nome</p>
+                  <p className="font-medium text-foreground">{pixData.name}</p>
+                </div>
+              </div>
+            )}
+            
+            {/* City */}
+            {pixData?.city && (
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <MapPin className="w-4 h-4 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Cidade</p>
+                  <p className="font-medium text-foreground">{pixData.city}</p>
+                </div>
+              </div>
+            )}
+            
+            {/* PIX Key */}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center">
+                <Key className="w-4 h-4 text-green-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs text-muted-foreground">Chave PIX ({pixKeyType})</p>
+                <p className="font-mono text-sm text-foreground truncate">{withdrawPixKey}</p>
+              </div>
+            </div>
+            
+            {/* Description */}
+            {pixData?.description && (
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-yellow-500/10 flex items-center justify-center">
+                  <FileText className="w-4 h-4 text-yellow-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Descricao</p>
+                  <p className="font-medium text-foreground">{pixData.description}</p>
+                </div>
+              </div>
+            )}
+            
+            {/* QR Code Amount (if present) */}
+            {pixData?.amount && pixData.amount > 0 && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Valor do QR Code:</span>
+                  <span className="text-lg font-bold text-primary">{formatCurrency(pixData.amount)}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Amount Input */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Valor do saque</label>
+            <label className="text-sm font-medium text-foreground">
+              {pixData?.amount ? 'Valor a transferir (pre-definido pelo QR)' : 'Valor do saque'}
+            </label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
               <Input
@@ -298,6 +417,7 @@ export function WithdrawModal({
                 max={maxWithdrawal}
                 step="0.01"
                 autoFocus
+                readOnly={!!(pixData?.amount && pixData.amount > 0)}
               />
             </div>
             <p className="text-xs text-muted-foreground">
@@ -317,7 +437,7 @@ export function WithdrawModal({
                 <span className="font-medium text-red-400">- {formatCurrency(feeCalculation.fee)}</span>
               </div>
               <div className="border-t border-border pt-3 flex justify-between">
-                <span className="font-semibold text-foreground">Voce recebe:</span>
+                <span className="font-semibold text-foreground">Destinatario recebe:</span>
                 <span className="font-bold text-xl text-primary">
                   {formatCurrency(feeCalculation.amount - feeCalculation.fee)}
                 </span>
