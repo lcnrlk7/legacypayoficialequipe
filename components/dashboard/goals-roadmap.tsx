@@ -2,9 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, X, MapPin, Loader2, Gift, Play } from "lucide-react";
+import { Trophy, X, MapPin, Loader2, Gift, Play, ChevronLeft, ChevronRight, RotateCcw, Award, Star, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import Image from "next/image";
 
 interface Reward {
   id: string;
@@ -19,11 +18,65 @@ interface GoalsRoadmapProps {
   userId: string;
 }
 
+// Recompensas da simulacao
+const simulationRewards = [
+  { 
+    id: 1, 
+    type: "bracelet", 
+    name: "Pulseira Exclusiva", 
+    value: 20000, 
+    label: "R$ 20K Faturados",
+    description: "Uma pulseira exclusiva LegacyPay para celebrar seus primeiros R$ 20K!",
+    icon: "bracelet",
+    level: "Conquista Bronze"
+  },
+  { 
+    id: 2, 
+    type: "plaque_100k", 
+    name: "Placa 100K", 
+    value: 100000, 
+    label: "R$ 100K Faturados",
+    description: "Placa comemorativa pelos R$ 100K faturados na plataforma!",
+    icon: "plaque",
+    level: "Conquista Prata"
+  },
+  { 
+    id: 3, 
+    type: "plaque_500k", 
+    name: "Placa 500K", 
+    value: 500000, 
+    label: "R$ 500K Faturados",
+    description: "Placa de reconhecimento pelo meio milhao faturado!",
+    icon: "plaque",
+    level: "Conquista Ouro"
+  },
+  { 
+    id: 4, 
+    type: "plaque_1m", 
+    name: "Placa 1M", 
+    value: 1000000, 
+    label: "R$ 1M Faturados",
+    description: "Placa premium pelo primeiro milhao faturado na LegacyPay!",
+    icon: "plaque",
+    level: "Conquista Diamante"
+  },
+  { 
+    id: 5, 
+    type: "event", 
+    name: "Evento Top Sellers", 
+    value: 1000000, 
+    label: "Evento Exclusivo",
+    description: "Convite para o evento anual dos maiores sellers da plataforma LegacyPay!",
+    icon: "event",
+    level: "Conquista Lendario"
+  },
+];
+
 const milestones = [
   { value: 1000, label: "R$ 1K", row: 1, col: 1 },
-  { value: 10000, label: "R$ 10K", row: 1, col: 2, hasBadge: true, badgeType: "bracelet" },
-  { value: 20000, label: "R$ 20K", row: 1, col: 3 },
-  { value: 50000, label: "R$ 50K", row: 1, col: 5, hasBadge: true, badgeType: "plaque_50k" },
+  { value: 10000, label: "R$ 10K", row: 1, col: 2 },
+  { value: 20000, label: "R$ 20K", row: 1, col: 3, hasBadge: true, badgeType: "bracelet" },
+  { value: 50000, label: "R$ 50K", row: 1, col: 5 },
   { value: 75000, label: "R$ 75K", row: 2, col: 5 },
   { value: 100000, label: "R$ 100K", row: 2, col: 4, hasBadge: true, badgeType: "plaque_100k" },
   { value: 250000, label: "R$ 250K", row: 2, col: 2 },
@@ -34,11 +87,11 @@ const milestones = [
 ];
 
 const achievementNames: Record<string, string> = {
-  bracelet: "Pulseira LegacyPay",
-  plaque_50k: "Placa 50K",
+  bracelet: "Pulseira Exclusiva",
   plaque_100k: "Placa 100K",
   plaque_500k: "Placa 500K",
   plaque_1m: "Placa 1M",
+  event: "Evento Top Sellers",
 };
 
 const achievementLevels = [
@@ -57,6 +110,7 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
   const [isClaiming, setIsClaiming] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [showSimulation, setShowSimulation] = useState(false);
+  const [currentRewardIndex, setCurrentRewardIndex] = useState(0);
 
   useEffect(() => {
     loadRewards();
@@ -358,7 +412,10 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                 Clique em &quot;Iniciar Simulacao&quot; para ver como ficaria o caminho ao completar cada recompensa.
               </p>
               <Button 
-                onClick={() => setShowSimulation(!showSimulation)}
+                onClick={() => {
+                  setShowSimulation(true);
+                  setCurrentRewardIndex(0);
+                }}
                 className="w-full bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90"
               >
                 <Play className="w-4 h-4 mr-2" />
@@ -443,6 +500,132 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                   Sua premiacao sera enviada em ate 15 dias uteis apos a solicitacao.
                 </p>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Simulation Modal */}
+      <AnimatePresence>
+        {showSimulation && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+            onClick={() => setShowSimulation(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md bg-[#1a1a1a] rounded-2xl border border-border p-6"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-foreground">Simulacao</h3>
+                <button
+                  onClick={() => {
+                    setCurrentRewardIndex(0);
+                  }}
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Resetar
+                </button>
+              </div>
+
+              {/* Active Mode Badge */}
+              <div className="bg-gradient-to-r from-primary to-orange-500 text-primary-foreground text-center py-2 px-4 rounded-lg text-sm font-medium mb-6">
+                Modo Simulacao Ativo
+              </div>
+
+              {/* Reward Display */}
+              <div className="flex flex-col items-center mb-6">
+                {/* Reward Icon */}
+                <div className="w-32 h-32 rounded-xl bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700 flex items-center justify-center mb-4 relative overflow-hidden">
+                  {simulationRewards[currentRewardIndex].icon === "bracelet" && (
+                    <div className="flex flex-col items-center">
+                      <div className="w-16 h-4 rounded-full border-4 border-primary bg-primary/20 mb-2" />
+                      <span className="text-xs text-primary font-bold">20K</span>
+                      <span className="text-[10px] text-muted-foreground">FATURADOS</span>
+                    </div>
+                  )}
+                  {simulationRewards[currentRewardIndex].icon === "plaque" && (
+                    <div className="flex flex-col items-center p-2 bg-gradient-to-b from-primary/30 to-primary/10 rounded-lg border border-primary/50">
+                      <Award className="w-8 h-8 text-primary mb-1" />
+                      <span className="text-lg font-bold text-primary">
+                        {simulationRewards[currentRewardIndex].value >= 1000000 
+                          ? "1M" 
+                          : `${simulationRewards[currentRewardIndex].value / 1000}K`}
+                      </span>
+                      <span className="text-[8px] text-muted-foreground">FATURADOS</span>
+                    </div>
+                  )}
+                  {simulationRewards[currentRewardIndex].icon === "event" && (
+                    <div className="flex flex-col items-center">
+                      <Users className="w-10 h-10 text-primary mb-1" />
+                      <Star className="w-4 h-4 text-yellow-500 absolute top-2 right-2" />
+                      <Star className="w-3 h-3 text-yellow-500 absolute top-4 left-3" />
+                      <span className="text-xs text-primary font-bold">TOP SELLERS</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Reward Name */}
+                <h4 className="text-xl font-bold text-foreground mb-1">
+                  {simulationRewards[currentRewardIndex].level}
+                </h4>
+                <p className="text-sm text-muted-foreground text-center mb-2">
+                  {simulationRewards[currentRewardIndex].description}
+                </p>
+              </div>
+
+              {/* Navigation */}
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentRewardIndex(Math.max(0, currentRewardIndex - 1))}
+                  disabled={currentRewardIndex === 0}
+                  className="flex-1 border-border"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Anterior
+                </Button>
+                <Button
+                  onClick={() => setCurrentRewardIndex(Math.min(simulationRewards.length - 1, currentRewardIndex + 1))}
+                  disabled={currentRewardIndex === simulationRewards.length - 1}
+                  className="flex-1 bg-primary hover:bg-primary/90"
+                >
+                  Proxima
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </div>
+
+              {/* Progress Indicator */}
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Recompensa {currentRewardIndex + 1} de {simulationRewards.length}
+                </p>
+                <div className="h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${((currentRewardIndex + 1) / simulationRewards.length) * 100}%` }}
+                    transition={{ duration: 0.3 }}
+                    className="h-full bg-gradient-to-r from-primary to-orange-400 rounded-full"
+                  />
+                </div>
+              </div>
+
+              {/* Close Button */}
+              <Button
+                variant="ghost"
+                onClick={() => setShowSimulation(false)}
+                className="w-full mt-4 text-muted-foreground hover:text-foreground"
+              >
+                Fechar Simulacao
+              </Button>
             </motion.div>
           </motion.div>
         )}
