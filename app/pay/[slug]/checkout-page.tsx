@@ -113,11 +113,11 @@ export function CheckoutPage({ checkout }: { checkout: Checkout }) {
     return { h, m, s };
   };
 
-  const formatCurrency = (cents: number) => {
+  const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
-    }).format(cents / 100);
+    }).format(value);
   };
 
   const formatPhone = (value: string) => {
