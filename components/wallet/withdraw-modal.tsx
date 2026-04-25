@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Loader2, AlertCircle, CheckCircle, QrCode, Copy, Key, ArrowLeft, Wallet } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, Key, ArrowLeft, Wallet, Mail, Phone, CreditCard, Hash } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { QRScanner } from './qr-scanner';
-import { CopyPasteInput } from './copy-paste-input';
-import { calculateWithdrawalFee, formatCurrency, detectPixKeyType, parsePixQRCode, PIXQRCodeData } from '@/lib/pix-validator';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { calculateWithdrawalFee, formatCurrency, validatePixKey } from '@/lib/pix-validator';
 
 interface PixKey {
   id: string;
@@ -27,7 +27,17 @@ interface WithdrawModalProps {
 }
 
 type Step = 'select' | 'confirm';
-type Tab = 'saved' | 'qr' | 'paste';
+type Tab = 'saved' | 'manual';
+
+const keyTypeIcons: Record<string, React.ReactNode> = {
+  cpf: <CreditCard className="w-4 h-4" />,
+  cnpj: <CreditCard className="w-4 h-4" />,
+  email: <Mail className="w-4 h-4" />,
+  phone: <Phone className="w-4 h-4" />,
+  telefone: <Phone className="w-4 h-4" />,
+  random: <Hash className="w-4 h-4" />,
+  aleatoria: <Hash className="w-4 h-4" />,
+};
 
 export function WithdrawModal({
   balance,
@@ -44,54 +54,9 @@ export function WithdrawModal({
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawPixKey, setWithdrawPixKey] = useState('');
   const [pixKeyType, setPixKeyType] = useState('');
-  const [pixData, setPixData] = useState<PIXQRCodeData | null>(null);
+  const [manualKeyType, setManualKeyType] = useState('cpf');
+  const [manualKeyValue, setManualKeyValue] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
-  const [fetchingQrData, setFetchingQrData] = useState(false);
-
-  // Fetch data from dynamic QR code URL
-  const fetchDynamicQRData = async (url: string, currentPixData: PIXQRCodeData) => {
-    console.log('[v0] Fetching dynamic QR data from URL:', url);
-    setFetchingQrData(true);
-    try {
-      const response = await fetch('/api/pix/qr-data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
-      });
-      
-      const data = await response.json();
-      console.log('[v0] QR data API response:', data);
-      
-      if (response.ok && data.found) {
-        const updatedPixData = { ...currentPixData };
-        
-        // Update amount if found
-        if (data.amount && data.amount > 0) {
-          console.log('[v0] Found amount:', data.amount);
-          updatedPixData.amount = data.amount;
-          setWithdrawAmount(data.amount.toString());
-        }
-        
-        // Update name if found
-        if (data.name) {
-          updatedPixData.name = data.name;
-        }
-        
-        // Update description if found
-        if (data.description) {
-          updatedPixData.description = data.description;
-        }
-        
-        setPixData(updatedPixData);
-      } else {
-        console.log('[v0] QR data not found or error:', data);
-      }
-    } catch (err) {
-      console.error('[v0] Error fetching dynamic QR data:', err);
-    } finally {
-      setFetchingQrData(false);
-    }
-  };
 
   // Calculate fee when amount changes
   const amount = parseFloat(withdrawAmount) || 0;
@@ -102,90 +67,26 @@ export function WithdrawModal({
   const handleSavedKeySelect = (key: PixKey) => {
     setWithdrawPixKey(key.key_value);
     setPixKeyType(key.key_type.toUpperCase());
-    setPixData(null);
     setLocalError(null);
     setStep('confirm');
   };
 
-  // Handle QR scan - parse QR code and go to confirm
-  const handleQRScan = async (qrCodeData: string) => {
-    // Parse the QR code
-    const parsed = parsePixQRCode(qrCodeData);
-    console.log('[v0] QR parsed result:', JSON.stringify(parsed, null, 2));
-    
-    if (parsed.isValid) {
-      setWithdrawPixKey(parsed.pixKey);
-      setPixKeyType(parsed.keyType);
-      setPixData(parsed);
-      
-      // If QR has amount, pre-fill it
-      if (parsed.amount && parsed.amount > 0) {
-        setWithdrawAmount(parsed.amount.toString());
-      }
-      
-      setLocalError(null);
-      setStep('confirm');
-      
-      // Try to fetch amount if not present
-      // Check if pixKey looks like a URL or if it's marked as dynamic
-      const looksLikeUrl = parsed.pixKey.includes('.com') || parsed.pixKey.includes('.br/');
-      const urlToFetch = parsed.dynamicUrl || (looksLikeUrl ? parsed.pixKey : null);
-      
-      if ((!parsed.amount || parsed.amount <= 0) && urlToFetch) {
-        console.log('[v0] Fetching dynamic data from:', urlToFetch);
-        fetchDynamicQRData(urlToFetch, parsed);
-      }
-    } else {
-      // Maybe it's just a PIX key
-      const keyType = detectPixKeyType(qrCodeData);
-      if (keyType && keyType !== 'DESCONHECIDO' && keyType !== 'PIX') {
-        setWithdrawPixKey(qrCodeData);
-        setPixKeyType(keyType);
-        setPixData(null);
-        setLocalError(null);
-        setStep('confirm');
-      } else {
-        setLocalError('QR Code invalido. Tente novamente.');
-      }
+  // Handle manual key submission
+  const handleManualSubmit = () => {
+    if (!manualKeyValue.trim()) {
+      setLocalError('Digite a chave PIX');
+      return;
     }
-  };
 
-  // Handle paste - parse and go to confirm
-  const handlePasteSubmit = async (pastedData: string) => {
-    // Check if it's a QR code string (can start with 0002 followed by various numbers)
-    if (pastedData.startsWith('0002') || pastedData.includes('br.gov.bcb.pix')) {
-      // It's a QR code string
-      const parsed = parsePixQRCode(pastedData);
-      
-      if (parsed.isValid) {
-        setWithdrawPixKey(parsed.pixKey);
-        setPixKeyType(parsed.keyType);
-        setPixData(parsed);
-        
-        if (parsed.amount && parsed.amount > 0) {
-          setWithdrawAmount(parsed.amount.toString());
-        }
-        
-        setLocalError(null);
-        setStep('confirm');
-        
-        // Try to fetch amount if not present
-        const looksLikeUrl = parsed.pixKey.includes('.com') || parsed.pixKey.includes('.br/');
-        const urlToFetch = parsed.dynamicUrl || (looksLikeUrl ? parsed.pixKey : null);
-        
-        if ((!parsed.amount || parsed.amount <= 0) && urlToFetch) {
-          console.log('[v0] Fetching dynamic data from paste:', urlToFetch);
-          fetchDynamicQRData(urlToFetch, parsed);
-        }
-        return;
-      }
+    // Validate the key
+    const validation = validatePixKey(manualKeyValue.trim());
+    if (!validation.isValid) {
+      setLocalError(validation.error || 'Chave PIX invalida');
+      return;
     }
-    
-    // It's just a PIX key
-    const keyType = detectPixKeyType(pastedData);
-    setWithdrawPixKey(pastedData);
-    setPixKeyType(keyType || 'PIX');
-    setPixData(null);
+
+    setWithdrawPixKey(manualKeyValue.trim());
+    setPixKeyType(manualKeyType.toUpperCase());
     setLocalError(null);
     setStep('confirm');
   };
@@ -194,7 +95,6 @@ export function WithdrawModal({
   const handleBack = () => {
     setStep('select');
     setWithdrawAmount('');
-    setPixData(null);
     setLocalError(null);
   };
 
@@ -283,38 +183,26 @@ export function WithdrawModal({
           <div className="flex gap-1 p-1 bg-secondary rounded-xl">
             <button
               onClick={() => setActiveTab('saved')}
-              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'saved'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               <Key className="w-4 h-4" />
-              Chave Salva
+              Chaves Salvas
             </button>
 
             <button
-              onClick={() => setActiveTab('qr')}
-              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'qr'
+              onClick={() => setActiveTab('manual')}
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'manual'
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <QrCode className="w-4 h-4" />
-              QR Code
-            </button>
-
-            <button
-              onClick={() => setActiveTab('paste')}
-              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === 'paste'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Copy className="w-4 h-4" />
-              Copia e Cola
+              <Mail className="w-4 h-4" />
+              Digitar Chave
             </button>
           </div>
 
@@ -325,7 +213,7 @@ export function WithdrawModal({
               <div className="space-y-3">
                 {savedPixKeys.length > 0 ? (
                   <>
-                    <p className="text-sm font-medium text-foreground">Selecione uma chave PIX salva</p>
+                    <p className="text-sm font-medium text-foreground">Selecione uma chave PIX</p>
                     <div className="space-y-2 max-h-[220px] overflow-y-auto">
                       {savedPixKeys.map((key) => (
                         <button
@@ -333,45 +221,112 @@ export function WithdrawModal({
                           onClick={() => handleSavedKeySelect(key)}
                           className="w-full p-3 rounded-xl border-2 border-border bg-secondary hover:border-primary/50 text-left transition-all"
                         >
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <p className="font-medium text-foreground">{key.key_type.toUpperCase()}</p>
-                              <p className="text-sm text-muted-foreground font-mono">{key.key_value}</p>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                              {keyTypeIcons[key.key_type.toLowerCase()] || <Key className="w-4 h-4" />}
                             </div>
-                            {key.is_primary && (
-                              <span className="text-xs font-semibold bg-primary/20 text-primary px-2 py-1 rounded">
-                                Principal
-                              </span>
-                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-foreground">{key.key_type.toUpperCase()}</p>
+                                {key.is_primary && (
+                                  <span className="text-xs font-semibold bg-primary/20 text-primary px-2 py-0.5 rounded">
+                                    Principal
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground font-mono truncate">{key.key_value}</p>
+                            </div>
                           </div>
                         </button>
                       ))}
                     </div>
                   </>
                 ) : (
-                  <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-center">
-                    <p className="text-sm text-yellow-500">Nenhuma chave PIX salva.</p>
-                    <p className="text-xs text-muted-foreground mt-1">Use QR Code ou Copia e Cola.</p>
+                  <div className="p-6 bg-secondary rounded-xl text-center">
+                    <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3">
+                      <Key className="w-6 h-6 text-muted-foreground" />
+                    </div>
+                    <p className="text-sm font-medium text-foreground">Nenhuma chave PIX salva</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Clique em &quot;Digitar Chave&quot; para inserir uma nova
+                    </p>
                   </div>
                 )}
               </div>
             )}
 
-            {/* QR Scanner */}
-            {activeTab === 'qr' && (
-              <QRScanner
-                onScan={handleQRScan}
-                onError={(err) => setLocalError(err)}
-                isLoading={loading}
-              />
-            )}
+            {/* Manual Input */}
+            {activeTab === 'manual' && (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="keyType" className="text-sm font-medium">Tipo de Chave</Label>
+                  <Select value={manualKeyType} onValueChange={setManualKeyType}>
+                    <SelectTrigger className="bg-secondary border-border">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cpf">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="w-4 h-4" />
+                          CPF
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="cnpj">
+                        <div className="flex items-center gap-2">
+                          <CreditCard className="w-4 h-4" />
+                          CNPJ
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="email">
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-4 h-4" />
+                          Email
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="telefone">
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4" />
+                          Telefone
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="aleatoria">
+                        <div className="flex items-center gap-2">
+                          <Hash className="w-4 h-4" />
+                          Chave Aleatoria
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            {/* Copy & Paste */}
-            {activeTab === 'paste' && (
-              <CopyPasteInput
-                onSubmit={handlePasteSubmit}
-                isLoading={loading}
-              />
+                <div className="space-y-2">
+                  <Label htmlFor="keyValue" className="text-sm font-medium">Chave PIX</Label>
+                  <Input
+                    id="keyValue"
+                    placeholder={
+                      manualKeyType === 'cpf' ? '000.000.000-00' :
+                      manualKeyType === 'cnpj' ? '00.000.000/0000-00' :
+                      manualKeyType === 'email' ? 'email@exemplo.com' :
+                      manualKeyType === 'telefone' ? '+55 11 99999-9999' :
+                      'Chave aleatoria'
+                    }
+                    value={manualKeyValue}
+                    onChange={(e) => {
+                      setManualKeyValue(e.target.value);
+                      setLocalError(null);
+                    }}
+                    className="bg-secondary border-border"
+                  />
+                </div>
+
+                <Button
+                  onClick={handleManualSubmit}
+                  disabled={!manualKeyValue.trim()}
+                  className="w-full bg-primary hover:bg-primary/90"
+                >
+                  Continuar
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -400,43 +355,17 @@ export function WithdrawModal({
             
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                <Key className="w-5 h-5 text-green-500" />
+                {keyTypeIcons[pixKeyType.toLowerCase()] || <Key className="w-5 h-5 text-green-500" />}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-mono text-sm text-foreground break-all">{withdrawPixKey}</p>
               </div>
             </div>
-
-            {/* Loading dynamic QR data */}
-            {fetchingQrData && (
-              <div className="mt-3 pt-3 border-t border-border flex items-center gap-2 text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm">Buscando dados do QR Code...</span>
-              </div>
-            )}
-
-            {/* If QR has name or description */}
-            {pixData?.name && !fetchingQrData && (
-              <div className="mt-3 pt-3 border-t border-border">
-                <p className="text-xs text-muted-foreground">Destinatario</p>
-                <p className="font-medium text-foreground">{pixData.name}</p>
-              </div>
-            )}
-            
-            {/* QR Code Amount (if present) */}
-            {pixData?.amount && pixData.amount > 0 && !fetchingQrData && (
-              <div className="mt-3 pt-3 border-t border-border">
-                <p className="text-xs text-muted-foreground">Valor definido pelo QR Code</p>
-                <p className="text-lg font-bold text-primary">{formatCurrency(pixData.amount)}</p>
-              </div>
-            )}
           </div>
 
           {/* Amount Input */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">
-              {pixData?.amount ? 'Valor (definido pelo QR Code)' : 'Valor do saque'}
-            </label>
+            <label className="text-sm font-medium text-foreground">Valor do saque</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
               <Input
@@ -452,7 +381,6 @@ export function WithdrawModal({
                 max={maxWithdrawal}
                 step="0.01"
                 autoFocus
-                readOnly={!!(pixData?.amount && pixData.amount > 0)}
               />
             </div>
             <p className="text-xs text-muted-foreground">
