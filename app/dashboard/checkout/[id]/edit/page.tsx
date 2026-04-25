@@ -46,6 +46,8 @@ interface Checkout {
   description: string | null;
   logo_url: string | null;
   banner_url: string | null;
+  favicon_url: string | null;
+  seo_title: string | null;
   primary_color: string;
   secondary_color: string;
   text_color: string;
@@ -525,6 +527,47 @@ export default function EditCheckoutPage({ params }: { params: Promise<{ id: str
                   value={checkout.banner_url || ""}
                   onChange={(e) => setCheckout({ ...checkout, banner_url: e.target.value })}
                 />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Aba do Navegador (SEO)</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Titulo da Aba</Label>
+                <Input
+                  placeholder="Ex: Oferta Especial - Meu Produto"
+                  value={checkout.seo_title || ""}
+                  onChange={(e) => setCheckout({ ...checkout, seo_title: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Este texto aparece na aba do navegador. Se vazio, usara o nome do checkout.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label>Favicon (Icone da Aba)</Label>
+                <Input
+                  placeholder="https://exemplo.com/favicon.png"
+                  value={checkout.favicon_url || ""}
+                  onChange={(e) => setCheckout({ ...checkout, favicon_url: e.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  URL de uma imagem para o icone da aba. Recomendado: 32x32 ou 64x64 pixels.
+                </p>
+                {checkout.favicon_url && (
+                  <div className="flex items-center gap-3 p-3 bg-secondary rounded-lg">
+                    <img
+                      src={checkout.favicon_url}
+                      alt="Favicon preview"
+                      className="w-8 h-8 rounded"
+                      onError={(e) => (e.currentTarget.style.display = "none")}
+                    />
+                    <span className="text-sm text-muted-foreground">Pre-visualizacao do favicon</span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

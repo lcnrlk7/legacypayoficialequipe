@@ -61,6 +61,8 @@ export async function PUT(
         description = ${body.description},
         logo_url = ${body.logo_url},
         banner_url = ${body.banner_url},
+        favicon_url = ${body.favicon_url},
+        seo_title = ${body.seo_title},
         primary_color = COALESCE(${body.primary_color}, primary_color),
         secondary_color = COALESCE(${body.secondary_color}, secondary_color),
         text_color = COALESCE(${body.text_color}, text_color),
