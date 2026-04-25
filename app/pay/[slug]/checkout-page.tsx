@@ -209,7 +209,14 @@ export function CheckoutPage({ checkout }: { checkout: Checkout }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           checkout_id: checkout.id,
-          items: [{ product_id: selectedProduct.id, quantity, unit_price: productPrice }],
+          seller_id: checkout.user_id,
+          items: [{ 
+            product_id: selectedProduct.id, 
+            product_name: selectedProduct.name,
+            product_price: productPrice,
+            quantity, 
+            unit_price: productPrice 
+          }],
           customer: formData,
           coupon_code: couponApplied?.code,
           subtotal,
