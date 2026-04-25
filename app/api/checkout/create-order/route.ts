@@ -197,6 +197,27 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Registrar no log do admin
+    await sql`
+      INSERT INTO admin_logs (type, action, title, description, user_id, amount, metadata)
+      VALUES (
+        'checkout_order',
+        'created',
+        ${'Nova venda: ' + items.map((i: any) => i.product_name).join(', ')},
+        ${'Cliente: ' + customerName + ' - ' + customerEmail},
+        ${seller_id},
+        ${total / 100},
+        ${JSON.stringify({
+          order_id: orderId,
+          checkout_id,
+          customer_name: customerName,
+          customer_email: customerEmail,
+          items: items.map((i: any) => ({ name: i.product_name, price: i.product_price })),
+          pix_generated: pixResult.success
+        })}
+      )
+    `;
+
     return NextResponse.json({ 
       success: true, 
       order_id: orderId,
