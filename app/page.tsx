@@ -1,20 +1,24 @@
 import { Header } from "@/components/landing/header";
-import { Hero } from "@/components/landing/hero";
-import { Features } from "@/components/landing/features";
-import { Taxas } from "@/components/landing/taxas";
+import { HeroNew } from "@/components/landing/hero-new";
+import { FeaturesNew } from "@/components/landing/features-new";
+import { BenefitsNew } from "@/components/landing/benefits-new";
+import { PricingNew } from "@/components/landing/pricing-new";
+import { CTANew } from "@/components/landing/cta-new";
+import { AnimatedParticles } from "@/components/landing/animated-particles";
 import { FAQ } from "@/components/landing/faq";
-import { CTA } from "@/components/landing/cta";
 import { Footer } from "@/components/landing/footer";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background relative overflow-hidden">
+      <AnimatedParticles />
       <Header />
-      <Hero />
-      <Features />
-      <Taxas />
+      <HeroNew />
+      <FeaturesNew />
+      <BenefitsNew />
+      <PricingNew />
+      <CTANew />
       <FAQ />
-      <CTA />
       <Footer />
     </main>
   );
