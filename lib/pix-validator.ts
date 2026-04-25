@@ -16,6 +16,8 @@ export interface PIXQRCodeData {
   description?: string;
   txId?: string;
   isValid: boolean;
+  isDynamic?: boolean;
+  dynamicUrl?: string;
 }
 
 /**
@@ -263,21 +265,29 @@ export function parsePixQRCode(qrCode: string): PIXQRCodeData {
     // Try to find PIX data in fields 26, 27, 28, 29 (different acquirers use different fields)
     let pixKey = '';
     let description = '';
+    let isDynamic = false;
+    let dynamicUrl = '';
     
     for (const fieldId of ['26', '27', '28', '29']) {
       const pixData = emv.get(fieldId);
       if (pixData && pixData.includes('br.gov.bcb.pix')) {
         const pixFields = parseAllEMVFields(pixData);
         
-        // Field 01 in PIX merchant data = PIX Key
+        // Field 01 in PIX merchant data = PIX Key (static QR)
         // Field 02 = Description
-        // Field 25 = URL (for dynamic QR)
+        // Field 25 = URL (dynamic QR)
         pixKey = pixFields.get('01') || '';
         description = pixFields.get('02') || '';
         
-        // If no key in 01, try URL in 25
-        if (!pixKey) {
-          pixKey = pixFields.get('25') || '';
+        // Check for dynamic QR (field 25 contains URL)
+        const urlField = pixFields.get('25');
+        if (urlField && urlField.includes('.')) {
+          isDynamic = true;
+          dynamicUrl = urlField;
+          // For dynamic QR, the URL IS the key
+          if (!pixKey) {
+            pixKey = urlField;
+          }
         }
         
         if (pixKey) break;
@@ -342,6 +352,8 @@ export function parsePixQRCode(qrCode: string): PIXQRCodeData {
       description: description || undefined,
       txId: txId || undefined,
       isValid: !!pixKey,
+      isDynamic,
+      dynamicUrl: dynamicUrl || undefined,
     };
   } catch (error) {
     return defaultResult;

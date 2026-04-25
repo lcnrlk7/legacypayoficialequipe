@@ -46,6 +46,48 @@ export function WithdrawModal({
   const [pixKeyType, setPixKeyType] = useState('');
   const [pixData, setPixData] = useState<PIXQRCodeData | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [fetchingQrData, setFetchingQrData] = useState(false);
+
+  // Fetch data from dynamic QR code URL
+  const fetchDynamicQRData = async (url: string, currentPixData: PIXQRCodeData) => {
+    setFetchingQrData(true);
+    try {
+      const response = await fetch('/api/pix/qr-data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.found) {
+          const updatedPixData = { ...currentPixData };
+          
+          // Update amount if found
+          if (data.amount && data.amount > 0) {
+            updatedPixData.amount = data.amount;
+            setWithdrawAmount(data.amount.toString());
+          }
+          
+          // Update name if found
+          if (data.name) {
+            updatedPixData.name = data.name;
+          }
+          
+          // Update description if found
+          if (data.description) {
+            updatedPixData.description = data.description;
+          }
+          
+          setPixData(updatedPixData);
+        }
+      }
+    } catch (err) {
+      console.error('[v0] Error fetching dynamic QR data:', err);
+    } finally {
+      setFetchingQrData(false);
+    }
+  };
 
   // Calculate fee when amount changes
   const amount = parseFloat(withdrawAmount) || 0;
@@ -62,7 +104,7 @@ export function WithdrawModal({
   };
 
   // Handle QR scan - parse QR code and go to confirm
-  const handleQRScan = (qrCodeData: string) => {
+  const handleQRScan = async (qrCodeData: string) => {
     // Parse the QR code
     const parsed = parsePixQRCode(qrCodeData);
     
@@ -78,6 +120,11 @@ export function WithdrawModal({
       
       setLocalError(null);
       setStep('confirm');
+      
+      // If it's a dynamic QR without amount, try to fetch from URL
+      if (parsed.isDynamic && parsed.dynamicUrl && (!parsed.amount || parsed.amount <= 0)) {
+        fetchDynamicQRData(parsed.dynamicUrl, parsed);
+      }
     } else {
       // Maybe it's just a PIX key
       const keyType = detectPixKeyType(qrCodeData);
@@ -94,7 +141,7 @@ export function WithdrawModal({
   };
 
   // Handle paste - parse and go to confirm
-  const handlePasteSubmit = (pastedData: string) => {
+  const handlePasteSubmit = async (pastedData: string) => {
     // Check if it's a QR code string (can start with 0002 followed by various numbers)
     if (pastedData.startsWith('0002') || pastedData.includes('br.gov.bcb.pix')) {
       // It's a QR code string
@@ -111,6 +158,11 @@ export function WithdrawModal({
         
         setLocalError(null);
         setStep('confirm');
+        
+        // If it's a dynamic QR without amount, try to fetch from URL
+        if (parsed.isDynamic && parsed.dynamicUrl && (!parsed.amount || parsed.amount <= 0)) {
+          fetchDynamicQRData(parsed.dynamicUrl, parsed);
+        }
         return;
       }
     }
@@ -341,8 +393,16 @@ export function WithdrawModal({
               </div>
             </div>
 
+            {/* Loading dynamic QR data */}
+            {fetchingQrData && (
+              <div className="mt-3 pt-3 border-t border-border flex items-center gap-2 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="text-sm">Buscando dados do QR Code...</span>
+              </div>
+            )}
+
             {/* If QR has name or description */}
-            {pixData?.name && (
+            {pixData?.name && !fetchingQrData && (
               <div className="mt-3 pt-3 border-t border-border">
                 <p className="text-xs text-muted-foreground">Destinatario</p>
                 <p className="font-medium text-foreground">{pixData.name}</p>
@@ -350,7 +410,7 @@ export function WithdrawModal({
             )}
             
             {/* QR Code Amount (if present) */}
-            {pixData?.amount && pixData.amount > 0 && (
+            {pixData?.amount && pixData.amount > 0 && !fetchingQrData && (
               <div className="mt-3 pt-3 border-t border-border">
                 <p className="text-xs text-muted-foreground">Valor definido pelo QR Code</p>
                 <p className="text-lg font-bold text-primary">{formatCurrency(pixData.amount)}</p>
