@@ -37,7 +37,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="pt-BR" className="bg-background">
+    <html lang="pt-BR" className="bg-background" data-scroll-behavior="smooth">
       <head>
         <link rel="icon" type="image/png" href="/logo-lp.png" />
         <link rel="apple-touch-icon" href="/logo-lp.png" />
