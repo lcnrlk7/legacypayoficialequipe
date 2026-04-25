@@ -29,7 +29,8 @@ export function validatePixKey(input: string): PIXKeyValidation {
   const cleaned = input.trim();
 
   // Check if it's a complete PIX QR code (EMV format)
-  if (cleaned.startsWith('000201') || cleaned.includes('br.gov.bcb.pix')) {
+  // QR codes can start with 0002 followed by different numbers (01, 26, etc)
+  if (cleaned.startsWith('0002') || cleaned.includes('br.gov.bcb.pix')) {
     // It's a valid QR code string - return as valid
     // The withdraw modal will parse it with parsePixQRCode
     return {
@@ -198,23 +199,32 @@ function validateRandomKey(key: string): PIXKeyValidation {
 }
 
 /**
- * Parses EMV TLV format used in PIX QR Codes
+ * Parses EMV TLV format used in PIX QR Codes - more robust version
  */
-function parseEMV(data: string): Map<string, string> {
+function parseEMVField(data: string, startPos: number): { id: string; value: string; nextPos: number } | null {
+  if (startPos + 4 > data.length) return null;
+  
+  const id = data.substring(startPos, startPos + 2);
+  const lengthStr = data.substring(startPos + 2, startPos + 4);
+  const length = parseInt(lengthStr, 10);
+  
+  if (isNaN(length) || length < 0 || startPos + 4 + length > data.length) {
+    return null;
+  }
+  
+  const value = data.substring(startPos + 4, startPos + 4 + length);
+  return { id, value, nextPos: startPos + 4 + length };
+}
+
+function parseAllEMVFields(data: string): Map<string, string> {
   const result = new Map<string, string>();
   let position = 0;
   
-  while (position < data.length - 4) {
-    const id = data.substring(position, position + 2);
-    const length = parseInt(data.substring(position + 2, position + 4), 10);
-    
-    if (isNaN(length) || length <= 0 || position + 4 + length > data.length) {
-      break;
-    }
-    
-    const value = data.substring(position + 4, position + 4 + length);
-    result.set(id, value);
-    position += 4 + length;
+  while (position < data.length) {
+    const field = parseEMVField(data, position);
+    if (!field) break;
+    result.set(field.id, field.value);
+    position = field.nextPos;
   }
   
   return result;
@@ -222,6 +232,7 @@ function parseEMV(data: string): Map<string, string> {
 
 /**
  * Parses a complete PIX QR Code and extracts all data
+ * Supports multiple QR code formats and variations
  */
 export function parsePixQRCode(qrCode: string): PIXQRCodeData {
   const defaultResult: PIXQRCodeData = {
@@ -233,8 +244,8 @@ export function parsePixQRCode(qrCode: string): PIXQRCodeData {
   try {
     const cleaned = qrCode.trim();
     
-    // Check if it's a valid PIX QR Code (starts with 00020126)
-    if (!cleaned.startsWith('000201')) {
+    // Check if it looks like a PIX QR Code
+    if (!cleaned.startsWith('0002') && !cleaned.includes('br.gov.bcb.pix')) {
       // Maybe it's just a PIX key
       const keyType = detectPixKeyType(cleaned);
       if (keyType !== 'PIX') {
@@ -247,51 +258,87 @@ export function parsePixQRCode(qrCode: string): PIXQRCodeData {
       return defaultResult;
     }
     
-    const emv = parseEMV(cleaned);
+    const emv = parseAllEMVFields(cleaned);
     
-    // Field 26 or 27 contains PIX data
-    const pixData = emv.get('26') || emv.get('27') || '';
-    const pixFields = parseEMV(pixData);
+    // Try to find PIX data in fields 26, 27, 28, 29 (different acquirers use different fields)
+    let pixKey = '';
+    let description = '';
     
-    // Field 00 in PIX data = GUI (br.gov.bcb.pix)
-    // Field 01 = PIX Key
-    // Field 02 = Description (optional)
-    // Field 25 = URL for dynamic QR (optional)
-    
-    let pixKey = pixFields.get('01') || '';
-    const description = pixFields.get('02') || '';
-    
-    // If no key in field 01, check if it's a URL-based dynamic QR
-    if (!pixKey && pixFields.get('25')) {
-      pixKey = pixFields.get('25') || '';
+    for (const fieldId of ['26', '27', '28', '29']) {
+      const pixData = emv.get(fieldId);
+      if (pixData && pixData.includes('br.gov.bcb.pix')) {
+        const pixFields = parseAllEMVFields(pixData);
+        
+        // Field 01 in PIX merchant data = PIX Key
+        // Field 02 = Description
+        // Field 25 = URL (for dynamic QR)
+        pixKey = pixFields.get('01') || '';
+        description = pixFields.get('02') || '';
+        
+        // If no key in 01, try URL in 25
+        if (!pixKey) {
+          pixKey = pixFields.get('25') || '';
+        }
+        
+        if (pixKey) break;
+      }
     }
     
-    // Field 52 = Merchant Category Code
-    // Field 53 = Currency (986 = BRL)
-    // Field 54 = Amount
-    const amountStr = emv.get('54') || '';
-    const amount = amountStr ? parseFloat(amountStr) : undefined;
+    // If still no key, try regex extraction as fallback
+    if (!pixKey) {
+      // Try to extract UUID (random key)
+      const uuidMatch = cleaned.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+      if (uuidMatch) {
+        pixKey = uuidMatch[1];
+      }
+      
+      // Try to extract email
+      if (!pixKey) {
+        const emailMatch = cleaned.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+        if (emailMatch) {
+          pixKey = emailMatch[1];
+        }
+      }
+      
+      // Try to extract CPF (11 digits)
+      if (!pixKey) {
+        const cpfMatch = cleaned.match(/\d{11}/);
+        if (cpfMatch) {
+          pixKey = cpfMatch[0];
+        }
+      }
+    }
     
-    // Field 59 = Merchant Name
+    // Extract amount - field 54
+    const amountStr = emv.get('54') || '';
+    let amount: number | undefined;
+    if (amountStr) {
+      const parsedAmount = parseFloat(amountStr);
+      if (!isNaN(parsedAmount) && parsedAmount > 0) {
+        amount = parsedAmount;
+      }
+    }
+    
+    // Extract name - field 59
     const name = emv.get('59') || '';
     
-    // Field 60 = Merchant City
+    // Extract city - field 60
     const city = emv.get('60') || '';
     
-    // Field 62 = Additional Data
+    // Extract txId from field 62
     const additionalData = emv.get('62') || '';
-    const additionalFields = parseEMV(additionalData);
+    const additionalFields = parseAllEMVFields(additionalData);
     const txId = additionalFields.get('05') || '';
     
     // Detect key type
-    const keyType = detectPixKeyType(pixKey);
+    const keyType = pixKey ? detectPixKeyType(pixKey) : 'DESCONHECIDO';
     
     return {
       pixKey,
       keyType,
       name: name || undefined,
       city: city || undefined,
-      amount: amount || undefined,
+      amount,
       description: description || undefined,
       txId: txId || undefined,
       isValid: !!pixKey,

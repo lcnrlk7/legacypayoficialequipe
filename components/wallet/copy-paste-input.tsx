@@ -34,8 +34,8 @@ export function CopyPasteInput({ onSubmit, isLoading }: CopyPasteInputProps) {
 
     const trimmed = value.trim();
     
-    // Check if it's a QR code first
-    if (trimmed.startsWith('000201') || trimmed.includes('br.gov.bcb.pix')) {
+    // Check if it's a QR code first (can start with 0002 followed by various numbers)
+    if (trimmed.startsWith('0002') || trimmed.includes('br.gov.bcb.pix')) {
       const qrData = parsePixQRCode(trimmed);
       setValidation({
         isValid: true,
@@ -160,7 +160,7 @@ export function CopyPasteInput({ onSubmit, isLoading }: CopyPasteInputProps) {
           <li>Email: exemplo@email.com</li>
           <li>Telefone: (11) 98765-4321</li>
           <li>Chave aleatória: UUID format</li>
-          <li>Código PIX completo: Comece com 00020126</li>
+          <li>Codigo PIX completo (QR Code)</li>
         </ul>
       </div>
 

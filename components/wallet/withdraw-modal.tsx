@@ -95,8 +95,8 @@ export function WithdrawModal({
 
   // Handle paste - parse and go to confirm
   const handlePasteSubmit = (pastedData: string) => {
-    // Check if it's a QR code string or just a key
-    if (pastedData.startsWith('000201')) {
+    // Check if it's a QR code string (can start with 0002 followed by various numbers)
+    if (pastedData.startsWith('0002') || pastedData.includes('br.gov.bcb.pix')) {
       // It's a QR code string
       const parsed = parsePixQRCode(pastedData);
       
