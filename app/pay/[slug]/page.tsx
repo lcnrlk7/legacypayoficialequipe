@@ -63,7 +63,7 @@ export async function generateMetadata({ params }: PageProps) {
 
   const data = checkout as any;
   return {
-    title: data.name || "Checkout",
+    title: `LegacyPay - ${data.name || "Checkout"}`,
     description: data.description || `Checkout - ${data.name}`,
   };
 }
