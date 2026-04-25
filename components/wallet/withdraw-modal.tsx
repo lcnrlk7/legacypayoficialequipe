@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Loader2, AlertCircle, CheckCircle, QrCode, Copy, Key, ArrowLeft, Wallet, User, MapPin, FileText } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, QrCode, Copy, Key, ArrowLeft, Wallet, User, MapPin, FileText, Building2, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { QRScanner } from './qr-scanner';
@@ -13,6 +13,17 @@ interface PixKey {
   key_type: string;
   key_value: string;
   is_primary: boolean;
+}
+
+interface BeneficiaryData {
+  found: boolean;
+  name?: string;
+  document?: string;
+  documentType?: string;
+  keyType?: string;
+  key?: string;
+  bank?: string;
+  bankCode?: string;
 }
 
 interface WithdrawModalProps {
@@ -45,7 +56,34 @@ export function WithdrawModal({
   const [withdrawPixKey, setWithdrawPixKey] = useState('');
   const [pixKeyType, setPixKeyType] = useState('');
   const [pixData, setPixData] = useState<PIXQRCodeData | null>(null);
+  const [beneficiary, setBeneficiary] = useState<BeneficiaryData | null>(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  // Lookup beneficiary data from PIX key
+  const lookupBeneficiary = async (pixKey: string, keyType: string) => {
+    setLookupLoading(true);
+    try {
+      const token = localStorage.getItem('auth-token');
+      const response = await fetch('/api/pix/lookup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ pixKey, keyType }),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setBeneficiary(data);
+      }
+    } catch (err) {
+      console.error('[v0] Lookup error:', err);
+    } finally {
+      setLookupLoading(false);
+    }
+  };
 
   // Calculate fee when amount changes
   const amount = parseFloat(withdrawAmount) || 0;
@@ -53,26 +91,28 @@ export function WithdrawModal({
   const feeCalculation = calculateWithdrawalFee(amount, feePercentage);
 
   // Handle saved key selection - go directly to confirm
-  const handleSavedKeySelect = (key: PixKey) => {
+  const handleSavedKeySelect = async (key: PixKey) => {
     setWithdrawPixKey(key.key_value);
     setPixKeyType(key.key_type.toUpperCase());
     setPixData(null);
+    setBeneficiary(null);
     setLocalError(null);
     setStep('confirm');
+    
+    // Lookup beneficiary data
+    await lookupBeneficiary(key.key_value, key.key_type.toUpperCase());
   };
 
   // Handle QR scan - parse QR code and go to confirm
-  const handleQRScan = (qrCodeData: string) => {
-    console.log('[v0] QR scanned:', qrCodeData);
-    
+  const handleQRScan = async (qrCodeData: string) => {
     // Parse the QR code
     const parsed = parsePixQRCode(qrCodeData);
-    console.log('[v0] Parsed QR:', parsed);
     
     if (parsed.isValid) {
       setWithdrawPixKey(parsed.pixKey);
       setPixKeyType(parsed.keyType);
       setPixData(parsed);
+      setBeneficiary(null);
       
       // If QR has amount, pre-fill it
       if (parsed.amount && parsed.amount > 0) {
@@ -81,6 +121,11 @@ export function WithdrawModal({
       
       setLocalError(null);
       setStep('confirm');
+      
+      // If QR doesn't have name, lookup beneficiary
+      if (!parsed.name) {
+        await lookupBeneficiary(parsed.pixKey, parsed.keyType);
+      }
     } else {
       // Maybe it's just a PIX key
       const keyType = detectPixKeyType(qrCodeData);
@@ -88,8 +133,12 @@ export function WithdrawModal({
         setWithdrawPixKey(qrCodeData);
         setPixKeyType(keyType);
         setPixData(null);
+        setBeneficiary(null);
         setLocalError(null);
         setStep('confirm');
+        
+        // Lookup beneficiary
+        await lookupBeneficiary(qrCodeData, keyType);
       } else {
         setLocalError('QR Code invalido. Tente novamente.');
       }
@@ -97,19 +146,17 @@ export function WithdrawModal({
   };
 
   // Handle paste - parse and go to confirm
-  const handlePasteSubmit = (pastedData: string) => {
-    console.log('[v0] PIX data pasted:', pastedData);
-    
+  const handlePasteSubmit = async (pastedData: string) => {
     // Check if it's a QR code string or just a key
     if (pastedData.startsWith('000201')) {
       // It's a QR code string
       const parsed = parsePixQRCode(pastedData);
-      console.log('[v0] Parsed pasted QR:', parsed);
       
       if (parsed.isValid) {
         setWithdrawPixKey(parsed.pixKey);
         setPixKeyType(parsed.keyType);
         setPixData(parsed);
+        setBeneficiary(null);
         
         if (parsed.amount && parsed.amount > 0) {
           setWithdrawAmount(parsed.amount.toString());
@@ -117,6 +164,10 @@ export function WithdrawModal({
         
         setLocalError(null);
         setStep('confirm');
+        
+        if (!parsed.name) {
+          await lookupBeneficiary(parsed.pixKey, parsed.keyType);
+        }
         return;
       }
     }
@@ -130,8 +181,12 @@ export function WithdrawModal({
       keyType: keyType || 'PIX',
       isValid: true,
     });
+    setBeneficiary(null);
     setLocalError(null);
     setStep('confirm');
+    
+    // Lookup beneficiary
+    await lookupBeneficiary(pastedData, keyType || 'PIX');
   };
 
   // Go back to selection
@@ -139,6 +194,7 @@ export function WithdrawModal({
     setStep('select');
     setWithdrawAmount('');
     setPixData(null);
+    setBeneficiary(null);
     setLocalError(null);
   };
 
@@ -331,20 +387,53 @@ export function WithdrawModal({
           <div className="p-4 bg-secondary rounded-xl border border-border space-y-3">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <span className="text-sm font-medium text-foreground">Dados do Destinatario</span>
-              <span className="text-xs font-semibold bg-primary/20 text-primary px-2 py-0.5 rounded">
-                {pixKeyType}
-              </span>
+              {lookupLoading ? (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Consultando...
+                </span>
+              ) : (
+                <span className="text-xs font-semibold bg-primary/20 text-primary px-2 py-0.5 rounded">
+                  {pixKeyType}
+                </span>
+              )}
             </div>
             
             {/* Beneficiary Name */}
-            {pixData?.name && (
+            {(pixData?.name || beneficiary?.name) && (
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <User className="w-4 h-4 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Nome</p>
-                  <p className="font-medium text-foreground">{pixData.name}</p>
+                  <p className="text-xs text-muted-foreground">Nome do Destinatario</p>
+                  <p className="font-medium text-foreground">{pixData?.name || beneficiary?.name}</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Document */}
+            {beneficiary?.document && (
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-purple-500/10 flex items-center justify-center">
+                  <CreditCard className="w-4 h-4 text-purple-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{beneficiary.documentType || 'Documento'}</p>
+                  <p className="font-medium text-foreground">{beneficiary.document}</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Bank */}
+            {beneficiary?.bank && (
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                  <Building2 className="w-4 h-4 text-blue-500" />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Instituicao</p>
+                  <p className="font-medium text-foreground">{beneficiary.bank}</p>
                 </div>
               </div>
             )}
@@ -352,8 +441,8 @@ export function WithdrawModal({
             {/* City */}
             {pixData?.city && (
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
-                  <MapPin className="w-4 h-4 text-blue-500" />
+                <div className="w-8 h-8 rounded-full bg-cyan-500/10 flex items-center justify-center">
+                  <MapPin className="w-4 h-4 text-cyan-500" />
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Cidade</p>
