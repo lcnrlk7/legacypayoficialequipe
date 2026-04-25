@@ -190,20 +190,24 @@ const handleDeposit = async () => {
     }
   };
 
-  const handleWithdraw = async () => {
-    const amount = parseFloat(withdrawAmount);
-    if (!withdrawAmount || amount <= 0 || !withdrawPixKey) {
+  const handleWithdraw = async (amount: number, pixKey: string) => {
+    if (!amount || amount <= 0 || !pixKey) {
       setError("Preencha todos os campos");
       return;
     }
 
     if (amount < systemSettings.minWithdrawal) {
-      setError(`Valor mínimo: R$ ${systemSettings.minWithdrawal.toFixed(2).replace('.', ',')}`);
+      setError(`Valor minimo: R$ ${systemSettings.minWithdrawal.toFixed(2).replace('.', ',')}`);
       return;
     }
 
-    if (amount > balance) {
-      setError("Saldo insuficiente");
+    // Calculate total with fee
+    const feePercentage = systemSettings.withdrawalFeePercentage || 1.5;
+    const fee = (amount * feePercentage) / 100;
+    const totalDebit = amount + fee;
+
+    if (totalDebit > balance) {
+      setError("Saldo insuficiente (incluindo taxa)");
       return;
     }
 
@@ -211,13 +215,17 @@ const handleDeposit = async () => {
     setError(null);
 
     try {
-      const response = await fetch("/api/withdrawals/create", {
+      const token = localStorage.getItem("auth-token");
+      const response = await fetch("/api/user/withdrawals", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
         body: JSON.stringify({
           amount: amount,
-          pixKey: withdrawPixKey,
-          description: "Saque via PIX - LegacyPay",
+          pixKey: pixKey,
+          pixKeyType: "PIX",
         }),
       });
 
@@ -232,17 +240,10 @@ const handleDeposit = async () => {
       setWithdrawPixKey("");
       loadBalance();
 
-      // Mostrar mensagem apropriada baseado se precisa aprovação
-      const message = data.message || (data.withdrawal?.requiresApproval 
-        ? "Saque acima de R$ 500,00 enviado para aprovação do administrador."
-        : "Saque enviado para processamento!");
-      
-      alert(message);
-
       setTimeout(() => {
         setWithdrawSuccess(false);
         setWithdrawDialogOpen(false);
-      }, 2000);
+      }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao processar saque");
     } finally {

@@ -21,6 +21,11 @@ import {
   Code,
   Settings,
   ShieldCheck,
+  ShoppingCart,
+  Package,
+  Truck,
+  Tag,
+  ChevronDown,
   type LucideIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -55,15 +60,25 @@ const menuItems: { href: string; icon: LucideIcon; label: string }[] = [
   { href: "/dashboard/pix-keys", icon: ArrowLeftRight, label: "Chaves PIX" },
   { href: "/dashboard/affiliates", icon: Users, label: "Afiliados" },
   { href: "/dashboard/fees", icon: Percent, label: "Taxas" },
-  { href: "/dashboard/kyc", icon: User, label: "Verificação KYC" },
   { href: "/dashboard/integration", icon: Code, label: "Integração API" },
   { href: "/dashboard/settings", icon: Settings, label: "Configurações" },
 ]
 
+const checkoutMenuItems = [
+  { href: "/dashboard/checkout", icon: ShoppingCart, label: "Meus Checkouts" },
+  { href: "/dashboard/checkout/orders", icon: Truck, label: "Entregas" },
+  { href: "/dashboard/checkout/products", icon: Package, label: "Produtos" },
+  { href: "/dashboard/checkout/coupons", icon: Tag, label: "Cupons" },
+]
+
 export function DashboardSidebar({ user, profile }: SidebarProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const [checkoutOpen, setCheckoutOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
+  
+  // Auto-expand checkout menu if on checkout page
+  const isCheckoutPage = pathname.startsWith("/dashboard/checkout")
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" })
@@ -91,15 +106,7 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1">
-        {menuItems
-          .filter((item) => {
-            // Esconder link de KYC se já aprovado
-            if (item.href === "/dashboard/kyc" && profile?.kyc_status === "approved") {
-              return false
-            }
-            return true
-          })
-          .map((item) => {
+        {menuItems.map((item) => {
           const isActive = pathname === item.href
           return (
             <Link
@@ -123,6 +130,70 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
             </Link>
           )
         })}
+
+        {/* Checkout Menu with Submenu */}
+        <div className="space-y-1">
+          <button
+            onClick={() => setCheckoutOpen(!checkoutOpen)}
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all ${
+              isCheckoutPage
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <ShoppingCart className="w-5 h-5 opacity-80" />
+              <span className="font-medium">Checkout</span>
+            </div>
+            <ChevronDown className={`w-4 h-4 transition-transform ${checkoutOpen || isCheckoutPage ? "rotate-180" : ""}`} />
+          </button>
+          
+          <AnimatePresence>
+            {(checkoutOpen || isCheckoutPage) && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden pl-4"
+              >
+                {checkoutMenuItems.map((item) => {
+                  const isActive = pathname === item.href
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setIsMobileOpen(false)}
+                      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all ${
+                        isActive
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4 opacity-80" />
+                      <span className="text-sm font-medium">{item.label}</span>
+                    </Link>
+                  )
+                })}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* KYC Link */}
+        {profile?.kyc_status !== "approved" && (
+          <Link
+            href="/dashboard/kyc"
+            onClick={() => setIsMobileOpen(false)}
+            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+              pathname === "/dashboard/kyc"
+                ? "bg-primary/10 text-primary"
+                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+            }`}
+          >
+            <User className="w-5 h-5 opacity-80" />
+            <span className="font-medium">Verificacao KYC</span>
+          </Link>
+        )}
 
         {profile?.is_admin && (
           <>

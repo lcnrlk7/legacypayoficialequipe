@@ -18,6 +18,8 @@ import {
   XCircle,
   Loader2,
   Eye,
+  ExternalLink,
+  MousePointer,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +30,12 @@ interface EmbedField {
   name: string;
   value: string;
   inline: boolean;
+}
+
+interface DiscordButton {
+  label: string;
+  url: string;
+  emoji?: string;
 }
 
 interface DiscordEmbed {
@@ -77,9 +85,26 @@ export default function WebhooksPage() {
   const [webhookUrl, setWebhookUrl] = useState("");
   const [embed, setEmbed] = useState<DiscordEmbed>(defaultEmbed);
   const [content, setContent] = useState("");
+  const [buttons, setButtons] = useState<DiscordButton[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showPreview, setShowPreview] = useState(true);
+
+  const addButton = () => {
+    if (buttons.length < 2) {
+      setButtons([...buttons, { label: "", url: "", emoji: "" }]);
+    }
+  };
+
+  const removeButton = (index: number) => {
+    setButtons(buttons.filter((_, i) => i !== index));
+  };
+
+  const updateButton = (index: number, key: keyof DiscordButton, value: string) => {
+    const newButtons = [...buttons];
+    newButtons[index] = { ...newButtons[index], [key]: value };
+    setButtons(newButtons);
+  };
 
   const addField = () => {
     setEmbed({
@@ -152,6 +177,23 @@ export default function WebhooksPage() {
       const payload: Record<string, unknown> = {};
       if (content) payload.content = content;
       if (Object.keys(embedData).length > 0) payload.embeds = [embedData];
+      
+      // Add buttons as components
+      const validButtons = buttons.filter((b) => b.label && b.url);
+      if (validButtons.length > 0) {
+        payload.components = [
+          {
+            type: 1, // Action Row
+            components: validButtons.map((b) => ({
+              type: 2, // Button
+              style: 5, // Link button
+              label: b.label,
+              url: b.url,
+              emoji: b.emoji ? { name: b.emoji } : undefined,
+            })),
+          },
+        ];
+      }
 
       const response = await fetch(webhookUrl, {
         method: "POST",
@@ -175,6 +217,7 @@ export default function WebhooksPage() {
   const resetEmbed = () => {
     setEmbed(defaultEmbed);
     setContent("");
+    setButtons([]);
     setResult(null);
   };
 
@@ -432,6 +475,68 @@ export default function WebhooksPage() {
               ))}
             </div>
 
+            {/* Buttons */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-muted-foreground text-sm flex items-center gap-2">
+                  <MousePointer className="w-4 h-4" />
+                  Botoes (max. 2)
+                </Label>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={addButton} 
+                  disabled={buttons.length >= 2}
+                  className="gap-1"
+                >
+                  <Plus className="w-3 h-3" />
+                  Adicionar
+                </Button>
+              </div>
+              {buttons.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Adicione botoes com links para sua mensagem
+                </p>
+              )}
+              {buttons.map((button, index) => (
+                <div
+                  key={index}
+                  className="flex items-start gap-2 p-3 bg-secondary rounded-lg"
+                >
+                  <div className="flex-1 space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <Input
+                        placeholder="Texto do botao"
+                        value={button.label}
+                        onChange={(e) => updateButton(index, "label", e.target.value)}
+                        className="bg-card border-border"
+                      />
+                      <Input
+                        placeholder="Emoji (opcional)"
+                        value={button.emoji || ""}
+                        onChange={(e) => updateButton(index, "emoji", e.target.value)}
+                        className="bg-card border-border"
+                      />
+                    </div>
+                    <Input
+                      placeholder="URL do link (https://...)"
+                      value={button.url}
+                      onChange={(e) => updateButton(index, "url", e.target.value)}
+                      className="bg-card border-border"
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeButton(index)}
+                    className="text-destructive hover:bg-destructive/10"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
             {/* Footer */}
             <div className="space-y-2">
               <Label className="text-muted-foreground text-sm flex items-center gap-2">
@@ -630,7 +735,28 @@ export default function WebhooksPage() {
                 </div>
               )}
 
-              {!content && !embed.title && !embed.description && (
+              {/* Buttons Preview */}
+              {buttons.filter((b) => b.label && b.url).length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {buttons
+                    .filter((b) => b.label && b.url)
+                    .map((button, index) => (
+                      <a
+                        key={index}
+                        href={button.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 bg-[#4E5058] hover:bg-[#6D6F78] text-white text-sm font-medium rounded transition-colors"
+                      >
+                        {button.emoji && <span>{button.emoji}</span>}
+                        {button.label}
+                        <ExternalLink className="w-3 h-3 opacity-60" />
+                      </a>
+                    ))}
+                </div>
+              )}
+
+              {!content && !embed.title && !embed.description && buttons.length === 0 && (
                 <p className="text-[#949BA4] text-sm text-center py-8">
                   Preencha os campos para ver o preview
                 </p>

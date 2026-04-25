@@ -9,9 +9,15 @@ export interface PIXKeyValidation {
 
 export interface PIXQRCodeData {
   pixKey: string;
+  keyType: string;
   name?: string;
+  city?: string;
   amount?: number;
   description?: string;
+  txId?: string;
+  isValid: boolean;
+  isDynamic?: boolean;
+  dynamicUrl?: string;
 }
 
 /**
@@ -24,16 +30,16 @@ export function validatePixKey(input: string): PIXKeyValidation {
 
   const cleaned = input.trim();
 
-  // Check if it's a complete PIX QR code (starts with 00020126)
-  if (cleaned.startsWith('00020126')) {
-    try {
-      const pixKey = extractPixKeyFromQRCode(cleaned);
-      if (pixKey) {
-        return validatePixKey(pixKey);
-      }
-    } catch (error) {
-      return { isValid: false, error: 'Código PIX inválido' };
-    }
+  // Check if it's a complete PIX QR code (EMV format)
+  // QR codes can start with 0002 followed by different numbers (01, 26, etc)
+  if (cleaned.startsWith('0002') || cleaned.includes('br.gov.bcb.pix')) {
+    // It's a valid QR code string - return as valid
+    // The withdraw modal will parse it with parsePixQRCode
+    return {
+      isValid: true,
+      type: 'random',
+      formattedKey: cleaned,
+    };
   }
 
   // Validate as individual key types
@@ -195,34 +201,256 @@ function validateRandomKey(key: string): PIXKeyValidation {
 }
 
 /**
+ * Parses EMV TLV format used in PIX QR Codes - more robust version
+ */
+function parseEMVField(data: string, startPos: number): { id: string; value: string; nextPos: number } | null {
+  if (startPos + 4 > data.length) return null;
+  
+  const id = data.substring(startPos, startPos + 2);
+  const lengthStr = data.substring(startPos + 2, startPos + 4);
+  const length = parseInt(lengthStr, 10);
+  
+  if (isNaN(length) || length < 0 || startPos + 4 + length > data.length) {
+    return null;
+  }
+  
+  const value = data.substring(startPos + 4, startPos + 4 + length);
+  return { id, value, nextPos: startPos + 4 + length };
+}
+
+function parseAllEMVFields(data: string): Map<string, string> {
+  const result = new Map<string, string>();
+  let position = 0;
+  
+  while (position < data.length) {
+    const field = parseEMVField(data, position);
+    if (!field) break;
+    result.set(field.id, field.value);
+    position = field.nextPos;
+  }
+  
+  return result;
+}
+
+/**
+ * Parses a complete PIX QR Code and extracts all data
+ * Supports multiple QR code formats and variations
+ */
+export function parsePixQRCode(qrCode: string): PIXQRCodeData {
+  const defaultResult: PIXQRCodeData = {
+    pixKey: '',
+    keyType: 'DESCONHECIDO',
+    isValid: false,
+  };
+  
+  try {
+    const cleaned = qrCode.trim();
+    
+    // Check if it looks like a PIX QR Code
+    if (!cleaned.startsWith('0002') && !cleaned.includes('br.gov.bcb.pix')) {
+      // Maybe it's just a PIX key
+      const keyType = detectPixKeyType(cleaned);
+      if (keyType !== 'PIX') {
+        return {
+          pixKey: cleaned,
+          keyType,
+          isValid: true,
+        };
+      }
+      return defaultResult;
+    }
+    
+    const emv = parseAllEMVFields(cleaned);
+    
+    // Try to find PIX data in fields 26, 27, 28, 29 (different acquirers use different fields)
+    let pixKey = '';
+    let description = '';
+    let isDynamic = false;
+    let dynamicUrl = '';
+    
+    for (const fieldId of ['26', '27', '28', '29']) {
+      const pixData = emv.get(fieldId);
+      if (pixData && pixData.includes('br.gov.bcb.pix')) {
+        const pixFields = parseAllEMVFields(pixData);
+        
+        // Field 01 in PIX merchant data = PIX Key (static QR)
+        // Field 02 = Description
+        // Field 25 = URL (dynamic QR)
+        pixKey = pixFields.get('01') || '';
+        description = pixFields.get('02') || '';
+        
+        // Check for dynamic QR (field 25 contains URL)
+        const urlField = pixFields.get('25');
+        if (urlField && urlField.includes('.')) {
+          isDynamic = true;
+          dynamicUrl = urlField;
+          // For dynamic QR, the URL IS the key
+          if (!pixKey) {
+            pixKey = urlField;
+          }
+        }
+        
+        if (pixKey) break;
+      }
+    }
+    
+    // Try to extract URL from the raw QR code if not found yet
+    if (!dynamicUrl) {
+      // Look for URL patterns in the raw string - more comprehensive patterns
+      const urlPatterns = [
+        // Common PSP URL patterns
+        /([a-zA-Z0-9-]+\.onlyup\.com\.br\/[^\s\d]{5,}[a-zA-Z0-9\/-]+)/i,
+        /([a-zA-Z0-9-]+\.mercadopago\.com\.br\/[^\s]+)/i,
+        /([a-zA-Z0-9-]+\.pagseguro\.com\.br\/[^\s]+)/i,
+        /(pix\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\/[^\s]+)/i,
+        // Generic URL patterns  
+        /([a-zA-Z0-9.-]+\.com\.br\/qr\/[^\s]+)/i,
+        /([a-zA-Z0-9.-]+\.com\.br\/pix\/[^\s]+)/i,
+        /([a-zA-Z0-9.-]+\.com\.br\/v[0-9]\/[^\s]+)/i,
+        /(https?:\/\/[a-zA-Z0-9.-]+\/[^\s]+)/i,
+      ];
+      
+      for (const pattern of urlPatterns) {
+        const match = cleaned.match(pattern);
+        if (match && match[1]) {
+          // Clean up the URL - remove trailing numbers that might be CRC
+          let url = match[1];
+          // Remove trailing 4-digit CRC code if present
+          url = url.replace(/\d{4}$/, '');
+          // Remove trailing digits that look like field IDs
+          url = url.replace(/\d{2,4}$/, '');
+          
+          dynamicUrl = url;
+          isDynamic = true;
+          break;
+        }
+      }
+    }
+    
+    // If pixKey looks like a URL, mark as dynamic
+    if (pixKey && pixKey.includes('.com') && pixKey.includes('/')) {
+      isDynamic = true;
+      if (!dynamicUrl) {
+        dynamicUrl = pixKey;
+      }
+    }
+    
+    // If still no key, try regex extraction as fallback
+    if (!pixKey) {
+      // Try to extract UUID (random key)
+      const uuidMatch = cleaned.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+      if (uuidMatch) {
+        pixKey = uuidMatch[1];
+      }
+      
+      // Try to extract email
+      if (!pixKey) {
+        const emailMatch = cleaned.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
+        if (emailMatch) {
+          pixKey = emailMatch[1];
+        }
+      }
+      
+      // Try to extract CPF (11 digits)
+      if (!pixKey) {
+        const cpfMatch = cleaned.match(/\d{11}/);
+        if (cpfMatch) {
+          pixKey = cpfMatch[0];
+        }
+      }
+    }
+    
+    // If we found a dynamic URL but no pixKey, use the URL as key
+    if (dynamicUrl && !pixKey) {
+      pixKey = dynamicUrl;
+    }
+    
+    // Extract amount - field 54
+    const amountStr = emv.get('54') || '';
+    let amount: number | undefined;
+    if (amountStr) {
+      const parsedAmount = parseFloat(amountStr);
+      if (!isNaN(parsedAmount) && parsedAmount > 0) {
+        amount = parsedAmount;
+      }
+    }
+    
+    // Extract name - field 59
+    const name = emv.get('59') || '';
+    
+    // Extract city - field 60
+    const city = emv.get('60') || '';
+    
+    // Extract txId from field 62
+    const additionalData = emv.get('62') || '';
+    const additionalFields = parseAllEMVFields(additionalData);
+    const txId = additionalFields.get('05') || '';
+    
+    // Detect key type
+    const keyType = pixKey ? detectPixKeyType(pixKey) : 'DESCONHECIDO';
+    
+    return {
+      pixKey,
+      keyType,
+      name: name || undefined,
+      city: city || undefined,
+      amount,
+      description: description || undefined,
+      txId: txId || undefined,
+      isValid: !!pixKey,
+      isDynamic,
+      dynamicUrl: dynamicUrl || undefined,
+    };
+  } catch (error) {
+    return defaultResult;
+  }
+}
+
+/**
  * Extracts PIX key from a complete QR code string
  */
 export function extractPixKeyFromQRCode(qrCode: string): string | null {
-  try {
-    // PIX QR Code structure - this is a simplified extraction
-    // Real implementation would need full EMV parsing
-    // For now, we'll look for common patterns
+  const parsed = parsePixQRCode(qrCode);
+  return parsed.isValid ? parsed.pixKey : null;
+}
 
-    // Look for key pattern after specific identifiers
-    const patterns = [
-      /0136\d+(.+?)00/,
-      /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
-      /\d{3}\.\d{3}\.\d{3}-\d{2}/,
-      /\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/,
-      /[^\s@]+@[^\s@]+\.[^\s@]+/,
-    ];
-
-    for (const pattern of patterns) {
-      const match = qrCode.match(pattern);
-      if (match) {
-        return match[1] || match[0];
-      }
-    }
-
-    return null;
-  } catch (error) {
-    return null;
+/**
+ * Detects the type of PIX key
+ */
+export function detectPixKeyType(key: string): string {
+  const cleaned = key.trim();
+  
+  // CPF: 11 digits
+  if (/^\d{11}$/.test(cleaned.replace(/\D/g, '')) && cleaned.replace(/\D/g, '').length === 11) {
+    return 'CPF';
   }
+  
+  // CNPJ: 14 digits
+  if (/^\d{14}$/.test(cleaned.replace(/\D/g, '')) && cleaned.replace(/\D/g, '').length === 14) {
+    return 'CNPJ';
+  }
+  
+  // Email
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned)) {
+    return 'EMAIL';
+  }
+  
+  // Phone: starts with +55 or has 10-11 digits
+  if (/^\+55/.test(cleaned) || /^\d{10,11}$/.test(cleaned.replace(/\D/g, ''))) {
+    return 'TELEFONE';
+  }
+  
+  // Random key (EVP): UUID format
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleaned)) {
+    return 'ALEATORIA';
+  }
+  
+  // EMV/QR Code
+  if (cleaned.startsWith('00020126') || cleaned.includes('br.gov.bcb.pix')) {
+    return 'QR CODE';
+  }
+  
+  return 'PIX';
 }
 
 /**
