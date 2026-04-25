@@ -33,16 +33,7 @@ export function HeroClean() {
       <div className="absolute top-1/2 left-1/5 w-1.5 h-1.5 rounded-full bg-orange-500/25 blur-sm" />
       
       {/* Content */}
-      <div className="relative z-10 max-w-6xl mx-auto px-4 pt-32 pb-20">
-        {/* Logo centered above title */}
-        <div className="flex justify-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M13 2L4.09 12.11C3.69 12.59 3.89 13.34 4.5 13.5L11 15.5L10 22L19.41 11.89C19.81 11.41 19.61 10.66 19 10.5L12.5 8.5L13 2Z" fill="white" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-        </div>
-        
+      <div className="relative z-10 max-w-6xl mx-auto px-4 pt-40 pb-20">
         {/* Hero Text with gradient effects */}
         <div className="text-center mb-12">
           <h1 className="text-5xl md:text-7xl font-extrabold text-white mb-2 leading-tight tracking-tight">
