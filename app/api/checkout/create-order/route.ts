@@ -18,13 +18,14 @@ export async function POST(request: NextRequest) {
       payment_method,
     } = body;
 
-    if (!checkout_id || !seller_id || !customer || !items || items.length === 0) {
+    if (!checkout_id || !seller_id || !items || items.length === 0) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
     }
 
-    if (!customer.email || !customer.name) {
-      return NextResponse.json({ error: "Nome e email sao obrigatorios" }, { status: 400 });
-    }
+    // Customer pode ser vazio se nenhum campo for obrigatorio
+    const customerData = customer || {};
+    const customerName = customerData.name || "Cliente";
+    const customerEmail = customerData.email || `cliente-${Date.now()}@checkout.local`;
 
     // Buscar dados do vendedor
     const sellerResult = await sql`
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
         payment_status, delivery_status, status
       ) VALUES (
         ${checkout_id}, ${seller_id},
-        ${customer.name}, ${customer.email}, ${customer.phone || null}, ${customer.cpf || null},
+        ${customerName}, ${customerEmail}, ${customerData.phone || null}, ${customerData.cpf || null},
         ${subtotal}, ${discount || 0}, ${total},
         ${coupon_code || null}, ${payment_method || 'pix'},
         'pending', 'pending', 'pending'
