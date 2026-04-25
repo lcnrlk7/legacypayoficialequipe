@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { validatePixKey } from '@/lib/pix-validator';
+import { validatePixKey, parsePixQRCode } from '@/lib/pix-validator';
 
 interface CopyPasteInputProps {
   onSubmit: (pixKey: string) => void;
@@ -32,6 +32,21 @@ export function CopyPasteInput({ onSubmit, isLoading }: CopyPasteInputProps) {
       return;
     }
 
+    const trimmed = value.trim();
+    
+    // Check if it's a QR code first
+    if (trimmed.startsWith('000201') || trimmed.includes('br.gov.bcb.pix')) {
+      const qrData = parsePixQRCode(trimmed);
+      setValidation({
+        isValid: true,
+        type: 'qrcode',
+        key: trimmed,
+        qrData: qrData.isValid ? qrData : null,
+      });
+      setError('');
+      return;
+    }
+
     const result = validatePixKey(value);
 
     if (result.isValid) {
@@ -43,7 +58,7 @@ export function CopyPasteInput({ onSubmit, isLoading }: CopyPasteInputProps) {
       setError('');
     } else {
       setValidation(null);
-      setError(result.error || 'Chave PIX inválida');
+      setError(result.error || 'Chave PIX invalida');
     }
   };
 
@@ -69,9 +84,10 @@ export function CopyPasteInput({ onSubmit, isLoading }: CopyPasteInputProps) {
       cnpj: 'CNPJ',
       email: 'Email',
       phone: 'Telefone',
-      random: 'Chave Aleatória',
+      random: 'Chave Aleatoria',
+      qrcode: 'QR Code PIX',
     };
-    return labels[type || ''] || 'Tipo desconhecido';
+    return labels[type || ''] || 'Chave PIX';
   };
 
   return (
@@ -99,11 +115,25 @@ export function CopyPasteInput({ onSubmit, isLoading }: CopyPasteInputProps) {
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
             <div className="flex-1">
-              <p className="text-sm font-medium text-green-800">Chave válida</p>
+              <p className="text-sm font-medium text-green-800">
+                {validation.type === 'qrcode' ? 'QR Code PIX valido' : 'Chave valida'}
+              </p>
               <p className="text-xs text-green-700 mt-1">
                 Tipo: <span className="font-semibold">{getTypeLabel(validation.type)}</span>
               </p>
-              <p className="text-xs text-green-700 font-mono break-all mt-1">{validation.key}</p>
+              {validation.qrData?.name && (
+                <p className="text-xs text-green-700 mt-1">
+                  Destinatario: <span className="font-semibold">{validation.qrData.name}</span>
+                </p>
+              )}
+              {validation.qrData?.amount && validation.qrData.amount > 0 && (
+                <p className="text-xs text-green-700 mt-1">
+                  Valor: <span className="font-semibold">R$ {validation.qrData.amount.toFixed(2).replace('.', ',')}</span>
+                </p>
+              )}
+              {validation.type !== 'qrcode' && (
+                <p className="text-xs text-green-700 font-mono break-all mt-1">{validation.key}</p>
+              )}
             </div>
           </div>
         </div>

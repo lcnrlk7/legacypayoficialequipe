@@ -28,16 +28,15 @@ export function validatePixKey(input: string): PIXKeyValidation {
 
   const cleaned = input.trim();
 
-  // Check if it's a complete PIX QR code (starts with 00020126)
-  if (cleaned.startsWith('00020126')) {
-    try {
-      const pixKey = extractPixKeyFromQRCode(cleaned);
-      if (pixKey) {
-        return validatePixKey(pixKey);
-      }
-    } catch (error) {
-      return { isValid: false, error: 'Código PIX inválido' };
-    }
+  // Check if it's a complete PIX QR code (EMV format)
+  if (cleaned.startsWith('000201') || cleaned.includes('br.gov.bcb.pix')) {
+    // It's a valid QR code string - return as valid
+    // The withdraw modal will parse it with parsePixQRCode
+    return {
+      isValid: true,
+      type: 'random',
+      formattedKey: cleaned,
+    };
   }
 
   // Validate as individual key types
