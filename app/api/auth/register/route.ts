@@ -9,7 +9,7 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { name, email, password, cpf, phone } = body;
+    const { name, email, password, cpf, phone, referralCode } = body;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -73,11 +73,29 @@ export async function POST(request: NextRequest) {
       kyc_status: user.kyc_status,
     });
 
+    // Processar codigo de referencia
+    if (referralCode) {
+      try {
+        const referrer = await sql`
+          SELECT id FROM profiles WHERE referral_code = ${referralCode.toUpperCase()}
+        `;
+        
+        if (referrer.length > 0) {
+          await sql`
+            UPDATE profiles SET referred_by = ${referrer[0].id} WHERE id = ${user.id}
+          `;
+          console.log(`[v0] Usuario ${user.id} indicado por ${referrer[0].id}`);
+        }
+      } catch (refError) {
+        console.error("[v0] Error processing referral:", refError);
+      }
+    }
+
     // Registrar log de cadastro
     try {
       await sql`
         INSERT INTO audit_logs (user_id, action, entity_type, new_value, created_at)
-        VALUES (${user.id}, 'REGISTER', 'auth', ${JSON.stringify({ email, name })}, NOW())
+        VALUES (${user.id}, 'REGISTER', 'auth', ${JSON.stringify({ email, name, referralCode })}, NOW())
       `;
     } catch (logError) {
       console.error("[v0] Error logging registration:", logError);

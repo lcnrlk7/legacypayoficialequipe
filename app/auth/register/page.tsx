@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
@@ -81,7 +81,17 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resendTimer, setResendTimer] = useState(0);
+  const [referralCode, setReferralCode] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Capturar codigo de referencia da URL
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      setReferralCode(ref.toUpperCase());
+    }
+  }, [searchParams]);
 
   // Enviar código de verificação
   const handleSendCode = async () => {
@@ -246,6 +256,7 @@ export default function RegisterPage() {
           name,
           cpf: cpf.replace(/\D/g, ""),
           phone: phone.replace(/\D/g, ""),
+          referralCode: referralCode || undefined,
         }),
       });
 

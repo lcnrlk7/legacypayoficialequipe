@@ -12,6 +12,7 @@ import {
   AlertTriangle,
   LayoutDashboard,
   Users,
+  UsersRound,
   TrendingUp,
   Settings,
   ArrowLeft,
@@ -25,6 +26,7 @@ const menuItems: { href: string; icon: LucideIcon; label: string; showBadge?: bo
   { href: "/admin", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/admin/users", icon: Users, label: "Usuários" },
   { href: "/admin/transactions", icon: TrendingUp, label: "Transações" },
+  { href: "/admin/affiliates", icon: UsersRound, label: "Afiliados" },
   { href: "/admin/integration-errors", icon: AlertTriangle, label: "Erros de Integração", showBadge: true },
   { href: "/admin/settings", icon: Settings, label: "Configurações" },
 ];

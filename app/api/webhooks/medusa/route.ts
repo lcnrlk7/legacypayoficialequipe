@@ -309,6 +309,36 @@ export async function POST(request: NextRequest) {
         console.error("[Medusa Webhook] Erro ao enviar push notification:", pushError);
       }
 
+      // Processar comissao de afiliado
+      try {
+        const referrer = await sql`
+          SELECT referred_by FROM profiles WHERE id = ${transaction.user_id} AND referred_by IS NOT NULL
+        `;
+        
+        if (referrer.length > 0 && referrer[0].referred_by) {
+          const affiliateId = referrer[0].referred_by;
+          const commissionAmount = 0.05; // R$ 0,05 por transacao
+          
+          // Criar registro de comissao
+          await sql`
+            INSERT INTO affiliate_commissions (id, affiliate_id, referred_user_id, transaction_id, amount, status, created_at)
+            VALUES (
+              ${crypto.randomUUID()},
+              ${affiliateId},
+              ${transaction.user_id},
+              ${transaction.id},
+              ${commissionAmount},
+              'pending',
+              NOW()
+            )
+          `;
+          
+          console.log(`[Medusa Webhook] Comissao de R$ ${commissionAmount.toFixed(2)} criada para afiliado ${affiliateId}`);
+        }
+      } catch (affiliateError) {
+        console.error("[Medusa Webhook] Erro ao processar comissao de afiliado:", affiliateError);
+      }
+
       // Enviar webhook para o cliente se configurado
       const userProfile = await sql`
         SELECT webhook_url, webhook_secret FROM profiles WHERE id = ${transaction.user_id}
