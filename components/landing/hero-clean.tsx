@@ -7,20 +7,20 @@ import { ArrowRight, Zap, Clock, Shield } from 'lucide-react';
 export function HeroClean() {
   return (
     <section className="relative min-h-screen bg-black overflow-hidden">
-      {/* Grid pattern background - muito sutil */}
+      {/* Grid pattern background - laranja sutil */}
       <div 
-        className="absolute inset-0 opacity-[0.03]"
+        className="absolute inset-0"
         style={{
           backgroundImage: `
-            linear-gradient(rgba(255, 106, 0, 0.5) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 106, 0, 0.5) 1px, transparent 1px)
+            linear-gradient(rgba(255, 120, 0, 0.08) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 120, 0, 0.08) 1px, transparent 1px)
           `,
-          backgroundSize: '80px 80px'
+          backgroundSize: '60px 60px'
         }}
       />
       
-      {/* Gradient overlay from top - escurecendo ainda mais em cima */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black via-black/50 to-transparent" />
+      {/* Gradient overlay - fade from top to blend grid */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black via-black/80 to-black/40" />
       
       {/* Orange glow at bottom center */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[1200px] h-[600px] bg-gradient-to-t from-orange-500/15 via-orange-500/5 to-transparent blur-3xl pointer-events-none" />
