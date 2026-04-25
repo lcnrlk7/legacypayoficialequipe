@@ -10,21 +10,12 @@ import {
   Edit,
   Trash2,
   Image as ImageIcon,
-  DollarSign,
-  Archive,
-  Eye,
   Loader2,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +24,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Product {
   id: string;
@@ -42,9 +39,11 @@ interface Product {
   price: number;
   compare_price: number | null;
   image_url: string | null;
+  banner_url?: string | null;
   sku: string | null;
   stock: number;
   is_digital: boolean;
+  product_type?: string;
   status: string;
   created_at: string;
 }
@@ -62,11 +61,10 @@ export default function ProductsPage() {
     name: "",
     description: "",
     price: "",
-    compare_price: "",
     image_url: "",
+    banner_url: "",
+    product_type: "",
     sku: "",
-    stock: "-1",
-    is_digital: false,
   });
 
   useEffect(() => {
@@ -96,11 +94,10 @@ export default function ProductsPage() {
       name: "",
       description: "",
       price: "",
-      compare_price: "",
       image_url: "",
+      banner_url: "",
+      product_type: "",
       sku: "",
-      stock: "-1",
-      is_digital: false,
     });
     setDialogOpen(true);
   };
@@ -111,11 +108,10 @@ export default function ProductsPage() {
       name: product.name,
       description: product.description || "",
       price: product.price.toString(),
-      compare_price: product.compare_price?.toString() || "",
       image_url: product.image_url || "",
+      banner_url: product.banner_url || "",
+      product_type: product.product_type || (product.is_digital ? "digital" : "fisico"),
       sku: product.sku || "",
-      stock: product.stock.toString(),
-      is_digital: product.is_digital,
     });
     setDialogOpen(true);
   };
@@ -140,12 +136,13 @@ export default function ProductsPage() {
         body: JSON.stringify({
           name: formData.name,
           description: formData.description || null,
-          price: parseFloat(formData.price),
-          compare_price: formData.compare_price ? parseFloat(formData.compare_price) : null,
+          price: parseFloat(formData.price.replace(",", ".")),
           image_url: formData.image_url || null,
+          banner_url: formData.banner_url || null,
           sku: formData.sku || null,
-          stock: parseInt(formData.stock),
-          is_digital: formData.is_digital,
+          is_digital: formData.product_type === "digital",
+          product_type: formData.product_type,
+          stock: -1,
         }),
       });
 
@@ -192,11 +189,14 @@ export default function ProductsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Produtos</h1>
-          <p className="text-muted-foreground">Gerencie seus produtos para checkout</p>
+        <div className="flex items-center gap-3">
+          <Package className="w-6 h-6 text-primary" />
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Produtos</h1>
+            <p className="text-muted-foreground">Gerencie seus produtos para checkout</p>
+          </div>
         </div>
-        <Button onClick={openCreateDialog} className="gap-2">
+        <Button onClick={openCreateDialog} className="gap-2 bg-primary hover:bg-primary/90">
           <Plus className="w-4 h-4" />
           Novo Produto
         </Button>
@@ -209,7 +209,7 @@ export default function ProductsPage() {
           placeholder="Buscar produtos..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
+          className="pl-10 bg-secondary border-border"
         />
       </div>
 
@@ -219,7 +219,7 @@ export default function ProductsPage() {
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </div>
       ) : filteredProducts.length === 0 ? (
-        <Card>
+        <Card className="bg-card border-border">
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Package className="w-12 h-12 text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">
@@ -231,7 +231,7 @@ export default function ProductsPage() {
                 : "Comece adicionando seu primeiro produto"}
             </p>
             {!search && (
-              <Button onClick={openCreateDialog} className="gap-2">
+              <Button onClick={openCreateDialog} className="gap-2 bg-primary hover:bg-primary/90">
                 <Plus className="w-4 h-4" />
                 Criar Produto
               </Button>
@@ -247,7 +247,7 @@ export default function ProductsPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
             >
-              <Card className="overflow-hidden hover:border-primary/50 transition-colors">
+              <Card className="overflow-hidden bg-card border-border hover:border-primary/50 transition-colors">
                 {/* Product Image */}
                 <div className="aspect-square bg-secondary relative">
                   {product.image_url ? (
@@ -261,14 +261,13 @@ export default function ProductsPage() {
                       <ImageIcon className="w-12 h-12 text-muted-foreground" />
                     </div>
                   )}
-                  {product.status !== "active" && (
-                    <div className="absolute top-2 left-2 px-2 py-1 bg-yellow-500/90 text-yellow-950 text-xs font-medium rounded">
-                      Inativo
-                    </div>
-                  )}
-                  {product.is_digital && (
-                    <div className="absolute top-2 right-2 px-2 py-1 bg-blue-500/90 text-white text-xs font-medium rounded">
+                  {product.is_digital || product.product_type === "digital" ? (
+                    <div className="absolute top-2 right-2 px-2 py-1 bg-primary/90 text-primary-foreground text-xs font-medium rounded">
                       Digital
+                    </div>
+                  ) : (
+                    <div className="absolute top-2 right-2 px-2 py-1 bg-green-500/90 text-white text-xs font-medium rounded">
+                      Fisico
                     </div>
                   )}
                 </div>
@@ -310,15 +309,6 @@ export default function ProductsPage() {
                     <span className="text-lg font-bold text-primary">
                       {formatCurrency(product.price)}
                     </span>
-                    {product.compare_price && product.compare_price > product.price && (
-                      <span className="text-sm text-muted-foreground line-through">
-                        {formatCurrency(product.compare_price)}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    {product.stock === -1 ? "Estoque ilimitado" : `${product.stock} em estoque`}
                   </div>
                 </CardContent>
               </Card>
@@ -327,119 +317,138 @@ export default function ProductsPage() {
         </div>
       )}
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {editingProduct ? "Editar Produto" : "Novo Produto"}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Nome do Produto *</Label>
-              <Input
-                placeholder="Ex: Curso de Marketing Digital"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Descricao</Label>
-              <Textarea
-                placeholder="Descreva seu produto..."
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Preco *</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0,00"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Preco Comparativo</Label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0,00"
-                    value={formData.compare_price}
-                    onChange={(e) => setFormData({ ...formData, compare_price: e.target.value })}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>URL da Imagem</Label>
-              <Input
-                placeholder="https://..."
-                value={formData.image_url}
-                onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>SKU</Label>
-                <Input
-                  placeholder="PROD-001"
-                  value={formData.sku}
-                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Estoque (-1 = ilimitado)</Label>
-                <Input
-                  type="number"
-                  value={formData.stock}
-                  onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-secondary rounded-lg">
+      {/* Create/Edit Modal */}
+      {dialogOpen && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-card border border-border rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+          >
+            <div className="flex items-center justify-between p-6 border-b border-border">
               <div>
-                <Label>Produto Digital</Label>
-                <p className="text-xs text-muted-foreground">
-                  Ativar para produtos que serao entregues digitalmente
+                <h2 className="text-xl font-semibold text-foreground">
+                  {editingProduct ? "Editar Produto" : "Novo Produto"}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Preencha as informacoes para {editingProduct ? "editar o" : "criar um novo"} produto.
                 </p>
               </div>
-              <Switch
-                checked={formData.is_digital}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_digital: checked })}
-              />
+              <button
+                onClick={() => setDialogOpen(false)}
+                className="text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
-          </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSubmit} disabled={saving || !formData.name || !formData.price}>
-              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {editingProduct ? "Salvar" : "Criar Produto"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <div className="p-6 space-y-5">
+              {/* Nome */}
+              <div className="space-y-2">
+                <Label className="text-foreground">Nome *</Label>
+                <Input
+                  placeholder="Nome do produto"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="bg-secondary border-border"
+                />
+              </div>
+
+              {/* Link da Imagem */}
+              <div className="space-y-2">
+                <Label className="text-foreground">Link da Imagem</Label>
+                <Input
+                  placeholder="https://exemplo.com/imagem.jpg"
+                  value={formData.image_url}
+                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                  className="bg-secondary border-border"
+                />
+              </div>
+
+              {/* Link do Banner */}
+              <div className="space-y-2">
+                <Label className="text-foreground">Link do Banner</Label>
+                <Input
+                  placeholder="https://exemplo.com/banner.jpg"
+                  value={formData.banner_url}
+                  onChange={(e) => setFormData({ ...formData, banner_url: e.target.value })}
+                  className="bg-secondary border-border"
+                />
+              </div>
+
+              {/* Preco */}
+              <div className="space-y-2">
+                <Label className="text-foreground">Preco (BRL) *</Label>
+                <Input
+                  placeholder="R$ 0,00"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  className="bg-secondary border-border"
+                />
+              </div>
+
+              {/* Descricao */}
+              <div className="space-y-2">
+                <Label className="text-foreground">Descricao *</Label>
+                <Textarea
+                  placeholder="Descricao do produto (suporta HTML)"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={4}
+                  className="bg-secondary border-border resize-none"
+                />
+              </div>
+
+              {/* Tipo de Produto */}
+              <div className="space-y-2">
+                <Label className="text-foreground">Tipo de Produto *</Label>
+                <Select
+                  value={formData.product_type}
+                  onValueChange={(value) => setFormData({ ...formData, product_type: value })}
+                >
+                  <SelectTrigger className="bg-secondary border-border">
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="digital">Digital</SelectItem>
+                    <SelectItem value="fisico">Fisico</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* SKU */}
+              <div className="space-y-2">
+                <Label className="text-foreground">SKU (opcional)</Label>
+                <Input
+                  placeholder="Codigo SKU"
+                  value={formData.sku}
+                  onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                  className="bg-secondary border-border"
+                />
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-border">
+              <Button
+                variant="outline"
+                onClick={() => setDialogOpen(false)}
+                className="border-border"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={saving || !formData.name || !formData.price}
+                className="bg-primary hover:bg-primary/90"
+              >
+                {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Salvar
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
