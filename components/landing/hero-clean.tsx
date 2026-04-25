@@ -2,16 +2,33 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, Zap, Clock, Shield } from 'lucide-react';
 
 export function HeroClean() {
   return (
-    <section className="relative min-h-screen bg-[#0a0a0a] overflow-hidden">
-      {/* Subtle gradient glow at bottom */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-t from-orange-500/10 via-orange-500/5 to-transparent blur-3xl pointer-events-none" />
+    <section className="relative min-h-screen overflow-hidden">
+      {/* Background gradient from black to dark */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black via-[#0a0a0a] to-[#0f0f0f]" />
+      
+      {/* Subtle orange glow at bottom center */}
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-t from-orange-500/8 via-orange-500/4 to-transparent blur-3xl pointer-events-none" />
+      
+      {/* Subtle side glows */}
+      <div className="absolute top-1/3 left-0 w-[400px] h-[400px] bg-gradient-to-r from-orange-500/5 to-transparent blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 right-0 w-[400px] h-[400px] bg-gradient-to-l from-orange-500/5 to-transparent blur-3xl pointer-events-none" />
       
       {/* Content */}
       <div className="relative z-10 max-w-6xl mx-auto px-4 pt-32 pb-20">
+        {/* Logo centered above title */}
+        <div className="flex justify-center mb-8">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/20">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M13 2L4.09 12.11C3.69 12.59 3.89 13.34 4.5 13.5L11 15.5L10 22L19.41 11.89C19.81 11.41 19.61 10.66 19 10.5L12.5 8.5L13 2Z" fill="white" stroke="white" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </div>
+        </div>
+        
         {/* Hero Text */}
         <div className="text-center mb-12">
           <h1 className="text-5xl md:text-7xl font-bold text-white mb-2 leading-tight">
