@@ -126,9 +126,14 @@ export function WithdrawModal({
       setLocalError(null);
       setStep('confirm');
       
-      // If it's a dynamic QR without amount, try to fetch from URL
-      if (parsed.isDynamic && parsed.dynamicUrl && (!parsed.amount || parsed.amount <= 0)) {
-        fetchDynamicQRData(parsed.dynamicUrl, parsed);
+      // Try to fetch amount if not present
+      // Check if pixKey looks like a URL or if it's marked as dynamic
+      const looksLikeUrl = parsed.pixKey.includes('.com') || parsed.pixKey.includes('.br/');
+      const urlToFetch = parsed.dynamicUrl || (looksLikeUrl ? parsed.pixKey : null);
+      
+      if ((!parsed.amount || parsed.amount <= 0) && urlToFetch) {
+        console.log('[v0] Fetching dynamic data from:', urlToFetch);
+        fetchDynamicQRData(urlToFetch, parsed);
       }
     } else {
       // Maybe it's just a PIX key
@@ -164,9 +169,13 @@ export function WithdrawModal({
         setLocalError(null);
         setStep('confirm');
         
-        // If it's a dynamic QR without amount, try to fetch from URL
-        if (parsed.isDynamic && parsed.dynamicUrl && (!parsed.amount || parsed.amount <= 0)) {
-          fetchDynamicQRData(parsed.dynamicUrl, parsed);
+        // Try to fetch amount if not present
+        const looksLikeUrl = parsed.pixKey.includes('.com') || parsed.pixKey.includes('.br/');
+        const urlToFetch = parsed.dynamicUrl || (looksLikeUrl ? parsed.pixKey : null);
+        
+        if ((!parsed.amount || parsed.amount <= 0) && urlToFetch) {
+          console.log('[v0] Fetching dynamic data from paste:', urlToFetch);
+          fetchDynamicQRData(urlToFetch, parsed);
         }
         return;
       }

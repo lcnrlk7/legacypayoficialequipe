@@ -296,21 +296,42 @@ export function parsePixQRCode(qrCode: string): PIXQRCodeData {
     
     // Try to extract URL from the raw QR code if not found yet
     if (!dynamicUrl) {
-      // Look for URL patterns in the raw string
+      // Look for URL patterns in the raw string - more comprehensive patterns
       const urlPatterns = [
-        /(pix\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\/[^\s0-9]{5,})/i,
-        /(https?:\/\/[^\s]+)/i,
+        // Common PSP URL patterns
+        /([a-zA-Z0-9-]+\.onlyup\.com\.br\/[^\s\d]{5,}[a-zA-Z0-9\/-]+)/i,
+        /([a-zA-Z0-9-]+\.mercadopago\.com\.br\/[^\s]+)/i,
+        /([a-zA-Z0-9-]+\.pagseguro\.com\.br\/[^\s]+)/i,
+        /(pix\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\/[^\s]+)/i,
+        // Generic URL patterns  
         /([a-zA-Z0-9.-]+\.com\.br\/qr\/[^\s]+)/i,
         /([a-zA-Z0-9.-]+\.com\.br\/pix\/[^\s]+)/i,
+        /([a-zA-Z0-9.-]+\.com\.br\/v[0-9]\/[^\s]+)/i,
+        /(https?:\/\/[a-zA-Z0-9.-]+\/[^\s]+)/i,
       ];
       
       for (const pattern of urlPatterns) {
         const match = cleaned.match(pattern);
-        if (match) {
-          dynamicUrl = match[1];
+        if (match && match[1]) {
+          // Clean up the URL - remove trailing numbers that might be CRC
+          let url = match[1];
+          // Remove trailing 4-digit CRC code if present
+          url = url.replace(/\d{4}$/, '');
+          // Remove trailing digits that look like field IDs
+          url = url.replace(/\d{2,4}$/, '');
+          
+          dynamicUrl = url;
           isDynamic = true;
           break;
         }
+      }
+    }
+    
+    // If pixKey looks like a URL, mark as dynamic
+    if (pixKey && pixKey.includes('.com') && pixKey.includes('/')) {
+      isDynamic = true;
+      if (!dynamicUrl) {
+        dynamicUrl = pixKey;
       }
     }
     
