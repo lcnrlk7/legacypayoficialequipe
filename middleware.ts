@@ -9,6 +9,11 @@ const MAIN_DOMAINS = [
   'vercel.app',
 ]
 
+// Dominios dedicados para checkout
+const CHECKOUT_DOMAINS = [
+  'pay-checkout-pagamentoseguros.online',
+]
+
 function isMainDomain(hostname: string): boolean {
   return MAIN_DOMAINS.some(domain => 
     hostname === domain || 
@@ -27,9 +32,12 @@ export async function middleware(request: NextRequest) {
   }
   
   // Se for dominio de checkout personalizado
-  // Reescreve para /pay/[domain] 
-  // onde [domain] e o hostname sem www
   const cleanHostname = hostname.replace(/^www\./, '').split(':')[0]
+  
+  // Verifica se e um dominio de checkout dedicado
+  const isCheckoutDomain = CHECKOUT_DOMAINS.some(domain => 
+    cleanHostname === domain || cleanHostname.endsWith(`.${domain}`)
+  )
   
   // Se ja esta em /pay/, nao reescreve novamente
   if (pathname.startsWith('/pay/')) {
