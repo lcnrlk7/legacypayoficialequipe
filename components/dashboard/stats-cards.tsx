@@ -28,6 +28,7 @@ interface StatsCardsProps {
   blockedBalance?: number;
   transactions: Transaction[];
   periodFilter: string;
+  allTransactions?: Transaction[];
 }
 
 const formatCurrency = (value: number) => {
@@ -41,17 +42,21 @@ export function StatsCards({
   balance, 
   blockedBalance = 0, 
   transactions,
-  periodFilter 
+  periodFilter,
+  allTransactions
 }: StatsCardsProps) {
   const stats = useMemo(() => {
+    // Usar transacoes filtradas pelo periodo
+    const filteredTx = transactions;
+    
     // Filtrar transacoes completadas
-    const completedDeposits = transactions.filter(
-      t => ["deposit", "transfer_in", "pix_in"].includes(t.type) && t.status === "completed"
+    const completedDeposits = filteredTx.filter(
+      t => ["deposit", "transfer_in", "pix_in", "received"].includes(t.type) && t.status === "completed"
     );
-    const completedWithdrawals = transactions.filter(
-      t => ["withdrawal", "transfer_out", "pix_out"].includes(t.type) && t.status === "completed"
+    const completedWithdrawals = filteredTx.filter(
+      t => ["withdrawal", "transfer_out", "pix_out", "sent"].includes(t.type) && t.status === "completed"
     );
-    const allCompleted = transactions.filter(t => t.status === "completed");
+    const allCompleted = filteredTx.filter(t => t.status === "completed");
 
     // Volume transacionado (total de entradas)
     const volumeTransacionado = completedDeposits.reduce(
@@ -59,17 +64,28 @@ export function StatsCards({
     );
 
     // Calcular crescimento comparando com periodo anterior
+    // Usar allTransactions se disponivel para comparacao
+    const txForComparison = allTransactions || transactions;
     const now = new Date();
     const currentMonth = now.getMonth();
-    const lastMonthDeposits = transactions.filter(t => {
+    const currentYear = now.getFullYear();
+    
+    // Transacoes do mes anterior
+    const lastMonthDeposits = txForComparison.filter(t => {
       const date = new Date(t.created_at);
-      return date.getMonth() === currentMonth - 1 && 
-        ["deposit", "transfer_in", "pix_in"].includes(t.type) && 
+      const isLastMonth = (
+        (date.getMonth() === currentMonth - 1 && date.getFullYear() === currentYear) ||
+        (currentMonth === 0 && date.getMonth() === 11 && date.getFullYear() === currentYear - 1)
+      );
+      return isLastMonth && 
+        ["deposit", "transfer_in", "pix_in", "received"].includes(t.type) && 
         t.status === "completed";
     });
+    
     const lastMonthVolume = lastMonthDeposits.reduce(
       (sum, t) => sum + (Number(t.amount) || 0), 0
     );
+    
     const volumeGrowth = lastMonthVolume > 0 
       ? ((volumeTransacionado - lastMonthVolume) / lastMonthVolume) * 100 
       : volumeTransacionado > 0 ? 100 : 0;
@@ -96,8 +112,8 @@ export function StatsCards({
     }, 0);
 
     // Conversao PIX (aprovados / total)
-    const pixTransactions = transactions.filter(
-      t => ["deposit", "transfer_in", "pix_in"].includes(t.type)
+    const pixTransactions = filteredTx.filter(
+      t => ["deposit", "transfer_in", "pix_in", "received"].includes(t.type)
     );
     const pixApproved = pixTransactions.filter(t => t.status === "completed").length;
     const pixConversion = pixTransactions.length > 0 
@@ -115,7 +131,7 @@ export function StatsCards({
       pixApproved,
       pixTotal: pixTransactions.length,
     };
-  }, [transactions]);
+  }, [transactions, allTransactions]);
 
   const cards = [
     {

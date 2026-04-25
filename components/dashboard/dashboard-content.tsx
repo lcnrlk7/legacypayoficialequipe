@@ -289,8 +289,9 @@ export function DashboardContent({
       <StatsCards
         balance={profile?.balance || 0}
         blockedBalance={0}
-        transactions={transactions}
+        transactions={filteredTransactions}
         periodFilter={periodLabels[periodFilter]}
+        allTransactions={transactions}
       />
 
       {/* Goals Roadmap */}
