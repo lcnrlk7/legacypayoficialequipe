@@ -2,21 +2,13 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { ArrowRight, Zap, Clock, Shield } from 'lucide-react';
 
 export function HeroClean() {
   return (
-    <section className="relative min-h-screen overflow-hidden">
-      {/* Background gradient from black to dark */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black via-[#0a0a0a] to-[#0f0f0f]" />
-      
-      {/* Subtle orange glow at bottom center */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-t from-orange-500/8 via-orange-500/4 to-transparent blur-3xl pointer-events-none" />
-      
-      {/* Subtle side glows */}
-      <div className="absolute top-1/3 left-0 w-[400px] h-[400px] bg-gradient-to-r from-orange-500/5 to-transparent blur-3xl pointer-events-none" />
-      <div className="absolute top-1/2 right-0 w-[400px] h-[400px] bg-gradient-to-l from-orange-500/5 to-transparent blur-3xl pointer-events-none" />
+    <section className="relative min-h-screen bg-black overflow-hidden">
+      {/* Subtle orange glow at bottom center only */}
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-t from-orange-500/10 to-transparent blur-3xl pointer-events-none" />
       
       {/* Content */}
       <div className="relative z-10 max-w-6xl mx-auto px-4 pt-32 pb-20">
