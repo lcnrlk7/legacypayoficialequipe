@@ -12,13 +12,14 @@ import {
   ChevronDown,
   CheckCircle,
   XCircle,
-  Wallet,
   TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { RewardsProgress } from "./rewards-progress";
 import { UserNotificationsBanner } from "./user-notifications-banner";
+import { SalesChart } from "./sales-chart";
+import { StatsCards } from "./stats-cards";
+import { GoalsRoadmap } from "./goals-roadmap";
 import { useProfile } from "@/components/profile-provider";
 
 export interface Profile {
@@ -253,13 +254,8 @@ export function DashboardContent({
         </p>
       </div>
       
-      {/* Rewards Progress */}
-      {profile && (
-        <RewardsProgress 
-          totalRevenue={profile.total_revenue || totalReceivedGross} 
-          userId={profile.id} 
-        />
-      )}
+      {/* Sales Chart */}
+      <SalesChart transactions={transactions} />
 
       {/* Period Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -295,94 +291,20 @@ export function DashboardContent({
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-3 sm:p-6 overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Wallet className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
-            </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground">Saldo</span>
-          </div>
-          <p className="text-sm sm:text-2xl font-bold text-primary truncate">
-            {formatCurrency(profile?.balance || 0)}
-          </p>
-          <p className="text-[10px] sm:text-sm text-green-500 mt-0.5 sm:mt-1">Disponível para saque</p>
-        </motion.div>
+      <StatsCards
+        balance={profile?.balance || 0}
+        blockedBalance={0}
+        transactions={transactions}
+        periodFilter={periodLabels[periodFilter]}
+      />
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-3 sm:p-6 overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-              <ArrowDownLeft className="w-4 h-4 sm:w-6 sm:h-6 text-blue-500" />
-            </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground truncate ml-1">Bruto</span>
-          </div>
-          <p className="text-sm sm:text-2xl font-bold text-foreground truncate">
-            {formatCurrency(totalReceivedGross)}
-          </p>
-          <p className="text-[10px] sm:text-sm text-blue-500 mt-0.5 sm:mt-1 truncate">{periodLabels[periodFilter]}</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-3 sm:p-6 overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
-              <ArrowDownLeft className="w-4 h-4 sm:w-6 sm:h-6 text-green-500" />
-            </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground truncate ml-1">Líquido</span>
-          </div>
-          <p className="text-sm sm:text-2xl font-bold text-foreground truncate">
-            {formatCurrency(totalReceivedNet)}
-          </p>
-          <p className="text-[10px] sm:text-sm text-green-500 mt-0.5 sm:mt-1 truncate">{periodLabels[periodFilter]}</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-3 sm:p-6 overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
-              <ArrowUpRight className="w-4 h-4 sm:w-6 sm:h-6 text-red-500" />
-            </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground truncate ml-1">Enviado</span>
-          </div>
-          <p className="text-sm sm:text-2xl font-bold text-foreground truncate">
-            {formatCurrency(totalSent)}
-          </p>
-          <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 truncate">{periodLabels[periodFilter]}</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-3 sm:p-6 overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Key className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
-            </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground">Chaves</span>
-          </div>
-          <p className="text-sm sm:text-2xl font-bold text-foreground">{pixKeys.length}</p>
-          <p className="text-[10px] sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">Chaves PIX</p>
-        </motion.div>
-      </div>
+      {/* Goals Roadmap */}
+      {profile && (
+        <GoalsRoadmap
+          totalRevenue={profile.total_revenue || totalReceivedGross}
+          userId={profile.id}
+        />
+      )}
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
