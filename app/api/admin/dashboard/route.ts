@@ -16,7 +16,7 @@ export async function GET() {
       recentUsersResult,
     ] = await Promise.all([
       sql`SELECT COUNT(*) as count FROM profiles`,
-      sql`SELECT COUNT(*) as count FROM profiles WHERE kyc_status != 'approved'`,
+      sql`SELECT COUNT(*) as count FROM profiles WHERE kyc_status = 'pending'`,
       sql`SELECT COUNT(*) as count FROM profiles WHERE kyc_status = 'approved'`,
       sql`SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE status = 'completed'`,
       sql`SELECT COALESCE(SUM(fee), 0) as total FROM transactions WHERE status = 'completed'`,
