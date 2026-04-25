@@ -47,20 +47,22 @@ function getNextMilestone(totalRevenue: number) {
   return milestones[milestones.length - 1];
 }
 
-function getCurrentMilestone(totalRevenue: number) {
-  let current = milestones[0];
+function getPreviousMilestone(totalRevenue: number) {
+  let prev = { value: 0, label: "R$ 0" };
   for (const milestone of milestones) {
     if (totalRevenue >= milestone.value) {
-      current = milestone;
+      prev = milestone;
+    } else {
+      break;
     }
   }
-  return current;
+  return prev;
 }
 
 function formatCompact(value: number) {
-  if (value >= 1000000) return `R$ ${(value / 1000000).toFixed(0)}M`;
-  if (value >= 1000) return `R$ ${(value / 1000).toFixed(0)}K`;
-  return `R$ ${value}`;
+  if (value >= 1000000) return `R$ ${(value / 1000000).toFixed(1)}M`;
+  if (value >= 1000) return `R$ ${(value / 1000).toFixed(1)}K`;
+  return `R$ ${value.toFixed(0)}`;
 }
 
 export function DashboardHeader({ profile }: HeaderProps) {
@@ -72,13 +74,14 @@ export function DashboardHeader({ profile }: HeaderProps) {
   }
 
   const totalRevenue = profile?.total_revenue || 0;
-  const currentMilestone = getCurrentMilestone(totalRevenue);
+  const previousMilestone = getPreviousMilestone(totalRevenue);
   const nextMilestone = getNextMilestone(totalRevenue);
   
-  // Calculate progress between current and next milestone
-  const prevValue = currentMilestone.value === nextMilestone.value ? 0 : currentMilestone.value;
-  const progressPercent = nextMilestone.value > prevValue
-    ? Math.min(100, Math.round(((totalRevenue - prevValue) / (nextMilestone.value - prevValue)) * 100))
+  // Calculate progress between previous and next milestone
+  const prevValue = previousMilestone.value;
+  const nextValue = nextMilestone.value;
+  const progressPercent = nextValue > prevValue
+    ? Math.min(100, Math.round(((totalRevenue - prevValue) / (nextValue - prevValue)) * 100))
     : 100;
 
   return (
@@ -97,9 +100,9 @@ export function DashboardHeader({ profile }: HeaderProps) {
       <div className="flex items-center gap-3 sm:gap-6 ml-auto">
         {/* Rewards Progress - hidden on very small screens */}
         <div className="hidden sm:flex items-center gap-2">
-          <Trophy className="w-4 h-4 text-purple-500" />
+          <Trophy className="w-4 h-4 text-orange-500" />
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-purple-400">
+            <span className="text-xs font-medium text-orange-400">
               {formatCompact(totalRevenue)}
             </span>
             <span className="text-xs text-muted-foreground">/</span>
@@ -108,11 +111,11 @@ export function DashboardHeader({ profile }: HeaderProps) {
             </span>
             <div className="w-16 sm:w-24 h-1.5 bg-secondary rounded-full overflow-hidden">
               <div 
-                className="h-full bg-gradient-to-r from-purple-500 to-purple-400 rounded-full transition-all duration-500"
+                className="h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            <span className="text-xs text-purple-400 font-medium">
+            <span className="text-xs text-orange-400 font-medium">
               {progressPercent}%
             </span>
           </div>
