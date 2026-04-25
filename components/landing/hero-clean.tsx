@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, Zap, Clock, Shield } from 'lucide-react';
 
 export function HeroClean() {
@@ -116,16 +117,14 @@ export function HeroClean() {
             {/* Dashboard Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
               <div className="flex items-center gap-3">
-                {/* Logo */}
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M13 2L4.09 12.11C3.69 12.59 3.89 13.34 4.5 13.5L11 15.5L10 22L19.41 11.89C19.81 11.41 19.61 10.66 19 10.5L12.5 8.5L13 2Z" fill="url(#logoGradient)" stroke="url(#logoGradient)" strokeWidth="0.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  <defs>
-                    <linearGradient id="logoGradient" x1="4" y1="2" x2="20" y2="22" gradientUnits="userSpaceOnUse">
-                      <stop stopColor="#ff6a00"/>
-                      <stop offset="1" stopColor="#ff8c00"/>
-                    </linearGradient>
-                  </defs>
-                </svg>
+                {/* Logo LegacyPay */}
+                <Image 
+                  src="/images/logo.png" 
+                  alt="LegacyPay" 
+                  width={24} 
+                  height={24}
+                  className="object-contain"
+                />
                 <span className="text-white font-semibold">Dashboard</span>
               </div>
               <div className="flex items-center gap-2">
