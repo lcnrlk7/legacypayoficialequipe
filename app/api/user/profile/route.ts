@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     }
 
     const result = await sql`
-      SELECT id, name, email, phone, cpf_cnpj as cpf, kyc_status, created_at, route_type
+      SELECT id, name, email, phone, cpf_cnpj as cpf, kyc_status, created_at, route_type, api_key
       FROM profiles
       WHERE id = ${user.id}
     `;
@@ -50,6 +50,7 @@ export async function GET(request: NextRequest) {
         email_verified: true,
         kyc_status: profile.kyc_status,
         created_at: profile.created_at,
+        api_key: profile.api_key,
       },
     });
   } catch (error) {
