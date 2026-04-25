@@ -9,10 +9,8 @@ const MAIN_DOMAINS = [
   'vercel.app',
 ]
 
-// Dominios dedicados para checkout
-const CHECKOUT_DOMAINS = [
-  'pay-checkout-pagamentoseguros.online',
-]
+// Dominio dedicado para todos os checkouts
+const CHECKOUT_DOMAIN = 'pay-checkout-pagamentoseguros.online'
 
 function isMainDomain(hostname: string): boolean {
   return MAIN_DOMAINS.some(domain => 
@@ -22,53 +20,57 @@ function isMainDomain(hostname: string): boolean {
   )
 }
 
+function isCheckoutDomain(hostname: string): boolean {
+  const cleanHostname = hostname.replace(/^www\./, '').split(':')[0]
+  return cleanHostname === CHECKOUT_DOMAIN || cleanHostname === `www.${CHECKOUT_DOMAIN}`
+}
+
 export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   const pathname = request.nextUrl.pathname
   
-  // Se for dominio principal, segue fluxo normal
+  // Se for dominio principal, segue fluxo normal de auth
   if (isMainDomain(hostname)) {
     return await handleAuth(request)
   }
   
-  // Se for dominio de checkout personalizado
-  const cleanHostname = hostname.replace(/^www\./, '').split(':')[0]
-  
-  // Verifica se e um dominio de checkout dedicado
-  const isCheckoutDomain = CHECKOUT_DOMAINS.some(domain => 
-    cleanHostname === domain || cleanHostname.endsWith(`.${domain}`)
-  )
-  
-  // Se ja esta em /pay/, nao reescreve novamente
-  if (pathname.startsWith('/pay/')) {
-    return await handleAuth(request)
-  }
-  
-  // Ignora arquivos estaticos
-  if (
-    pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
-    pathname.includes('.') // arquivos com extensao
-  ) {
+  // Se for dominio de checkout (pay-checkout-pagamentoseguros.online)
+  if (isCheckoutDomain(hostname)) {
+    // Ignora arquivos estaticos e API
+    if (
+      pathname.startsWith('/_next') ||
+      pathname.startsWith('/api') ||
+      pathname.includes('.') // arquivos com extensao
+    ) {
+      return NextResponse.next()
+    }
+    
+    // Se acessar a raiz, mostra pagina inicial do checkout
+    if (pathname === '/' || pathname === '') {
+      const url = request.nextUrl.clone()
+      url.pathname = '/checkout-home'
+      return NextResponse.rewrite(url)
+    }
+    
+    // Pega o slug do path (ex: /meu-produto -> meu-produto)
+    const slug = pathname.replace(/^\//, '').split('/')[0]
+    
+    if (slug) {
+      // Reescreve para /pay/[slug]
+      const url = request.nextUrl.clone()
+      url.pathname = `/pay/${slug}`
+      return NextResponse.rewrite(url)
+    }
+    
     return NextResponse.next()
   }
   
-  // Reescreve a URL para a pagina de checkout do dominio
-  const url = request.nextUrl.clone()
-  url.pathname = `/checkout-domain/${cleanHostname}${pathname}`
-  
-  return NextResponse.rewrite(url)
+  // Outro dominio desconhecido - segue fluxo normal
+  return await handleAuth(request)
 }
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - images - .svg, .png, .jpg, .jpeg, .gif, .webp
-     */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

@@ -83,6 +83,9 @@ export default function CheckoutsPage() {
   // Form state - complete form based on config
   const [formData, setFormData] = useState({
     // Basic
+    name: "",
+    slug: "",
+    description: "",
     product_id: "",
     order_bumps: [] as string[],
     
@@ -110,8 +113,7 @@ export default function CheckoutsPage() {
     theme: "dark",
     primary_color: "#f97316",
     
-    // Custom Domain
-    custom_domain: "",
+    
     
     // SEO
     page_title: "",
@@ -162,6 +164,9 @@ export default function CheckoutsPage() {
   const openCreateDialog = () => {
     setEditingCheckout(null);
     setFormData({
+      name: "",
+      slug: "",
+      description: "",
       product_id: "",
       order_bumps: [],
       require_name: true,
@@ -178,7 +183,6 @@ export default function CheckoutsPage() {
       return_url: "",
       theme: "dark",
       primary_color: "#f97316",
-      custom_domain: "",
       page_title: "",
       page_description: "",
       share_title: "",
@@ -191,9 +195,12 @@ export default function CheckoutsPage() {
     setDialogOpen(true);
   };
 
-  const handleSubmit = async () => {
-    if (!formData.product_id) return;
-
+const handleSubmit = async () => {
+    if (!formData.name || !formData.slug) {
+      alert("Nome e slug sao obrigatorios");
+      return;
+    }
+    
     setSaving(true);
     try {
       const token = localStorage.getItem("auth-token");
@@ -201,26 +208,14 @@ export default function CheckoutsPage() {
         ? `/api/checkout/stores/${editingCheckout.id}`
         : "/api/checkout/stores";
       const method = editingCheckout ? "PUT" : "POST";
-
-      const selectedProduct = products.find(p => p.id === formData.product_id);
-      const slug = selectedProduct?.name
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "") + "-" + Date.now().toString(36);
-
+      
       const res = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          name: selectedProduct?.name || "Checkout",
-          slug,
-          ...formData,
-        }),
+        body: JSON.stringify(formData),
       });
 
       if (res.ok) {
@@ -253,7 +248,7 @@ export default function CheckoutsPage() {
   };
 
   const copyLink = (slug: string) => {
-    const url = `${window.location.origin}/pay/${slug}`;
+    const url = `https://pay-checkout-pagamentoseguros.online/${slug}`;
     navigator.clipboard.writeText(url);
   };
 
@@ -362,7 +357,7 @@ export default function CheckoutsPage() {
                       <div>
                         <h3 className="font-semibold text-foreground">{checkout.name}</h3>
                         <p className="text-sm text-muted-foreground">
-                          /pay/{checkout.slug}
+                          pay-checkout-pagamentoseguros.online/{checkout.slug}
                         </p>
                       </div>
                     </div>
@@ -412,7 +407,7 @@ export default function CheckoutsPage() {
                         className="border-border"
                       >
                         <a
-                          href={`/pay/${checkout.slug}`}
+                          href={`https://pay-checkout-pagamentoseguros.online/${checkout.slug}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="gap-1"
@@ -486,10 +481,51 @@ export default function CheckoutsPage() {
                   <p className="text-muted-foreground">
                     Seu limite maximo por venda e de R$ 5.000,00. Produtos com valor acima deste limite nao poderao ser vendidos via checkout.
                   </p>
-                </div>
-              </div>
-
-              {/* Product Selection */}
+</div>
+                  </div>
+                  
+                  {/* Basic Info */}
+                  <div className="space-y-4">
+                    <h3 className="font-medium text-foreground">Informacoes Basicas</h3>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-foreground">Nome do Checkout *</Label>
+                      <Input
+                        placeholder="Ex: Curso de Marketing Digital"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="bg-secondary border-border"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-foreground">Slug (URL) *</Label>
+                      <Input
+                        placeholder="Ex: curso-marketing"
+                        value={formData.slug}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-') 
+                        })}
+                        className="bg-secondary border-border"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        URL: pay-checkout-pagamentoseguros.online/<span className="text-primary">{formData.slug || 'seu-slug'}</span>
+                      </p>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-foreground">Descricao (Opcional)</Label>
+                      <Textarea
+                        placeholder="Descreva seu produto..."
+                        value={formData.description}
+                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                        className="bg-secondary border-border min-h-[80px]"
+                      />
+                    </div>
+                  </div>
+                  
+                  {/* Product Selection */}
               <div className="space-y-2">
                 <Label className="text-foreground flex items-center gap-1">
                   <ShoppingCart className="w-4 h-4" />
@@ -783,17 +819,27 @@ export default function CheckoutsPage() {
 </div>
                   </div>
                   
-                  {/* Custom Domain */}
+                  {/* Checkout URL Preview */}
                   <div className="space-y-2 pt-4 border-t border-border">
-                    <Label className="text-foreground">Dominio Personalizado (Opcional)</Label>
-                    <Input
-                      placeholder="Ex: pay-checkout-pagamentoseguros.online"
-                      value={formData.custom_domain}
-                      onChange={(e) => setFormData({ ...formData, custom_domain: e.target.value.toLowerCase().trim() })}
-                      className="bg-secondary border-border"
-                    />
+                    <Label className="text-foreground">URL do Checkout</Label>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 bg-secondary border border-border rounded-md px-3 py-2 text-sm">
+                        <span className="text-muted-foreground">pay-checkout-pagamentoseguros.online/</span>
+                        <span className="text-primary font-medium">{formData.slug || 'seu-slug'}</span>
+                      </div>
+                      {formData.slug && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => copyLink(formData.slug)}
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      Configure um dominio personalizado para seu checkout. O dominio deve estar apontando para o Vercel.
+                      Este sera o link de pagamento do seu checkout.
                     </p>
                   </div>
                   </div>
