@@ -50,6 +50,7 @@ export function WithdrawModal({
 
   // Fetch data from dynamic QR code URL
   const fetchDynamicQRData = async (url: string, currentPixData: PIXQRCodeData) => {
+    console.log('[v0] Fetching dynamic QR data from URL:', url);
     setFetchingQrData(true);
     try {
       const response = await fetch('/api/pix/qr-data', {
@@ -58,29 +59,32 @@ export function WithdrawModal({
         body: JSON.stringify({ url }),
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        if (data.found) {
-          const updatedPixData = { ...currentPixData };
-          
-          // Update amount if found
-          if (data.amount && data.amount > 0) {
-            updatedPixData.amount = data.amount;
-            setWithdrawAmount(data.amount.toString());
-          }
-          
-          // Update name if found
-          if (data.name) {
-            updatedPixData.name = data.name;
-          }
-          
-          // Update description if found
-          if (data.description) {
-            updatedPixData.description = data.description;
-          }
-          
-          setPixData(updatedPixData);
+      const data = await response.json();
+      console.log('[v0] QR data API response:', data);
+      
+      if (response.ok && data.found) {
+        const updatedPixData = { ...currentPixData };
+        
+        // Update amount if found
+        if (data.amount && data.amount > 0) {
+          console.log('[v0] Found amount:', data.amount);
+          updatedPixData.amount = data.amount;
+          setWithdrawAmount(data.amount.toString());
         }
+        
+        // Update name if found
+        if (data.name) {
+          updatedPixData.name = data.name;
+        }
+        
+        // Update description if found
+        if (data.description) {
+          updatedPixData.description = data.description;
+        }
+        
+        setPixData(updatedPixData);
+      } else {
+        console.log('[v0] QR data not found or error:', data);
       }
     } catch (err) {
       console.error('[v0] Error fetching dynamic QR data:', err);
@@ -107,6 +111,7 @@ export function WithdrawModal({
   const handleQRScan = async (qrCodeData: string) => {
     // Parse the QR code
     const parsed = parsePixQRCode(qrCodeData);
+    console.log('[v0] QR parsed result:', JSON.stringify(parsed, null, 2));
     
     if (parsed.isValid) {
       setWithdrawPixKey(parsed.pixKey);

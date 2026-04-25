@@ -294,6 +294,26 @@ export function parsePixQRCode(qrCode: string): PIXQRCodeData {
       }
     }
     
+    // Try to extract URL from the raw QR code if not found yet
+    if (!dynamicUrl) {
+      // Look for URL patterns in the raw string
+      const urlPatterns = [
+        /(pix\.[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\/[^\s0-9]{5,})/i,
+        /(https?:\/\/[^\s]+)/i,
+        /([a-zA-Z0-9.-]+\.com\.br\/qr\/[^\s]+)/i,
+        /([a-zA-Z0-9.-]+\.com\.br\/pix\/[^\s]+)/i,
+      ];
+      
+      for (const pattern of urlPatterns) {
+        const match = cleaned.match(pattern);
+        if (match) {
+          dynamicUrl = match[1];
+          isDynamic = true;
+          break;
+        }
+      }
+    }
+    
     // If still no key, try regex extraction as fallback
     if (!pixKey) {
       // Try to extract UUID (random key)
@@ -317,6 +337,11 @@ export function parsePixQRCode(qrCode: string): PIXQRCodeData {
           pixKey = cpfMatch[0];
         }
       }
+    }
+    
+    // If we found a dynamic URL but no pixKey, use the URL as key
+    if (dynamicUrl && !pixKey) {
+      pixKey = dynamicUrl;
     }
     
     // Extract amount - field 54
