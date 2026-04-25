@@ -1,5 +1,6 @@
 import { Header } from "@/components/landing/header";
 import { HeroClean } from "@/components/landing/hero-clean";
+import { Features } from "@/components/landing/features";
 import { FAQ } from "@/components/landing/faq";
 import { Footer } from "@/components/landing/footer";
 
@@ -22,6 +23,7 @@ export default function Home() {
       <div className="relative z-10">
         <Header />
         <HeroClean />
+        <Features />
         <FAQ />
         <Footer />
       </div>
