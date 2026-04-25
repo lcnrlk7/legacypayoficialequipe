@@ -103,8 +103,8 @@ export function SalesChart({ transactions }: SalesChartProps) {
       </div>
 
       {/* Chart */}
-      <div className="h-[250px] sm:h-[300px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="w-full" style={{ minHeight: "300px", height: "300px" }}>
+        <ResponsiveContainer width="100%" height={300} minWidth={0}>
           <AreaChart
             data={chartData}
             margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
