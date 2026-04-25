@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
 import { getSession } from "@/lib/auth";
 
-const sql = neon(process.env.DATABASE_URL!);
-
 export async function GET() {
+  const sql = neon(process.env.DATABASE_URL!);
+  
   try {
     const session = await getSession();
     if (!session) {

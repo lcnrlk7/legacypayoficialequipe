@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -69,7 +69,7 @@ function validateCPF(cpf: string): boolean {
 
 type Step = "data" | "verification" | "password" | "success";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const [step, setStep] = useState<Step>("data");
   const [name, setName] = useState("");
   const [cpf, setCpf] = useState("");
@@ -646,5 +646,17 @@ export default function RegisterPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    }>
+      <RegisterForm />
+    </Suspense>
   );
 }
