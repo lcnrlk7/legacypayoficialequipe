@@ -7,18 +7,18 @@ import {
   ArrowUpRight,
   Key,
   Clock,
-  Copy,
   Calendar,
   ChevronDown,
   CheckCircle,
   XCircle,
-  Wallet,
   TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { RewardsProgress } from "./rewards-progress";
 import { UserNotificationsBanner } from "./user-notifications-banner";
+import { SalesChart } from "./sales-chart";
+import { StatsCards } from "./stats-cards";
+import { GoalsRoadmap } from "./goals-roadmap";
 import { useProfile } from "@/components/profile-provider";
 
 export interface Profile {
@@ -192,10 +192,6 @@ export function DashboardContent({
   const currentBalance = contextProfile?.balance ?? serverProfile?.balance ?? 0;
   const profile = serverProfile ? { ...serverProfile, balance: Number(currentBalance) } : null;
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
-
   const { totalReceivedGross, totalReceivedNet, totalSent, filteredTransactions } = useMemo(() => {
     const { start, end } = getDateRange(periodFilter);
     
@@ -253,13 +249,8 @@ export function DashboardContent({
         </p>
       </div>
       
-      {/* Rewards Progress */}
-      {profile && (
-        <RewardsProgress 
-          totalRevenue={profile.total_revenue || totalReceivedGross} 
-          userId={profile.id} 
-        />
-      )}
+      {/* Sales Chart */}
+      <SalesChart transactions={transactions} />
 
       {/* Period Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -295,137 +286,28 @@ export function DashboardContent({
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-3 sm:p-6 overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Wallet className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
-            </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground">Saldo</span>
-          </div>
-          <p className="text-sm sm:text-2xl font-bold text-primary truncate">
-            {formatCurrency(profile?.balance || 0)}
-          </p>
-          <p className="text-[10px] sm:text-sm text-green-500 mt-0.5 sm:mt-1">Disponível para saque</p>
-        </motion.div>
+      <StatsCards
+        balance={profile?.balance || 0}
+        blockedBalance={0}
+        transactions={transactions}
+        periodFilter={periodLabels[periodFilter]}
+      />
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-3 sm:p-6 overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-              <ArrowDownLeft className="w-4 h-4 sm:w-6 sm:h-6 text-blue-500" />
-            </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground truncate ml-1">Bruto</span>
-          </div>
-          <p className="text-sm sm:text-2xl font-bold text-foreground truncate">
-            {formatCurrency(totalReceivedGross)}
-          </p>
-          <p className="text-[10px] sm:text-sm text-blue-500 mt-0.5 sm:mt-1 truncate">{periodLabels[periodFilter]}</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-3 sm:p-6 overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
-              <ArrowDownLeft className="w-4 h-4 sm:w-6 sm:h-6 text-green-500" />
-            </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground truncate ml-1">Líquido</span>
-          </div>
-          <p className="text-sm sm:text-2xl font-bold text-foreground truncate">
-            {formatCurrency(totalReceivedNet)}
-          </p>
-          <p className="text-[10px] sm:text-sm text-green-500 mt-0.5 sm:mt-1 truncate">{periodLabels[periodFilter]}</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-3 sm:p-6 overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
-              <ArrowUpRight className="w-4 h-4 sm:w-6 sm:h-6 text-red-500" />
-            </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground truncate ml-1">Enviado</span>
-          </div>
-          <p className="text-sm sm:text-2xl font-bold text-foreground truncate">
-            {formatCurrency(totalSent)}
-          </p>
-          <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 truncate">{periodLabels[periodFilter]}</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-3 sm:p-6 overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Key className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
-            </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground">Chaves</span>
-          </div>
-          <p className="text-sm sm:text-2xl font-bold text-foreground">{pixKeys.length}</p>
-          <p className="text-[10px] sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">Chaves PIX</p>
-        </motion.div>
-      </div>
+      {/* Goals Roadmap */}
+      {profile && (
+        <GoalsRoadmap
+          totalRevenue={profile.total_revenue || totalReceivedGross}
+          userId={profile.id}
+        />
+      )}
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* API Key */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="lg:col-span-2 bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6"
-        >
-          <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">
-            Sua Chave API
-          </h2>
-          <div className="flex items-center gap-2 sm:gap-3 bg-secondary rounded-lg sm:rounded-xl p-3 sm:p-4">
-            <code className="flex-1 text-xs sm:text-sm text-muted-foreground font-mono truncate">
-              {profile?.api_key || "Carregando..."}
-            </code>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => copyToClipboard(profile?.api_key || "")}
-              className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
-            >
-              <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
-            </Button>
-          </div>
-          <p className="text-[10px] sm:text-xs text-muted-foreground mt-2 sm:mt-3">
-            Use esta chave para autenticar suas requisições à API. Mantenha-a em segredo!
-          </p>
-          <Link href="/docs">
-            <Button variant="link" className="text-primary p-0 mt-2 text-xs sm:text-sm">
-              Ver documentação da API
-            </Button>
-          </Link>
-        </motion.div>
-
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6"
-        >
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6"
+      >
           <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">
             Ações Rápidas
           </h2>
@@ -449,8 +331,7 @@ export function DashboardContent({
               </Button>
             </Link>
           </div>
-        </motion.div>
-      </div>
+      </motion.div>
 
       {/* Recent Transactions */}
       <motion.div

@@ -37,11 +37,17 @@ interface Integration {
   created_at: string;
 }
 
+interface Profile {
+  api_key: string;
+}
+
 export default function IntegrationPage() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [limit, setLimit] = useState(7);
   const [remaining, setRemaining] = useState(7);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   // Modal states
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -64,7 +70,20 @@ export default function IntegrationPage() {
 
   useEffect(() => {
     loadIntegrations();
+    loadProfile();
   }, []);
+
+  async function loadProfile() {
+    try {
+      const response = await fetch("/api/user/profile");
+      const data = await response.json();
+      if (data.profile) {
+        setProfile(data.profile);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar profile:", error);
+    }
+  }
 
   async function loadIntegrations() {
     try {
@@ -276,6 +295,66 @@ export default function IntegrationPage() {
           </Button>
         </div>
       </div>
+
+      {/* Sua Chave API */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-card border border-border rounded-2xl p-4 sm:p-6"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+            <Key className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-base sm:text-lg font-semibold text-foreground">
+              Sua Chave API
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Use esta chave para autenticar suas requisicoes
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 sm:gap-3 bg-secondary rounded-lg sm:rounded-xl p-3 sm:p-4">
+          <code className="flex-1 text-xs sm:text-sm text-muted-foreground font-mono truncate">
+            {showApiKey 
+              ? (profile?.api_key || "Carregando...") 
+              : "••••••••••••••••••••••••••••••••••••••••"}
+          </code>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowApiKey(!showApiKey)}
+            className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
+            title={showApiKey ? "Esconder" : "Mostrar"}
+          >
+            {showApiKey ? <EyeOff className="w-3 h-3 sm:w-4 sm:h-4" /> : <Eye className="w-3 h-3 sm:w-4 sm:h-4" />}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              if (profile?.api_key) {
+                copyToClipboard(profile.api_key, "api_key");
+              }
+            }}
+            className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
+            title="Copiar"
+          >
+            {copied === "api_key" ? (
+              <Check className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
+            ) : (
+              <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
+            )}
+          </Button>
+        </div>
+        <p className="text-[10px] sm:text-xs text-muted-foreground mt-2 sm:mt-3">
+          Mantenha sua chave em segredo! Nao a compartilhe publicamente.
+        </p>
+        <a href="/docs" className="text-primary text-xs sm:text-sm hover:underline mt-2 inline-block">
+          Ver documentacao da API
+        </a>
+      </motion.div>
 
       {/* Integrations List */}
       {integrations.length === 0 ? (
