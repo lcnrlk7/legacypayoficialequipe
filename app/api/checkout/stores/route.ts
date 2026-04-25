@@ -43,7 +43,24 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, slug, description, primary_color } = body;
+    const { 
+      name, 
+      slug, 
+      description, 
+      primary_color, 
+      custom_domain,
+      theme,
+      require_name,
+      require_email,
+      require_phone,
+      require_cpf,
+      require_address,
+      timer_enabled,
+      timer_minutes,
+      success_url,
+      seo_title,
+      show_visitor_counter
+    } = body;
 
     if (!name || !slug) {
       return NextResponse.json({ error: "Nome e slug sao obrigatorios" }, { status: 400 });
@@ -58,11 +75,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Este slug ja esta em uso" }, { status: 400 });
     }
 
+    // Check if custom domain already exists
+    if (custom_domain) {
+      const domainExists = await sql`
+        SELECT id FROM checkouts WHERE custom_domain = ${custom_domain}
+      `;
+      if (domainExists.length > 0) {
+        return NextResponse.json({ error: "Este dominio ja esta em uso" }, { status: 400 });
+      }
+    }
+
     const checkout = await sql`
       INSERT INTO checkouts (
-        user_id, name, slug, description, primary_color, status
+        user_id, name, slug, description, primary_color, custom_domain,
+        theme, require_name, require_email, require_phone, require_cpf,
+        timer_enabled, timer_minutes, success_url, seo_title, 
+        show_visitor_counter, status
       ) VALUES (
-        ${user.id}, ${name}, ${slug}, ${description}, ${primary_color || '#f97316'}, 'active'
+        ${user.id}, ${name}, ${slug}, ${description || null}, ${primary_color || '#f97316'}, 
+        ${custom_domain || null}, ${theme || 'dark'}, ${require_name !== false}, 
+        ${require_email !== false}, ${require_phone || false}, ${require_cpf || false},
+        ${timer_enabled || false}, ${timer_minutes || 15}, ${success_url || null},
+        ${seo_title || null}, ${show_visitor_counter || false}, 'active'
       )
       RETURNING *
     `;

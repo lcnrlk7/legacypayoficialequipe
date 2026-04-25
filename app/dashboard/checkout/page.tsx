@@ -110,6 +110,9 @@ export default function CheckoutsPage() {
     theme: "dark",
     primary_color: "#f97316",
     
+    // Custom Domain
+    custom_domain: "",
+    
     // SEO
     page_title: "",
     page_description: "",
@@ -175,6 +178,7 @@ export default function CheckoutsPage() {
       return_url: "",
       theme: "dark",
       primary_color: "#f97316",
+      custom_domain: "",
       page_title: "",
       page_description: "",
       share_title: "",
@@ -776,11 +780,25 @@ export default function CheckoutsPage() {
                       onChange={(e) => setFormData({ ...formData, primary_color: e.target.value })}
                       className="flex-1 bg-secondary border-border"
                     />
+</div>
                   </div>
-                </div>
-              </div>
-
-              {/* SEO Section */}
+                  
+                  {/* Custom Domain */}
+                  <div className="space-y-2 pt-4 border-t border-border">
+                    <Label className="text-foreground">Dominio Personalizado (Opcional)</Label>
+                    <Input
+                      placeholder="Ex: pay-checkout-pagamentoseguros.online"
+                      value={formData.custom_domain}
+                      onChange={(e) => setFormData({ ...formData, custom_domain: e.target.value.toLowerCase().trim() })}
+                      className="bg-secondary border-border"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Configure um dominio personalizado para seu checkout. O dominio deve estar apontando para o Vercel.
+                    </p>
+                  </div>
+                  </div>
+                  
+                  {/* SEO Section */}
               <div className="border border-border rounded-lg overflow-hidden">
                 <button
                   onClick={() => toggleSection("seo")}
