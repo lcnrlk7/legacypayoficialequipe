@@ -117,7 +117,10 @@ export default function ProductsPage() {
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.price) return;
+    if (!formData.name || !formData.price || !formData.image_url) {
+      alert("Nome, preco e imagem sao obrigatorios");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -356,13 +359,14 @@ export default function ProductsPage() {
 
               {/* Link da Imagem */}
               <div className="space-y-2">
-                <Label className="text-foreground">Link da Imagem</Label>
-                <Input
-                  placeholder="https://exemplo.com/imagem.jpg"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  className="bg-secondary border-border"
-                />
+<Label className="text-foreground">Link da Imagem *</Label>
+  <Input
+  placeholder="https://exemplo.com/imagem.jpg"
+  value={formData.image_url}
+  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+  className="bg-secondary border-border"
+  required
+  />
               </div>
 
               {/* Link do Banner */}
