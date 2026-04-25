@@ -479,9 +479,9 @@ const handleDeposit = async () => {
                 Sacar
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-card border-border max-w-md sm:max-w-lg">
+            <DialogContent className="!bg-[#1a1a1a] border-border max-w-md sm:max-w-lg">
               <DialogHeader>
-                <DialogTitle>Sacar via PIX</DialogTitle>
+                <DialogTitle className="text-foreground">Sacar via PIX</DialogTitle>
               </DialogHeader>
               <WithdrawModal
                 balance={balance}

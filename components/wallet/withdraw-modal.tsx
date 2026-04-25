@@ -107,9 +107,9 @@ export function WithdrawModal({
   return (
     <div className="space-y-6">
       {/* Balance Info */}
-      <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-sm text-blue-800 mb-2">Saldo disponível</p>
-        <p className="text-2xl font-bold text-blue-900">{formatCurrency(balance)}</p>
+      <div className="p-4 bg-primary/10 border border-primary/30 rounded-xl">
+        <p className="text-sm text-primary mb-1">Saldo disponivel</p>
+        <p className="text-2xl font-bold text-primary">{formatCurrency(balance)}</p>
       </div>
 
       {/* Error Message */}
@@ -139,14 +139,14 @@ export function WithdrawModal({
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex gap-2 border-b border-gray-200">
+          <div className="flex gap-2 border-b border-border">
             {/* Tab: Saved Keys */}
             <button
               onClick={() => setActiveTab('saved')}
               className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
                 activeTab === 'saved'
-                  ? 'border-blue-600 text-blue-600 font-semibold'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  ? 'border-primary text-primary font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               <Key className="w-4 h-4" />
@@ -158,8 +158,8 @@ export function WithdrawModal({
               onClick={() => setActiveTab('qr')}
               className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
                 activeTab === 'qr'
-                  ? 'border-blue-600 text-blue-600 font-semibold'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  ? 'border-primary text-primary font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               <QrCode className="w-4 h-4" />
@@ -171,8 +171,8 @@ export function WithdrawModal({
               onClick={() => setActiveTab('paste')}
               className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
                 activeTab === 'paste'
-                  ? 'border-blue-600 text-blue-600 font-semibold'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
+                  ? 'border-primary text-primary font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               <Copy className="w-4 h-4" />
@@ -192,19 +192,19 @@ export function WithdrawModal({
                         <button
                           key={key.id}
                           onClick={() => handleSavedKeySelect(key.id)}
-                          className={`w-full p-3 rounded-lg border-2 text-left transition-all ${
+                          className={`w-full p-3 rounded-xl border-2 text-left transition-all ${
                             selectedPixKeyId === key.id
-                              ? 'border-blue-600 bg-blue-50'
-                              : 'border-gray-200 bg-white hover:border-gray-300'
+                              ? 'border-primary bg-primary/10'
+                              : 'border-border bg-secondary hover:border-primary/50'
                           }`}
                         >
                           <div className="flex items-center justify-between">
                             <div>
                               <p className="font-medium text-foreground">{key.key_type.toUpperCase()}</p>
-                              <p className="text-sm text-gray-600 font-mono">{key.key_value}</p>
+                              <p className="text-sm text-muted-foreground font-mono">{key.key_value}</p>
                             </div>
                             {key.is_primary && (
-                              <span className="text-xs font-semibold bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                              <span className="text-xs font-semibold bg-primary/20 text-primary px-2 py-1 rounded">
                                 Principal
                               </span>
                             )}
@@ -214,42 +214,42 @@ export function WithdrawModal({
                     </div>
                   </div>
                 ) : (
-                  <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <p className="text-sm text-yellow-800">Nenhuma chave PIX salva. Use QR Code ou Copia e Cola.</p>
+                  <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+                    <p className="text-sm text-yellow-500">Nenhuma chave PIX salva. Use QR Code ou Copia e Cola.</p>
                   </div>
                 )}
 
                 {/* Amount Input */}
                 {withdrawPixKey && (
-                  <div className="space-y-2 pt-4 border-t">
+                  <div className="space-y-2 pt-4 border-t border-border">
                     <label className="text-sm font-medium text-foreground">Valor do saque</label>
                     <Input
                       type="number"
                       placeholder="0,00"
                       value={withdrawAmount}
                       onChange={(e) => setWithdrawAmount(e.target.value)}
-                      className="bg-white border-gray-300"
+                      className="bg-secondary border-border"
                       min={systemSettings.minWithdrawal}
                       step="0.01"
                     />
-                    <p className="text-xs text-gray-600">
-                      Mínimo: {formatCurrency(systemSettings.minWithdrawal)} | Máximo: {formatCurrency(systemSettings.maxWithdrawal || 50000)}
+                    <p className="text-xs text-muted-foreground">
+                      Minimo: {formatCurrency(systemSettings.minWithdrawal)} | Maximo: {formatCurrency(systemSettings.maxWithdrawal || 50000)}
                     </p>
 
                     {/* Fee Breakdown */}
                     {amount > 0 && (
-                      <div className="p-3 bg-gray-50 rounded-lg space-y-2 mt-4">
+                      <div className="p-3 bg-secondary rounded-xl space-y-2 mt-4">
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Valor:</span>
+                          <span className="text-muted-foreground">Valor:</span>
                           <span className="font-medium text-foreground">{formatCurrency(feeCalculation.amount)}</span>
                         </div>
                         <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Taxa ({systemSettings.withdrawalFeePercentage}%):</span>
-                          <span className="font-medium text-orange-600">{formatCurrency(feeCalculation.fee)}</span>
+                          <span className="text-muted-foreground">Taxa ({systemSettings.withdrawalFeePercentage}%):</span>
+                          <span className="font-medium text-primary">{formatCurrency(feeCalculation.fee)}</span>
                         </div>
-                        <div className="border-t pt-2 flex justify-between text-sm">
+                        <div className="border-t border-border pt-2 flex justify-between text-sm">
                           <span className="font-semibold text-foreground">Total:</span>
-                          <span className="font-bold text-foreground">{formatCurrency(feeCalculation.total)}</span>
+                          <span className="font-bold text-primary">{formatCurrency(feeCalculation.total)}</span>
                         </div>
                       </div>
                     )}
@@ -258,7 +258,7 @@ export function WithdrawModal({
                     <Button
                       onClick={handleWithdraw}
                       disabled={loading || !withdrawAmount || !withdrawPixKey}
-                      className="w-full mt-4 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+                      className="w-full mt-4 bg-primary hover:bg-primary/90 text-primary-foreground"
                     >
                       {loading ? (
                         <>
