@@ -66,7 +66,8 @@ interface CartItem {
 
 export function CheckoutPage({ checkout }: { checkout: Checkout }) {
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [step, setStep] = useState<"products" | "info" | "payment" | "success">("products");
+  const [step, setStep] = useState<"products" | "info" | "payment" | "pix" | "success">("products");
+  const [pixData, setPixData] = useState<{ qrCode?: string; copyPaste?: string } | null>(null);
   const [couponCode, setCouponCode] = useState("");
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState<string | null>(null);
@@ -216,10 +217,21 @@ export function CheckoutPage({ checkout }: { checkout: Checkout }) {
         }),
       });
 
+      const data = await res.json();
+      
       if (res.ok) {
-        setStep("success");
+        // Se tiver dados do PIX, mostra tela do QR Code
+        if (data.pix && data.pix.qrCode) {
+          setPixData({
+            qrCode: data.pix.qrCode,
+            copyPaste: data.pix.copyPaste || data.pix.qrCode,
+          });
+          setStep("pix");
+        } else {
+          // Se nao tiver PIX, vai direto para sucesso
+          setStep("success");
+        }
       } else {
-        const data = await res.json();
         alert(data.error || "Erro ao criar pedido");
       }
     } catch (err) {
@@ -236,6 +248,101 @@ export function CheckoutPage({ checkout }: { checkout: Checkout }) {
     "--bg": checkout.bg_color,
     "--text": checkout.text_color,
   } as React.CSSProperties;
+
+  // PIX Screen
+  if (step === "pix" && pixData) {
+    return (
+      <div
+        className="min-h-screen flex items-center justify-center p-4"
+        style={{ backgroundColor: checkout.bg_color || "#0a0a0a" }}
+      >
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="text-center max-w-md w-full"
+        >
+          <div
+            className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
+            style={{ backgroundColor: (checkout.primary_color || "#f97316") + "20" }}
+          >
+            <CreditCard
+              className="w-8 h-8"
+              style={{ color: checkout.primary_color || "#f97316" }}
+            />
+          </div>
+          <h1
+            className="text-2xl font-bold mb-2"
+            style={{ color: checkout.text_color || "#ffffff" }}
+          >
+            Pagamento via PIX
+          </h1>
+          <p className="text-sm mb-6" style={{ color: (checkout.text_color || "#ffffff") + "99" }}>
+            Escaneie o QR Code ou copie o codigo para pagar
+          </p>
+          
+          {/* QR Code */}
+          <div className="bg-white p-4 rounded-xl mb-4 inline-block">
+            <img
+              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(pixData.copyPaste || '')}`}
+              alt="QR Code PIX"
+              className="w-48 h-48"
+            />
+          </div>
+          
+          {/* Copy Paste */}
+          <div className="mb-6">
+            <p className="text-xs mb-2" style={{ color: (checkout.text_color || "#ffffff") + "99" }}>
+              Ou copie o codigo PIX:
+            </p>
+            <div className="relative">
+              <input
+                type="text"
+                value={pixData.copyPaste || ''}
+                readOnly
+                className="w-full p-3 pr-20 rounded-lg text-sm bg-black/30 border border-white/10"
+                style={{ color: checkout.text_color || "#ffffff" }}
+              />
+              <Button
+                size="sm"
+                className="absolute right-1 top-1/2 -translate-y-1/2"
+                style={{ backgroundColor: checkout.primary_color || "#f97316" }}
+                onClick={() => {
+                  navigator.clipboard.writeText(pixData.copyPaste || '');
+                  alert('Codigo copiado!');
+                }}
+              >
+                Copiar
+              </Button>
+            </div>
+          </div>
+          
+          {/* Total */}
+          <div
+            className="p-4 rounded-xl mb-6"
+            style={{ backgroundColor: (checkout.primary_color || "#f97316") + "10" }}
+          >
+            <p className="text-sm" style={{ color: (checkout.text_color || "#ffffff") + "99" }}>
+              Valor a pagar:
+            </p>
+            <p
+              className="text-3xl font-bold"
+              style={{ color: checkout.primary_color || "#f97316" }}
+            >
+              {formatCurrency(total)}
+            </p>
+          </div>
+          
+          <Button
+            className="w-full"
+            variant="outline"
+            onClick={() => setStep("success")}
+          >
+            Ja fiz o pagamento
+          </Button>
+        </motion.div>
+      </div>
+    );
+  }
 
   // Success Screen
   if (step === "success") {
@@ -334,7 +441,7 @@ export function CheckoutPage({ checkout }: { checkout: Checkout }) {
           <>
             {/* Products Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-              {checkout.products.map((product) => (
+              {(checkout.products || []).map((product) => (
                 <motion.div
                   key={product.id}
                   initial={{ opacity: 0, y: 20 }}

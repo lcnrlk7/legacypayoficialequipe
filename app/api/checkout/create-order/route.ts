@@ -1,5 +1,7 @@
 import { sql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { createMisticPayClient } from "@/lib/acquirers/misticpay";
+import { MedusaPayments } from "@/lib/acquirers/medusa";
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,7 +22,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
     }
 
-    // Create the order
+    if (!customer.email || !customer.name) {
+      return NextResponse.json({ error: "Nome e email sao obrigatorios" }, { status: 400 });
+    }
+
+    // Buscar dados do vendedor
+    const sellerResult = await sql`
+      SELECT id, name, email, cpf_cnpj, is_active, kyc_status, route_type, fee_percentage
+      FROM profiles WHERE id = ${seller_id}
+    `;
+
+    if (sellerResult.length === 0) {
+      return NextResponse.json({ error: "Vendedor nao encontrado" }, { status: 404 });
+    }
+
+    const seller = sellerResult[0];
+
+    if (!seller.is_active) {
+      return NextResponse.json({ error: "Vendedor inativo" }, { status: 403 });
+    }
+
+    // Create the order first
     const order = await sql`
       INSERT INTO checkout_orders (
         checkout_id, seller_id,
@@ -62,10 +84,127 @@ export async function POST(request: NextRequest) {
       `;
     }
 
+    // Generate PIX payment
+    let pixResult: { 
+      success: boolean; 
+      data?: { 
+        qrCode?: string; 
+        qrCodeBase64?: string; 
+        copyPaste?: string; 
+        transactionId?: string;
+      }; 
+      error?: string 
+    } = { success: false };
+
+    // Buscar adquirente baseado na rota do vendedor
+    const userRouteType = seller.route_type || 'black';
+    const acquirerResult = await sql`
+      SELECT * FROM acquirers WHERE is_active = true AND route_type = ${userRouteType} LIMIT 1
+    `;
+
+    if (acquirerResult.length > 0) {
+      const acquirer = acquirerResult[0];
+      const transactionId = `checkout_${orderId}_${Date.now()}`;
+      const description = `Pedido #${orderId} - ${items.map((i: any) => i.product_name).join(', ')}`;
+
+      if (acquirer.code === 'misticpay') {
+        const misticPay = await createMisticPayClient();
+        
+        if (misticPay) {
+          const webhookUrl = "https://legacypay.site/api/webhooks/misticpay";
+          
+          pixResult = await misticPay.createPixCharge({
+            amount: total,
+            payerName: customer.name,
+            payerDocument: customer.cpf || "00000000000",
+            transactionId,
+            description,
+            projectWebhook: webhookUrl,
+          });
+        }
+      } else if (acquirer.code === 'medusa') {
+        try {
+          const medusa = new MedusaPayments({
+            secretKey: acquirer.api_key,
+            licenseKey: acquirer.api_secret || undefined,
+          });
+          
+          const amountInCents = Math.round(total * 100);
+          const customerDocument = customer.cpf || "36009722004";
+          const medusaWebhookUrl = "https://legacypay.site/api/webhooks/medusa";
+          
+          const medusaResult = await medusa.createSimplePixPayment(
+            amountInCents,
+            customer.name,
+            customerDocument,
+            customer.email,
+            description,
+            medusaWebhookUrl
+          );
+          
+          if (medusaResult.pix?.qrcode) {
+            pixResult = {
+              success: true,
+              data: {
+                qrCode: medusaResult.pix.qrcode,
+                qrCodeBase64: medusaResult.pix.qrcode,
+                copyPaste: medusaResult.pix.qrcode,
+                transactionId: String(medusaResult.id),
+              }
+            };
+          }
+        } catch (error) {
+          console.error("[Checkout] Medusa error:", error);
+        }
+      }
+
+      // Se gerou PIX, salvar na transacao
+      if (pixResult.success && pixResult.data) {
+        // Calcular taxa do vendedor
+        const feePercentage = Number(seller.fee_percentage) || 5;
+        const fee = total * (feePercentage / 100);
+        const netAmount = total - fee;
+        
+        const txId = crypto.randomUUID();
+        
+        // Criar transacao vinculada ao pedido
+        await sql`
+          INSERT INTO transactions (
+            id, user_id, external_id, acquirer_transaction_id, type,
+            amount, fee, net_amount, status,
+            payer_name, payer_document, description, metadata, created_at
+          )
+          VALUES (
+            ${txId}, ${seller_id}, ${`order_${orderId}`}, ${pixResult.data.transactionId || transactionId},
+            'pix_in', ${total}, ${fee}, ${netAmount}, 'pending',
+            ${customer.name}, ${customer.cpf || ''}, ${description},
+            ${JSON.stringify({ 
+              order_id: orderId,
+              checkout_id,
+              qr_code: pixResult.data.qrCode || '',
+              copy_paste: pixResult.data.copyPaste || ''
+            })}, NOW()
+          )
+        `;
+
+        // Atualizar pedido com ID da transacao
+        await sql`
+          UPDATE checkout_orders 
+          SET pix_transaction_id = ${txId}
+          WHERE id = ${orderId}
+        `;
+      }
+    }
+
     return NextResponse.json({ 
       success: true, 
       order_id: orderId,
-      order: order[0]
+      order: order[0],
+      pix: pixResult.success ? {
+        qrCode: pixResult.data?.qrCode,
+        qrCodeBase64: pixResult.data?.qrCodeBase64,
+        copyPaste: pixResult.data?.copyPaste,
+      } : null
     });
   } catch (error) {
     console.error("[API] Error creating order:", error);
