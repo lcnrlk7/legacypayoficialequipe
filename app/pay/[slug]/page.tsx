@@ -50,7 +50,7 @@ export default async function PayPage({ params }: PageProps) {
     notFound();
   }
 
-  return <CheckoutPage checkout={checkout} />;
+  return <CheckoutPage checkout={checkout as any} />;
 }
 
 export async function generateMetadata({ params }: PageProps) {
@@ -61,8 +61,9 @@ export async function generateMetadata({ params }: PageProps) {
     return { title: "Checkout nao encontrado" };
   }
 
+  const data = checkout as any;
   return {
-    title: checkout.name,
-    description: checkout.description || `Checkout - ${checkout.name}`,
+    title: data.name || "Checkout",
+    description: data.description || `Checkout - ${data.name}`,
   };
 }

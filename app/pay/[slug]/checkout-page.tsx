@@ -38,25 +38,25 @@ interface Checkout {
   user_id: string;
   name: string;
   slug: string;
-  description: string | null;
-  logo_url: string | null;
-  banner_url: string | null;
-  primary_color: string;
-  secondary_color: string;
-  text_color: string;
-  bg_color: string;
-  pix_enabled: boolean;
-  card_enabled: boolean;
-  show_timer: boolean;
-  timer_minutes: number;
-  show_stock: boolean;
-  require_phone: boolean;
-  require_cpf: boolean;
-  headline: string | null;
-  subheadline: string | null;
-  cta_text: string;
-  success_message: string;
-  products: Product[];
+  description?: string | null;
+  logo_url?: string | null;
+  banner_url?: string | null;
+  primary_color?: string;
+  secondary_color?: string;
+  text_color?: string;
+  bg_color?: string;
+  pix_enabled?: boolean;
+  card_enabled?: boolean;
+  show_timer?: boolean;
+  timer_minutes?: number;
+  show_stock?: boolean;
+  require_phone?: boolean;
+  require_cpf?: boolean;
+  headline?: string | null;
+  subheadline?: string | null;
+  cta_text?: string;
+  success_message?: string;
+  products?: Product[];
 }
 
 interface CartItem {
@@ -71,7 +71,7 @@ export function CheckoutPage({ checkout }: { checkout: Checkout }) {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [couponApplied, setCouponApplied] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(checkout.timer_minutes * 60);
+  const [timeLeft, setTimeLeft] = useState((checkout.timer_minutes || 15) * 60);
 
   // Customer info
   const [customerInfo, setCustomerInfo] = useState({
