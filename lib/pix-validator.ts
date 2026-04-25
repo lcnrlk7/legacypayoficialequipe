@@ -226,6 +226,45 @@ export function extractPixKeyFromQRCode(qrCode: string): string | null {
 }
 
 /**
+ * Detects the type of PIX key
+ */
+export function detectPixKeyType(key: string): string {
+  const cleaned = key.trim();
+  
+  // CPF: 11 digits
+  if (/^\d{11}$/.test(cleaned.replace(/\D/g, '')) && cleaned.replace(/\D/g, '').length === 11) {
+    return 'CPF';
+  }
+  
+  // CNPJ: 14 digits
+  if (/^\d{14}$/.test(cleaned.replace(/\D/g, '')) && cleaned.replace(/\D/g, '').length === 14) {
+    return 'CNPJ';
+  }
+  
+  // Email
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned)) {
+    return 'EMAIL';
+  }
+  
+  // Phone: starts with +55 or has 10-11 digits
+  if (/^\+55/.test(cleaned) || /^\d{10,11}$/.test(cleaned.replace(/\D/g, ''))) {
+    return 'TELEFONE';
+  }
+  
+  // Random key (EVP): UUID format
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleaned)) {
+    return 'ALEATORIA';
+  }
+  
+  // EMV/QR Code
+  if (cleaned.startsWith('00020126') || cleaned.includes('br.gov.bcb.pix')) {
+    return 'QR CODE';
+  }
+  
+  return 'PIX';
+}
+
+/**
  * Formats currency for display
  */
 export function formatCurrency(value: number): string {

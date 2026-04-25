@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Loader2, AlertCircle, CheckCircle, QrCode, Copy, Key } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, QrCode, Copy, Key, ArrowLeft, Wallet } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { QRScanner } from './qr-scanner';
 import { CopyPasteInput } from './copy-paste-input';
-import { calculateWithdrawalFee, formatCurrency } from '@/lib/pix-validator';
+import { calculateWithdrawalFee, formatCurrency, detectPixKeyType } from '@/lib/pix-validator';
 
 interface PixKey {
   id: string;
@@ -26,6 +26,9 @@ interface WithdrawModalProps {
   onClose: () => void;
 }
 
+type Step = 'select' | 'confirm';
+type Tab = 'saved' | 'qr' | 'paste';
+
 export function WithdrawModal({
   balance,
   savedPixKeys,
@@ -36,44 +39,56 @@ export function WithdrawModal({
   onWithdraw,
   onClose,
 }: WithdrawModalProps) {
+  const [step, setStep] = useState<Step>('select');
+  const [activeTab, setActiveTab] = useState<Tab>('saved');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawPixKey, setWithdrawPixKey] = useState('');
-  const [activeTab, setActiveTab] = useState<'saved' | 'qr' | 'paste'>('saved');
-  const [selectedPixKeyId, setSelectedPixKeyId] = useState<string>(
-    savedPixKeys.find((k) => k.is_primary)?.id || savedPixKeys[0]?.id || ''
-  );
+  const [pixKeyType, setPixKeyType] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
 
   // Calculate fee when amount changes
   const amount = parseFloat(withdrawAmount) || 0;
-  const feeCalculation = calculateWithdrawalFee(amount, systemSettings.withdrawalFeePercentage || 1.5);
+  const feePercentage = systemSettings.withdrawalFeePercentage || 1.5;
+  const feeCalculation = calculateWithdrawalFee(amount, feePercentage);
 
-  const handleSavedKeySelect = (keyId: string) => {
-    setSelectedPixKeyId(keyId);
-    const key = savedPixKeys.find((k) => k.id === keyId);
-    if (key) {
-      setWithdrawPixKey(key.key_value);
-    }
+  // Handle saved key selection - go directly to confirm
+  const handleSavedKeySelect = (key: PixKey) => {
+    setWithdrawPixKey(key.key_value);
+    setPixKeyType(key.key_type.toUpperCase());
+    setLocalError(null);
+    setStep('confirm');
   };
 
+  // Handle QR scan - go directly to confirm
   const handleQRScan = (pixKey: string) => {
     console.log('[v0] QR scanned:', pixKey);
     setWithdrawPixKey(pixKey);
-    setActiveTab('saved'); // Show summary after scan
+    setPixKeyType(detectPixKeyType(pixKey) || 'PIX');
     setLocalError(null);
+    setStep('confirm');
   };
 
+  // Handle paste - go directly to confirm
   const handlePasteSubmit = (pixKey: string) => {
     console.log('[v0] PIX key pasted:', pixKey);
     setWithdrawPixKey(pixKey);
-    setActiveTab('saved'); // Show summary after paste
+    setPixKeyType(detectPixKeyType(pixKey) || 'PIX');
+    setLocalError(null);
+    setStep('confirm');
+  };
+
+  // Go back to selection
+  const handleBack = () => {
+    setStep('select');
+    setWithdrawAmount('');
     setLocalError(null);
   };
 
+  // Process withdrawal
   const handleWithdraw = async () => {
     // Validation
     if (!withdrawAmount || amount <= 0) {
-      setLocalError('Informe um valor válido');
+      setLocalError('Informe um valor valido');
       return;
     }
 
@@ -82,30 +97,51 @@ export function WithdrawModal({
       return;
     }
 
-    if (amount < systemSettings.minWithdrawal) {
-      setLocalError(`Valor mínimo: ${formatCurrency(systemSettings.minWithdrawal)}`);
+    if (amount < (systemSettings.minWithdrawal || 3)) {
+      setLocalError(`Valor minimo: ${formatCurrency(systemSettings.minWithdrawal || 3)}`);
       return;
     }
 
     if (feeCalculation.total > balance) {
-      setLocalError('Saldo insuficiente para esta transferência (incluindo taxa)');
+      setLocalError('Saldo insuficiente para esta transferencia (incluindo taxa)');
       return;
     }
 
     try {
       await onWithdraw(amount, withdrawPixKey);
-      setWithdrawAmount('');
-      setWithdrawPixKey('');
-      setSelectedPixKeyId('');
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : 'Erro ao processar saque');
     }
   };
 
   const displayError = localError || error;
+  const minWithdrawal = systemSettings.minWithdrawal || 3;
+  const maxWithdrawal = systemSettings.maxWithdrawal || 50000;
+
+  // Success state
+  if (withdrawSuccess) {
+    return (
+      <div className="text-center space-y-4 py-6">
+        <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
+          <CheckCircle className="w-8 h-8 text-green-500" />
+        </div>
+        <div>
+          <h3 className="font-semibold text-foreground">Saque Enviado!</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            {amount <= 500
+              ? 'Seu saque sera processado em breve'
+              : 'Seu saque foi enviado para aprovacao do administrador'}
+          </p>
+        </div>
+        <Button onClick={onClose} className="w-full bg-primary hover:bg-primary/90">
+          Fechar
+        </Button>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Balance Info */}
       <div className="p-4 bg-primary/10 border border-primary/30 rounded-xl">
         <p className="text-sm text-primary mb-1">Saldo disponivel</p>
@@ -120,59 +156,41 @@ export function WithdrawModal({
         </div>
       )}
 
-      {withdrawSuccess ? (
-        <div className="text-center space-y-4 py-6">
-          <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
-            <CheckCircle className="w-8 h-8 text-green-500" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-foreground">Saque Enviado!</h3>
-            <p className="text-sm text-muted-foreground mt-1">
-              {feeCalculation.amount <= 500
-                ? 'Seu saque será processado em breve'
-                : 'Seu saque foi enviado para aprovação do administrador'}
-            </p>
-          </div>
-          <Button onClick={onClose} className="w-full">
-            Fechar
-          </Button>
-        </div>
-      ) : (
+      {/* Step: Select PIX Key */}
+      {step === 'select' && (
         <div className="space-y-4">
-          <div className="flex gap-2 border-b border-border">
-            {/* Tab: Saved Keys */}
+          {/* Tabs */}
+          <div className="flex gap-1 p-1 bg-secondary rounded-xl">
             <button
               onClick={() => setActiveTab('saved')}
-              className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'saved'
-                  ? 'border-primary text-primary font-semibold'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               <Key className="w-4 h-4" />
               Chave Salva
             </button>
 
-            {/* Tab: QR Scanner */}
             <button
               onClick={() => setActiveTab('qr')}
-              className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'qr'
-                  ? 'border-primary text-primary font-semibold'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               <QrCode className="w-4 h-4" />
               QR Code
             </button>
 
-            {/* Tab: Copy & Paste */}
             <button
               onClick={() => setActiveTab('paste')}
-              className={`flex items-center gap-2 px-4 py-2 border-b-2 transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'paste'
-                  ? 'border-primary text-primary font-semibold'
-                  : 'border-transparent text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               <Copy className="w-4 h-4" />
@@ -180,23 +198,20 @@ export function WithdrawModal({
             </button>
           </div>
 
-          <div className="space-y-4">
-            {/* Tab Content: Saved Keys */}
+          {/* Tab Content */}
+          <div className="min-h-[250px]">
+            {/* Saved Keys */}
             {activeTab === 'saved' && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {savedPixKeys.length > 0 ? (
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium text-foreground">Selecione uma chave PIX salva</label>
-                    <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                  <>
+                    <p className="text-sm font-medium text-foreground">Selecione uma chave PIX salva</p>
+                    <div className="space-y-2 max-h-[220px] overflow-y-auto">
                       {savedPixKeys.map((key) => (
                         <button
                           key={key.id}
-                          onClick={() => handleSavedKeySelect(key.id)}
-                          className={`w-full p-3 rounded-xl border-2 text-left transition-all ${
-                            selectedPixKeyId === key.id
-                              ? 'border-primary bg-primary/10'
-                              : 'border-border bg-secondary hover:border-primary/50'
-                          }`}
+                          onClick={() => handleSavedKeySelect(key)}
+                          className="w-full p-3 rounded-xl border-2 border-border bg-secondary hover:border-primary/50 text-left transition-all"
                         >
                           <div className="flex items-center justify-between">
                             <div>
@@ -212,89 +227,132 @@ export function WithdrawModal({
                         </button>
                       ))}
                     </div>
-                  </div>
+                  </>
                 ) : (
-                  <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
-                    <p className="text-sm text-yellow-500">Nenhuma chave PIX salva. Use QR Code ou Copia e Cola.</p>
-                  </div>
-                )}
-
-                {/* Amount Input */}
-                {withdrawPixKey && (
-                  <div className="space-y-2 pt-4 border-t border-border">
-                    <label className="text-sm font-medium text-foreground">Valor do saque</label>
-                    <Input
-                      type="number"
-                      placeholder="0,00"
-                      value={withdrawAmount}
-                      onChange={(e) => setWithdrawAmount(e.target.value)}
-                      className="bg-secondary border-border"
-                      min={systemSettings.minWithdrawal}
-                      step="0.01"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Minimo: {formatCurrency(systemSettings.minWithdrawal)} | Maximo: {formatCurrency(systemSettings.maxWithdrawal || 50000)}
-                    </p>
-
-                    {/* Fee Breakdown */}
-                    {amount > 0 && (
-                      <div className="p-3 bg-secondary rounded-xl space-y-2 mt-4">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Valor:</span>
-                          <span className="font-medium text-foreground">{formatCurrency(feeCalculation.amount)}</span>
-                        </div>
-                        <div className="flex justify-between text-sm">
-                          <span className="text-muted-foreground">Taxa ({systemSettings.withdrawalFeePercentage}%):</span>
-                          <span className="font-medium text-primary">{formatCurrency(feeCalculation.fee)}</span>
-                        </div>
-                        <div className="border-t border-border pt-2 flex justify-between text-sm">
-                          <span className="font-semibold text-foreground">Total:</span>
-                          <span className="font-bold text-primary">{formatCurrency(feeCalculation.total)}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Withdraw Button */}
-                    <Button
-                      onClick={handleWithdraw}
-                      disabled={loading || !withdrawAmount || !withdrawPixKey}
-                      className="w-full mt-4 bg-primary hover:bg-primary/90 text-primary-foreground"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          Processando...
-                        </>
-                      ) : (
-                        `Sacar ${withdrawPixKey ? formatCurrency(feeCalculation.amount) : ''}`
-                      )}
-                    </Button>
+                  <div className="p-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg text-center">
+                    <p className="text-sm text-yellow-500">Nenhuma chave PIX salva.</p>
+                    <p className="text-xs text-muted-foreground mt-1">Use QR Code ou Copia e Cola.</p>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Tab Content: QR Scanner */}
+            {/* QR Scanner */}
             {activeTab === 'qr' && (
-              <div className="space-y-4">
-                <QRScanner
-                  onScan={handleQRScan}
-                  onError={(err) => setLocalError(err)}
-                  isLoading={loading}
-                />
-              </div>
+              <QRScanner
+                onScan={handleQRScan}
+                onError={(err) => setLocalError(err)}
+                isLoading={loading}
+              />
             )}
 
-            {/* Tab Content: Copy & Paste */}
+            {/* Copy & Paste */}
             {activeTab === 'paste' && (
-              <div className="space-y-4">
-                <CopyPasteInput
-                  onSubmit={handlePasteSubmit}
-                  isLoading={loading}
-                />
-              </div>
+              <CopyPasteInput
+                onSubmit={handlePasteSubmit}
+                isLoading={loading}
+              />
             )}
           </div>
+        </div>
+      )}
+
+      {/* Step: Confirm Payment */}
+      {step === 'confirm' && (
+        <div className="space-y-4">
+          {/* Back button */}
+          <button
+            onClick={handleBack}
+            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar
+          </button>
+
+          {/* Selected Key */}
+          <div className="p-4 bg-secondary rounded-xl border border-border">
+            <p className="text-xs text-muted-foreground mb-1">Chave PIX de destino</p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold bg-primary/20 text-primary px-2 py-0.5 rounded">
+                {pixKeyType}
+              </span>
+              <p className="font-mono text-sm text-foreground truncate">{withdrawPixKey}</p>
+            </div>
+          </div>
+
+          {/* Amount Input */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Valor do saque</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
+              <Input
+                type="number"
+                placeholder="0,00"
+                value={withdrawAmount}
+                onChange={(e) => {
+                  setWithdrawAmount(e.target.value);
+                  setLocalError(null);
+                }}
+                className="pl-10 bg-secondary border-border text-lg h-12"
+                min={minWithdrawal}
+                max={maxWithdrawal}
+                step="0.01"
+                autoFocus
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Minimo: {formatCurrency(minWithdrawal)} | Maximo: {formatCurrency(maxWithdrawal)}
+            </p>
+          </div>
+
+          {/* Fee Breakdown */}
+          {amount > 0 && (
+            <div className="p-4 bg-secondary rounded-xl space-y-3 border border-border">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Valor do saque:</span>
+                <span className="font-medium text-foreground">{formatCurrency(feeCalculation.amount)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Taxa ({feePercentage}%):</span>
+                <span className="font-medium text-red-400">- {formatCurrency(feeCalculation.fee)}</span>
+              </div>
+              <div className="border-t border-border pt-3 flex justify-between">
+                <span className="font-semibold text-foreground">Voce recebe:</span>
+                <span className="font-bold text-xl text-primary">
+                  {formatCurrency(feeCalculation.amount - feeCalculation.fee)}
+                </span>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Total debitado do saldo:</span>
+                <span>{formatCurrency(feeCalculation.total)}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Withdraw Button */}
+          <Button
+            onClick={handleWithdraw}
+            disabled={loading || !withdrawAmount || amount <= 0 || feeCalculation.total > balance}
+            className="w-full h-12 bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 text-primary-foreground font-semibold"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                Processando...
+              </>
+            ) : (
+              <>
+                <Wallet className="w-5 h-5 mr-2" />
+                Confirmar Saque
+              </>
+            )}
+          </Button>
+
+          {feeCalculation.total > balance && amount > 0 && (
+            <p className="text-xs text-center text-red-400">
+              Saldo insuficiente. Voce precisa de {formatCurrency(feeCalculation.total)} (incluindo taxa).
+            </p>
+          )}
         </div>
       )}
     </div>
