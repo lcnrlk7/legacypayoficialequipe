@@ -49,14 +49,18 @@ export function StatsCards({
     // Usar transacoes filtradas pelo periodo
     const filteredTx = transactions;
     
-    // Filtrar transacoes completadas
+    // Filtrar transacoes (incluir pendentes e processando como volume)
+    const depositTypes = ["deposit", "transfer_in", "pix_in", "received"];
+    const withdrawalTypes = ["withdrawal", "transfer_out", "pix_out", "sent"];
+    const activeStatuses = ["completed", "pending", "processing"];
+    
     const completedDeposits = filteredTx.filter(
-      t => ["deposit", "transfer_in", "pix_in", "received"].includes(t.type) && t.status === "completed"
+      t => depositTypes.includes(t.type) && activeStatuses.includes(t.status)
     );
     const completedWithdrawals = filteredTx.filter(
-      t => ["withdrawal", "transfer_out", "pix_out", "sent"].includes(t.type) && t.status === "completed"
+      t => withdrawalTypes.includes(t.type) && t.status === "completed"
     );
-    const allCompleted = filteredTx.filter(t => t.status === "completed");
+    const allCompleted = filteredTx.filter(t => activeStatuses.includes(t.status));
 
     // Volume transacionado (total de entradas)
     const volumeTransacionado = completedDeposits.reduce(
@@ -78,8 +82,8 @@ export function StatsCards({
         (currentMonth === 0 && date.getMonth() === 11 && date.getFullYear() === currentYear - 1)
       );
       return isLastMonth && 
-        ["deposit", "transfer_in", "pix_in", "received"].includes(t.type) && 
-        t.status === "completed";
+        depositTypes.includes(t.type) && 
+        activeStatuses.includes(t.status);
     });
     
     const lastMonthVolume = lastMonthDeposits.reduce(
@@ -113,7 +117,7 @@ export function StatsCards({
 
     // Conversao PIX (aprovados / total)
     const pixTransactions = filteredTx.filter(
-      t => ["deposit", "transfer_in", "pix_in", "received"].includes(t.type)
+      t => depositTypes.includes(t.type)
     );
     const pixApproved = pixTransactions.filter(t => t.status === "completed").length;
     const pixConversion = pixTransactions.length > 0 

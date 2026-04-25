@@ -58,11 +58,11 @@ export function SalesChart({ transactions }: SalesChartProps) {
         monthlyData[key] = 0;
       }
 
-      // Somar transacoes de deposito por mes
+      // Somar transacoes de deposito por mes (incluir pendentes tambem)
       transactions
         .filter(t => 
           ["deposit", "transfer_in", "pix_in", "received"].includes(t.type) && 
-          t.status === "completed"
+          ["completed", "pending", "processing"].includes(t.status)
         )
         .forEach(t => {
           const date = new Date(t.created_at);
@@ -97,7 +97,7 @@ export function SalesChart({ transactions }: SalesChartProps) {
       transactions
         .filter(t => 
           ["deposit", "transfer_in", "pix_in", "received"].includes(t.type) && 
-          t.status === "completed"
+          ["completed", "pending", "processing"].includes(t.status)
         )
         .forEach(t => {
           const date = new Date(t.created_at);

@@ -14,12 +14,12 @@ export default async function DashboardPage() {
     SELECT * FROM profiles WHERE id = ${session.userId}
   `
   
-  // Calculate total_revenue from completed transactions
+  // Calculate total_revenue from completed transactions (pix_in is the income type)
   const revenueResult = await sql`
     SELECT COALESCE(SUM(amount), 0) as total_revenue 
     FROM transactions 
     WHERE user_id = ${session.userId} 
-    AND type = 'received' 
+    AND type IN ('pix_in', 'received', 'deposit', 'sale')
     AND status = 'completed'
   `
   
@@ -28,11 +28,11 @@ export default async function DashboardPage() {
     total_revenue: parseFloat(revenueResult[0]?.total_revenue || 0)
   } as Profile
 
+  // Get ALL transactions for stats calculation (not just 10)
   const transactions = await sql`
     SELECT * FROM transactions 
     WHERE user_id = ${session.userId} 
-    ORDER BY created_at DESC 
-    LIMIT 10
+    ORDER BY created_at DESC
   `
 
   const pixKeys = await sql`
