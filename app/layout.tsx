@@ -39,8 +39,8 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="bg-background">
       <head>
-        <link rel="icon" type="image/png" href="/favicon.png" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
+        <link rel="icon" type="image/png" href="/logo-lp.png" />
+        <link rel="apple-touch-icon" href="/logo-lp.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>
