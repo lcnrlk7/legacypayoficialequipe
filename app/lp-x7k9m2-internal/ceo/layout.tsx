@@ -23,6 +23,8 @@ import {
   Gift,
   Percent,
   FileBarChart,
+  UsersRound,
+  Webhook,
 } from "lucide-react";
 
 const menuItems = [
@@ -67,14 +69,24 @@ const menuItems = [
     icon: FileBarChart,
   },
   {
-    label: "Premiações",
+    label: "Premiacoes",
     href: "/lp-x7k9m2-internal/ceo/rewards",
     icon: Gift,
   },
   {
-    label: "Notificações",
+    label: "Afiliados",
+    href: "/lp-x7k9m2-internal/ceo/affiliates",
+    icon: UsersRound,
+  },
+  {
+    label: "Notificacoes",
     href: "/lp-x7k9m2-internal/ceo/notifications",
     icon: Bell,
+  },
+  {
+    label: "Webhooks",
+    href: "/lp-x7k9m2-internal/ceo/webhooks",
+    icon: Webhook,
   },
   {
     label: "Logs",
