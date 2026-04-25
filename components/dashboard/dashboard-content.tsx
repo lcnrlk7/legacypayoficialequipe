@@ -7,7 +7,6 @@ import {
   ArrowUpRight,
   Key,
   Clock,
-  Copy,
   Calendar,
   ChevronDown,
   CheckCircle,
@@ -193,10 +192,6 @@ export function DashboardContent({
   const currentBalance = contextProfile?.balance ?? serverProfile?.balance ?? 0;
   const profile = serverProfile ? { ...serverProfile, balance: Number(currentBalance) } : null;
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
-
   const { totalReceivedGross, totalReceivedNet, totalSent, filteredTransactions } = useMemo(() => {
     const { start, end } = getDateRange(periodFilter);
     
@@ -307,47 +302,12 @@ export function DashboardContent({
       )}
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* API Key */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="lg:col-span-2 bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6"
-        >
-          <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">
-            Sua Chave API
-          </h2>
-          <div className="flex items-center gap-2 sm:gap-3 bg-secondary rounded-lg sm:rounded-xl p-3 sm:p-4">
-            <code className="flex-1 text-xs sm:text-sm text-muted-foreground font-mono truncate">
-              {profile?.api_key || "Carregando..."}
-            </code>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => copyToClipboard(profile?.api_key || "")}
-              className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
-            >
-              <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
-            </Button>
-          </div>
-          <p className="text-[10px] sm:text-xs text-muted-foreground mt-2 sm:mt-3">
-            Use esta chave para autenticar suas requisições à API. Mantenha-a em segredo!
-          </p>
-          <Link href="/docs">
-            <Button variant="link" className="text-primary p-0 mt-2 text-xs sm:text-sm">
-              Ver documentação da API
-            </Button>
-          </Link>
-        </motion.div>
-
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6"
-        >
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+        className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6"
+      >
           <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">
             Ações Rápidas
           </h2>
@@ -371,8 +331,7 @@ export function DashboardContent({
               </Button>
             </Link>
           </div>
-        </motion.div>
-      </div>
+      </motion.div>
 
       {/* Recent Transactions */}
       <motion.div
