@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, Mail, Phone, Building, Loader2, Save, CheckCircle2, Shield, Lock, Eye, EyeOff, KeyRound, X, Monitor, Smartphone, Globe, Clock, LogOut, Trash2, AlertTriangle, Bell, BellRing, Send, Calendar } from "lucide-react";
+import { User, Mail, Phone, Building, Loader2, Save, CheckCircle2, Shield, Lock, Eye, EyeOff, KeyRound, X, Monitor, Smartphone, Globe, Clock, LogOut, Trash2, AlertTriangle, Bell, BellRing, Send, Calendar, Moon, Sun, Palette } from "lucide-react";
+import { ThemeToggleWithLabel } from "@/components/theme-toggle";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -797,6 +798,30 @@ export default function SettingsPage() {
         </div>
       </motion.div>
 
+      {/* Appearance Settings */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.09 }}
+        className="bg-card border border-border rounded-2xl p-6"
+      >
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 rounded-xl bg-primary/10">
+            <Palette className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              Aparencia
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Personalize a interface do sistema
+            </p>
+          </div>
+        </div>
+
+        <ThemeToggleWithLabel />
+      </motion.div>
+
       {/* Security Settings */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -817,7 +842,7 @@ export default function SettingsPage() {
               <div>
                 <p className="font-medium text-foreground">Alterar Senha</p>
                 <p className="text-sm text-muted-foreground">
-                  Um código será enviado para seu email
+                  Um codigo sera enviado para seu email
                 </p>
               </div>
             </div>

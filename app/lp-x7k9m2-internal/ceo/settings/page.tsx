@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Save, Percent, DollarSign, Shield, Bell } from "lucide-react";
+import { Save, Percent, DollarSign, Shield, Bell, Palette } from "lucide-react";
+import { ThemeToggleWithLabel } from "@/components/theme-toggle";
 
 interface SystemSettings {
   // Taxas de Deposito (PIX In)
@@ -460,22 +461,44 @@ export default function SettingsPage() {
         </div>
       </motion.div>
 
+      {/* Appearance */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="glass rounded-2xl p-6"
+      >
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 rounded-xl bg-primary/10">
+            <Palette className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Aparencia</h2>
+            <p className="text-sm text-muted-foreground">
+              Personalize a interface do painel administrativo
+            </p>
+          </div>
+        </div>
+
+        <ThemeToggleWithLabel />
+      </motion.div>
+
       {/* Info */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: 0.3 }}
         className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20"
       >
         <div className="flex items-start gap-3">
           <Bell className="w-5 h-5 text-blue-400 mt-0.5" />
           <div>
             <p className="text-sm text-blue-400 font-medium">
-              Alterações em tempo real
+              Alteracoes em tempo real
             </p>
             <p className="text-sm text-blue-300/70">
-              As configurações são aplicadas imediatamente após salvar. Taxas
-              personalizadas de usuários têm prioridade sobre as taxas padrão.
+              As configuracoes sao aplicadas imediatamente apos salvar. Taxas
+              personalizadas de usuarios tem prioridade sobre as taxas padrao.
             </p>
           </div>
         </div>
