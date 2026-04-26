@@ -2,8 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, X, MapPin, Loader2, Gift, Play, ChevronLeft, ChevronRight, RotateCcw, Award, Star, Users } from "lucide-react";
+import { Trophy, X, MapPin, Loader2, Gift, Play, ChevronLeft, ChevronRight, RotateCcw, Award, Star, Users, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
+
+// Mapeamento de imagens das premiacoes
+const rewardImages: Record<string, string> = {
+  bracelet: "/images/rewards/pulseira-20k.png",
+  plaque_100k: "/images/rewards/placa-100k.png",
+  plaque_500k: "/images/rewards/placa-500k.png",
+  plaque_1m: "/images/rewards/placa-1m.png",
+};
 
 interface Reward {
   id: string;
@@ -197,6 +206,56 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
   const hasAvailableReward = availableRewards.length > 0;
   const nextAvailableReward = availableRewards[0];
 
+  // Funcao para renderizar um milestone
+  const renderMilestone = (milestone: typeof milestones[0]) => {
+    const status = getMilestoneStatus(milestone);
+    const isCompleted = status === "completed" || status === "pending" || status === "credited";
+    const hasRewardImage = milestone.hasBadge && milestone.badgeType && rewardImages[milestone.badgeType];
+    
+    return (
+      <div
+        className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center transition-all overflow-hidden ${
+          isCompleted
+            ? "border-primary bg-primary/20"
+            : hasRewardImage
+              ? "border-primary/50 bg-gray-800/50"
+              : "border-gray-600 bg-gray-800/50"
+        }`}
+      >
+        {/* Imagem da premiacao para milestones com recompensa */}
+        {hasRewardImage ? (
+          <>
+            <Image
+              src={rewardImages[milestone.badgeType!]}
+              alt={achievementNames[milestone.badgeType!] || milestone.label}
+              fill
+              className={`object-cover ${isCompleted ? "opacity-100" : "opacity-40 grayscale"}`}
+            />
+            {/* Overlay com valor */}
+            <div className={`absolute inset-0 flex flex-col items-center justify-center ${isCompleted ? "bg-black/40" : "bg-black/60"}`}>
+              <span className={`text-[10px] sm:text-xs font-bold ${isCompleted ? "text-white" : "text-gray-400"}`}>
+                {milestone.label}
+              </span>
+              {isCompleted && (
+                <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center mt-1">
+                  <Check className="w-3 h-3 text-white" />
+                </div>
+              )}
+            </div>
+            {/* Borda brilhante para premiacoes */}
+            {!isCompleted && (
+              <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-pulse" />
+            )}
+          </>
+        ) : (
+          <span className={`text-xs sm:text-sm font-bold ${isCompleted ? "text-primary" : "text-gray-500"}`}>
+            {milestone.label}
+          </span>
+        )}
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="bg-card border border-border rounded-2xl p-6 flex items-center justify-center min-h-[400px]">
@@ -233,23 +292,7 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                   
                   return (
                     <div key={milestone.value} className="flex items-center">
-                      <div
-                        className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center transition-all ${
-                          isCompleted
-                            ? "border-primary bg-primary/20"
-                            : "border-gray-600 bg-gray-800/50"
-                        }`}
-                      >
-                        {milestone.hasBadge && isCompleted ? (
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center">
-                            <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                          </div>
-                        ) : (
-                          <span className={`text-xs sm:text-sm font-bold ${isCompleted ? "text-primary" : "text-gray-500"}`}>
-                            {milestone.label}
-                          </span>
-                        )}
-                      </div>
+                      {renderMilestone(milestone)}
                       {idx < arr.length - 1 && (
                         <div className={`w-8 sm:w-12 h-1 ${
                           getMilestoneStatus(arr[idx + 1]) !== "locked" || isCompleted
@@ -275,23 +318,7 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                   
                   return (
                     <div key={milestone.value} className="flex items-center flex-row-reverse">
-                      <div
-                        className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center transition-all ${
-                          isCompleted
-                            ? "border-primary bg-primary/20"
-                            : "border-gray-600 bg-gray-800/50"
-                        }`}
-                      >
-                        {milestone.hasBadge && isCompleted ? (
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center">
-                            <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                          </div>
-                        ) : (
-                          <span className={`text-xs sm:text-sm font-bold ${isCompleted ? "text-primary" : "text-gray-500"}`}>
-                            {milestone.label}
-                          </span>
-                        )}
-                      </div>
+                      {renderMilestone(milestone)}
                       {idx < arr.length - 1 && (
                         <div className={`w-8 sm:w-12 h-1 ${
                           isCompleted ? "bg-primary" : "bg-gray-700"
@@ -315,23 +342,7 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                   
                   return (
                     <div key={milestone.value} className="flex items-center">
-                      <div
-                        className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center transition-all ${
-                          isCompleted
-                            ? "border-primary bg-primary/20"
-                            : "border-gray-600 bg-gray-800/50"
-                        }`}
-                      >
-                        {milestone.hasBadge && isCompleted ? (
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center">
-                            <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                          </div>
-                        ) : (
-                          <span className={`text-xs sm:text-sm font-bold ${isCompleted ? "text-primary" : "text-gray-500"}`}>
-                            {milestone.label}
-                          </span>
-                        )}
-                      </div>
+                      {renderMilestone(milestone)}
                       {idx < arr.length - 1 && (
                         <div className={`w-8 sm:w-12 h-1 ${
                           isCompleted ? "bg-primary" : "bg-gray-700"
