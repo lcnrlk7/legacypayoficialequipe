@@ -108,7 +108,10 @@ export async function GET(request: NextRequest) {
       const nextGoal = getNextGoal(totalRevenue);
       const progress = getProgress(totalRevenue);
 
-      // Encontrar todas as metas atingidas com recompensa
+      // Encontrar TODAS as metas atingidas (com ou sem recompensa)
+      const allAchievedGoals = GOALS.filter(g => totalRevenue >= g.value);
+      
+      // Encontrar metas atingidas QUE TEM recompensa
       const achievedRewards = GOALS.filter(
         g => g.reward && totalRevenue >= g.value
       ).map(g => ({
@@ -116,8 +119,11 @@ export async function GET(request: NextRequest) {
         delivered: deliveredSet.has(`${user.id}-${g.value}`)
       }));
 
-      // Recompensas pendentes = atingidas mas nao entregues
+      // Recompensas pendentes = atingidas com recompensa mas NAO entregues
       const pendingRewards = achievedRewards.filter(r => !r.delivered);
+      
+      // Recompensas entregues
+      const deliveredRewardsForUser = achievedRewards.filter(r => r.delivered);
 
       return {
         id: user.id,
@@ -129,8 +135,11 @@ export async function GET(request: NextRequest) {
         current_goal: currentGoal,
         next_goal: nextGoal,
         progress,
+        all_achieved_goals: allAchievedGoals,
         achieved_rewards: achievedRewards,
         pending_rewards: pendingRewards,
+        delivered_rewards: deliveredRewardsForUser,
+        has_rewards: achievedRewards.length > 0,
         has_pending_rewards: pendingRewards.length > 0,
       };
     });
@@ -148,16 +157,29 @@ export async function GET(request: NextRequest) {
     }
 
     if (filter === "with_goals") {
+      // Filtrar usuarios que atingiram pelo menos uma meta
       filtered = filtered.filter((u: any) => u.current_goal !== null);
     } else if (filter === "pending_rewards") {
-      filtered = filtered.filter((u: any) => u.has_pending_rewards);
+      // Filtrar APENAS usuarios com recompensas PENDENTES (nao entregues)
+      filtered = filtered.filter((u: any) => u.has_pending_rewards === true);
+    } else if (filter === "with_rewards") {
+      // Filtrar usuarios que atingiram metas com recompensa (pendente ou entregue)
+      filtered = filtered.filter((u: any) => u.has_rewards === true);
     }
+
+    // Ordenar: usuarios com recompensas pendentes primeiro, depois por faturamento
+    filtered.sort((a: any, b: any) => {
+      if (a.has_pending_rewards && !b.has_pending_rewards) return -1;
+      if (!a.has_pending_rewards && b.has_pending_rewards) return 1;
+      return b.total_revenue - a.total_revenue;
+    });
 
     // Stats
     const stats = {
       total_users: usersWithGoals.length,
       users_with_goals: usersWithGoals.filter((u: any) => u.current_goal !== null).length,
-      users_with_pending_rewards: usersWithGoals.filter((u: any) => u.has_pending_rewards).length,
+      users_with_rewards: usersWithGoals.filter((u: any) => u.has_rewards === true).length,
+      users_with_pending_rewards: usersWithGoals.filter((u: any) => u.has_pending_rewards === true).length,
       total_revenue: usersWithGoals.reduce((sum: number, u: any) => sum + u.total_revenue, 0),
     };
 

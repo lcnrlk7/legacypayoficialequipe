@@ -40,14 +40,18 @@ interface UserGoal {
   current_goal: Goal | null;
   next_goal: Goal | null;
   progress: number;
+  all_achieved_goals: Goal[];
   achieved_rewards: Goal[];
   pending_rewards: Goal[];
+  delivered_rewards: Goal[];
+  has_rewards: boolean;
   has_pending_rewards: boolean;
 }
 
 interface Stats {
   total_users: number;
   users_with_goals: number;
+  users_with_rewards: number;
   users_with_pending_rewards: number;
   total_revenue: number;
 }
@@ -412,21 +416,21 @@ export default function UserGoalsPage() {
                 </p>
               </div>
 
-              {/* Achieved Rewards */}
-              {user.achieved_rewards.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-border">
-                  {/* Pending Rewards */}
+              {/* Rewards Section */}
+              {(user.has_rewards || user.has_pending_rewards) && (
+                <div className="mt-4 pt-4 border-t border-border space-y-4">
+                  {/* Pending Rewards - Aguardando entrega */}
                   {user.pending_rewards && user.pending_rewards.length > 0 && (
-                    <>
-                      <p className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
-                        <Award className="w-4 h-4 text-yellow-500" />
-                        Recompensas Pendentes:
+                    <div>
+                      <p className="text-sm font-medium text-yellow-500 mb-3 flex items-center gap-2">
+                        <Award className="w-4 h-4" />
+                        Recompensas Pendentes ({user.pending_rewards.length}):
                       </p>
-                      <div className="flex flex-wrap gap-2 mb-4">
+                      <div className="flex flex-wrap gap-2">
                         {user.pending_rewards.map((reward) => (
                           <div
                             key={reward.value}
-                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20"
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30"
                           >
                             <Gift className="w-4 h-4 text-yellow-500" />
                             <span className="text-sm text-yellow-500 font-medium">
@@ -447,25 +451,25 @@ export default function UserGoalsPage() {
                               ) : (
                                 <>
                                   <CheckCircle className="w-3 h-3 mr-1" />
-                                  Entregar
+                                  Marcar Entregue
                                 </>
                               )}
                             </Button>
                           </div>
                         ))}
                       </div>
-                    </>
+                    </div>
                   )}
 
-                  {/* Delivered Rewards */}
-                  {user.achieved_rewards.filter(r => r.delivered).length > 0 && (
-                    <>
-                      <p className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        Recompensas Entregues:
+                  {/* Delivered Rewards - Ja entregues */}
+                  {user.delivered_rewards && user.delivered_rewards.length > 0 && (
+                    <div>
+                      <p className="text-sm font-medium text-green-500 mb-2 flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4" />
+                        Recompensas Entregues ({user.delivered_rewards.length}):
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {user.achieved_rewards.filter(r => r.delivered).map((reward) => (
+                        {user.delivered_rewards.map((reward) => (
                           <div
                             key={reward.value}
                             className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20"
@@ -480,7 +484,7 @@ export default function UserGoalsPage() {
                           </div>
                         ))}
                       </div>
-                    </>
+                    </div>
                   )}
                 </div>
               )}

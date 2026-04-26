@@ -35,6 +35,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Ensure table exists
+    await sql`
+      CREATE TABLE IF NOT EXISTS user_rewards (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL,
+        goal_value INTEGER NOT NULL,
+        reward_type TEXT NOT NULL,
+        delivered_at TIMESTAMPTZ DEFAULT NOW(),
+        delivered_by TEXT,
+        notes TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE(user_id, goal_value)
+      )
+    `;
+
     // Check if reward already delivered
     const existing = await sql`
       SELECT id FROM user_rewards 
@@ -43,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     if (existing.length > 0) {
       return NextResponse.json(
-        { error: "Reward already delivered for this goal" },
+        { error: "Essa recompensa ja foi marcada como entregue" },
         { status: 400 }
       );
     }
