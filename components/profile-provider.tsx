@@ -19,6 +19,8 @@ interface ProfileContextType {
   isLoading: boolean;
   refreshProfile: () => Promise<void>;
   updateBalance: (newBalance: number) => void;
+  updateTotalRevenue: (newRevenue: number) => void;
+  totalRevenue: number;
 }
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
@@ -27,6 +29,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   const { user, token, isLoading: authLoading } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [totalRevenue, setTotalRevenue] = useState(0);
 
   const fetchProfile = useCallback(async () => {
     if (!token || !user) {
@@ -94,13 +97,18 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     await fetchProfile();
   }, [fetchProfile]);
 
-  // Função para atualizar apenas o saldo localmente (otimistic update)
+  // Funcao para atualizar apenas o saldo localmente (otimistic update)
   const updateBalance = useCallback((newBalance: number) => {
     setProfile(prev => prev ? { ...prev, balance: Number(newBalance) } : null);
   }, []);
 
+  // Funcao para atualizar o faturamento total (para metas)
+  const updateTotalRevenue = useCallback((newRevenue: number) => {
+    setTotalRevenue(newRevenue);
+  }, []);
+
   return (
-    <ProfileContext.Provider value={{ profile, isLoading, refreshProfile, updateBalance }}>
+    <ProfileContext.Provider value={{ profile, isLoading, refreshProfile, updateBalance, updateTotalRevenue, totalRevenue }}>
       {children}
     </ProfileContext.Provider>
   );
