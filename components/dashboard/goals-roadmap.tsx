@@ -114,6 +114,8 @@ const achievementLevels = [
 export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
   const [userRewards, setUserRewards] = useState<Reward[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewMilestone, setPreviewMilestone] = useState<typeof milestones[0] | null>(null);
   const [selectedMilestone, setSelectedMilestone] = useState<typeof milestones[0] | null>(null);
   const [address, setAddress] = useState("");
   const [isClaiming, setIsClaiming] = useState(false);
@@ -211,16 +213,27 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
     const status = getMilestoneStatus(milestone);
     const isCompleted = status === "completed" || status === "pending" || status === "credited";
     const hasRewardImage = milestone.hasBadge && milestone.badgeType && rewardImages[milestone.badgeType];
+    const isClickable = hasRewardImage;
+    
+    const handleClick = () => {
+      if (hasRewardImage) {
+        setPreviewMilestone(milestone);
+        setShowPreview(true);
+      }
+    };
     
     return (
-      <div
-        className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center transition-all overflow-hidden ${
+      <button
+        type="button"
+        onClick={handleClick}
+        disabled={!isClickable}
+        className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 flex items-center justify-center transition-all overflow-hidden ${
           isCompleted
             ? "border-primary bg-primary/20"
             : hasRewardImage
-              ? "border-primary/50 bg-gray-800/50"
-              : "border-gray-600 bg-gray-800/50"
-        }`}
+              ? "border-primary/50 bg-gray-800/50 cursor-pointer hover:border-primary hover:scale-105"
+              : "border-gray-600 bg-gray-800/50 cursor-default"
+        } ${isClickable ? "hover:shadow-lg hover:shadow-primary/20" : ""}`}
       >
         {/* Imagem da premiacao para milestones com recompensa */}
         {hasRewardImage ? (
@@ -229,30 +242,30 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
               src={rewardImages[milestone.badgeType!]}
               alt={achievementNames[milestone.badgeType!] || milestone.label}
               fill
-              className={`object-cover ${isCompleted ? "opacity-100" : "opacity-40 grayscale"}`}
+              className={`object-cover ${isCompleted ? "opacity-100" : "opacity-50 grayscale"}`}
             />
             {/* Overlay com valor */}
-            <div className={`absolute inset-0 flex flex-col items-center justify-center ${isCompleted ? "bg-black/40" : "bg-black/60"}`}>
-              <span className={`text-[10px] sm:text-xs font-bold ${isCompleted ? "text-white" : "text-gray-400"}`}>
+            <div className={`absolute inset-0 flex flex-col items-center justify-center ${isCompleted ? "bg-black/50" : "bg-black/60"}`}>
+              <span className={`text-[9px] sm:text-[10px] font-bold ${isCompleted ? "text-white" : "text-gray-300"}`}>
                 {milestone.label}
               </span>
               {isCompleted && (
-                <div className="w-4 h-4 rounded-full bg-green-500 flex items-center justify-center mt-1">
-                  <Check className="w-3 h-3 text-white" />
+                <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-green-500 flex items-center justify-center mt-0.5">
+                  <Check className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
                 </div>
               )}
             </div>
             {/* Borda brilhante para premiacoes */}
             {!isCompleted && (
-              <div className="absolute inset-0 rounded-full border-2 border-primary/30 animate-pulse" />
+              <div className="absolute inset-0 rounded-full border-2 border-primary/40 animate-pulse" />
             )}
           </>
         ) : (
-          <span className={`text-xs sm:text-sm font-bold ${isCompleted ? "text-primary" : "text-gray-500"}`}>
+          <span className={`text-[10px] sm:text-xs font-bold ${isCompleted ? "text-primary" : "text-gray-500"}`}>
             {milestone.label}
           </span>
         )}
-      </div>
+      </button>
     );
   };
 
@@ -281,77 +294,96 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
         </p>
 
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Roadmap Grid */}
-          <div className="flex-1 overflow-x-auto">
-            <div className="min-w-[600px] space-y-4">
-              {/* Row 1 */}
-              <div className="flex items-center gap-2">
-                {milestones.filter(m => m.row === 1).sort((a, b) => a.col - b.col).map((milestone, idx, arr) => {
-                  const status = getMilestoneStatus(milestone);
-                  const isCompleted = status === "completed" || status === "pending" || status === "credited";
-                  
-                  return (
-                    <div key={milestone.value} className="flex items-center">
-                      {renderMilestone(milestone)}
-                      {idx < arr.length - 1 && (
-                        <div className={`w-8 sm:w-12 h-1 ${
-                          getMilestoneStatus(arr[idx + 1]) !== "locked" || isCompleted
-                            ? "bg-primary"
-                            : "bg-gray-700"
-                        }`} />
-                      )}
-                    </div>
-                  );
-                })}
+          {/* Roadmap Grid - Snake/Labyrinth Layout */}
+          <div className="flex-1">
+            <div className="relative bg-secondary/30 rounded-xl p-4 sm:p-6 border border-border">
+              {/* Legenda */}
+              <div className="flex items-center gap-4 mb-6 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-primary" />
+                  <span>Atingida</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full border border-primary/50 bg-primary/20" />
+                  <span>Com Premio</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 rounded-full bg-gray-600" />
+                  <span>Bloqueada</span>
+                </div>
               </div>
 
-              {/* Connecting line down */}
-              <div className="flex justify-end pr-10">
-                <div className="w-1 h-8 bg-gray-700" />
+              {/* Snake Path Layout */}
+              <div className="space-y-3">
+                {/* Row 1: 1K -> 10K -> 20K -> 50K */}
+                <div className="flex items-center justify-start gap-1">
+                  {milestones.filter(m => m.row === 1).sort((a, b) => a.col - b.col).map((milestone, idx, arr) => {
+                    const status = getMilestoneStatus(milestone);
+                    const isCompleted = status === "completed" || status === "pending" || status === "credited";
+                    const nextIsCompleted = idx < arr.length - 1 && getMilestoneStatus(arr[idx + 1]) !== "locked";
+                    
+                    return (
+                      <div key={milestone.value} className="flex items-center">
+                        {renderMilestone(milestone)}
+                        {idx < arr.length - 1 && (
+                          <div className={`w-6 sm:w-10 h-0.5 ${nextIsCompleted || isCompleted ? "bg-primary" : "bg-gray-700"}`} />
+                        )}
+                      </div>
+                    );
+                  })}
+                  {/* Curva para baixo */}
+                  <div className="flex flex-col items-center ml-1">
+                    <div className="w-0.5 h-6 bg-gray-700" />
+                  </div>
+                </div>
+
+                {/* Row 2: 75K <- 100K <- 250K <- 375K (reversed) */}
+                <div className="flex items-center justify-start gap-1 pl-0">
+                  {/* Curva vindo de cima */}
+                  <div className="flex flex-col items-center mr-1">
+                    <div className="w-0.5 h-6 bg-gray-700" />
+                  </div>
+                  {milestones.filter(m => m.row === 2).sort((a, b) => a.col - b.col).map((milestone, idx, arr) => {
+                    const status = getMilestoneStatus(milestone);
+                    const isCompleted = status === "completed" || status === "pending" || status === "credited";
+                    
+                    return (
+                      <div key={milestone.value} className="flex items-center">
+                        {renderMilestone(milestone)}
+                        {idx < arr.length - 1 && (
+                          <div className={`w-6 sm:w-10 h-0.5 ${isCompleted ? "bg-primary" : "bg-gray-700"}`} />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Row 3: 500K -> 750K -> 1M */}
+                <div className="flex items-center justify-start gap-1">
+                  {milestones.filter(m => m.row === 3).sort((a, b) => a.col - b.col).map((milestone, idx, arr) => {
+                    const status = getMilestoneStatus(milestone);
+                    const isCompleted = status === "completed" || status === "pending" || status === "credited";
+                    
+                    return (
+                      <div key={milestone.value} className="flex items-center">
+                        {renderMilestone(milestone)}
+                        {idx < arr.length - 1 && (
+                          <div className={`w-6 sm:w-10 h-0.5 ${isCompleted ? "bg-primary" : "bg-gray-700"}`} />
+                        )}
+                      </div>
+                    );
+                  })}
+                  {/* Final Trophy */}
+                  <div className="flex items-center ml-2">
+                    <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500" />
+                  </div>
+                </div>
               </div>
 
-              {/* Row 2 - Reverse order */}
-              <div className="flex items-center gap-2 flex-row-reverse">
-                {milestones.filter(m => m.row === 2).sort((a, b) => b.col - a.col).map((milestone, idx, arr) => {
-                  const status = getMilestoneStatus(milestone);
-                  const isCompleted = status === "completed" || status === "pending" || status === "credited";
-                  
-                  return (
-                    <div key={milestone.value} className="flex items-center flex-row-reverse">
-                      {renderMilestone(milestone)}
-                      {idx < arr.length - 1 && (
-                        <div className={`w-8 sm:w-12 h-1 ${
-                          isCompleted ? "bg-primary" : "bg-gray-700"
-                        }`} />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Connecting line down */}
-              <div className="flex pl-10">
-                <div className="w-1 h-8 bg-gray-700" />
-              </div>
-
-              {/* Row 3 */}
-              <div className="flex items-center gap-2">
-                {milestones.filter(m => m.row === 3).sort((a, b) => a.col - b.col).map((milestone, idx, arr) => {
-                  const status = getMilestoneStatus(milestone);
-                  const isCompleted = status === "completed" || status === "pending" || status === "credited";
-                  
-                  return (
-                    <div key={milestone.value} className="flex items-center">
-                      {renderMilestone(milestone)}
-                      {idx < arr.length - 1 && (
-                        <div className={`w-8 sm:w-12 h-1 ${
-                          isCompleted ? "bg-primary" : "bg-gray-700"
-                        }`} />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+              {/* Dica de clique */}
+              <p className="text-xs text-muted-foreground mt-4 text-center">
+                Clique nos circulos com borda laranja para ver a premiacao
+              </p>
             </div>
           </div>
 
@@ -650,6 +682,102 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
               >
                 Fechar Simulacao
               </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Preview Modal - Mostra imagem da premiacao */}
+      <AnimatePresence>
+        {showPreview && previewMilestone && previewMilestone.badgeType && rewardImages[previewMilestone.badgeType] && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+            onClick={() => setShowPreview(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg bg-card rounded-2xl border border-border overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">
+                    {achievementNames[previewMilestone.badgeType]}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Meta: {previewMilestone.label}
+                  </p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setShowPreview(false)}>
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              
+              {/* Imagem */}
+              <div className="relative w-full aspect-square max-h-[400px] bg-black">
+                <Image
+                  src={rewardImages[previewMilestone.badgeType]}
+                  alt={achievementNames[previewMilestone.badgeType]}
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              
+              {/* Footer com status */}
+              <div className="p-4 border-t border-border">
+                {totalRevenue >= previewMilestone.value ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-green-500">
+                      <Check className="w-5 h-5" />
+                      <span className="font-medium">Meta Atingida!</span>
+                    </div>
+                    {(() => {
+                      const reward = userRewards.find(r => r.type === previewMilestone.badgeType);
+                      if (!reward) {
+                        return (
+                          <Button
+                            onClick={() => {
+                              setShowPreview(false);
+                              setSelectedMilestone(previewMilestone);
+                              setShowModal(true);
+                            }}
+                            className="bg-primary hover:bg-primary/90"
+                          >
+                            <Gift className="w-4 h-4 mr-2" />
+                            Resgatar
+                          </Button>
+                        );
+                      }
+                      return (
+                        <span className="text-sm text-muted-foreground">
+                          Status: {reward.status === "pending" ? "Solicitado" : "Entregue"}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Faltam {formatCurrency(previewMilestone.value - totalRevenue)} para desbloquear
+                    </p>
+                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-primary to-orange-400 rounded-full transition-all"
+                        style={{ width: `${Math.min((totalRevenue / previewMilestone.value) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {((totalRevenue / previewMilestone.value) * 100).toFixed(0)}% completo
+                    </p>
+                  </div>
+                )}
+              </div>
             </motion.div>
           </motion.div>
         )}
