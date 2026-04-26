@@ -19,7 +19,9 @@ import {
   Lock,
   FileText,
   MapPin,
-  Check
+  Check,
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,6 +86,9 @@ export function CheckoutPage({ checkout }: { checkout: Checkout }) {
   const [loading, setLoading] = useState(false);
   const [pixData, setPixData] = useState<{ qrCode?: string; copyPaste?: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  const [pixTimeLeft, setPixTimeLeft] = useState(15 * 60); // 15 minutos para pagar
   
   // Form data
   const [formData, setFormData] = useState({
@@ -228,11 +233,13 @@ export function CheckoutPage({ checkout }: { checkout: Checkout }) {
       const data = await res.json();
 
       if (res.ok) {
+        setOrderId(data.order_id);
         if (data.pix && data.pix.qrCode) {
           setPixData({
             qrCode: data.pix.qrCode,
             copyPaste: data.pix.copyPaste || data.pix.qrCode,
           });
+          setPixTimeLeft(15 * 60); // Reset timer
           setStep("pix");
         } else {
           setStep("success");
@@ -255,6 +262,65 @@ export function CheckoutPage({ checkout }: { checkout: Checkout }) {
     }
   };
 
+  // Timer do PIX
+  useEffect(() => {
+    if (step !== "pix") return;
+    const timer = setInterval(() => {
+      setPixTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [step]);
+
+  // Polling automatico do status do pagamento
+  useEffect(() => {
+    if (step !== "pix" || !orderId) return;
+
+    const checkPaymentStatus = async () => {
+      try {
+        const res = await fetch(`/api/checkout/orders/status?order_id=${orderId}`);
+        const data = await res.json();
+        
+        if (data.is_paid) {
+          setStep("success");
+        }
+      } catch (error) {
+        console.error("Erro ao verificar status:", error);
+      }
+    };
+
+    // Verificar a cada 5 segundos
+    const interval = setInterval(checkPaymentStatus, 5000);
+    
+    return () => clearInterval(interval);
+  }, [step, orderId]);
+
+  // Verificar pagamento manualmente
+  const checkPaymentManually = async () => {
+    if (!orderId) return;
+    
+    setCheckingPayment(true);
+    try {
+      const res = await fetch(`/api/checkout/orders/status?order_id=${orderId}`);
+      const data = await res.json();
+      
+      if (data.is_paid) {
+        setStep("success");
+      } else {
+        alert("Pagamento ainda nao confirmado. Por favor, aguarde alguns instantes apos realizar o pagamento.");
+      }
+    } catch (error) {
+      alert("Erro ao verificar pagamento. Tente novamente.");
+    } finally {
+      setCheckingPayment(false);
+    }
+  };
+
+  const formatPixTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
   const time = formatTimeUnit(timeLeft);
 
   // PIX Screen
@@ -266,6 +332,20 @@ export function CheckoutPage({ checkout }: { checkout: Checkout }) {
           animate={{ scale: 1, opacity: 1 }}
           className="w-full max-w-md text-center"
         >
+          {/* Timer */}
+          <div 
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-6"
+            style={{ backgroundColor: pixTimeLeft < 60 ? "#ef444420" : primaryColor + "20" }}
+          >
+            <Clock className="w-4 h-4" style={{ color: pixTimeLeft < 60 ? "#ef4444" : primaryColor }} />
+            <span 
+              className="text-sm font-medium"
+              style={{ color: pixTimeLeft < 60 ? "#ef4444" : primaryColor }}
+            >
+              Expira em {formatPixTime(pixTimeLeft)}
+            </span>
+          </div>
+
           <div 
             className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
             style={{ backgroundColor: primaryColor + "20" }}
@@ -323,14 +403,37 @@ export function CheckoutPage({ checkout }: { checkout: Checkout }) {
             </p>
           </div>
 
+          {/* Status info */}
+          <div 
+            className="flex items-center justify-center gap-2 mb-4 p-3 rounded-xl"
+            style={{ backgroundColor: "rgba(255,255,255,0.05)" }}
+          >
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+            <span className="text-xs" style={{ color: textColor + "80" }}>
+              Aguardando confirmacao do pagamento...
+            </span>
+          </div>
+
           <Button
             className="w-full"
             variant="outline"
-            onClick={() => setStep("success")}
+            onClick={checkPaymentManually}
+            disabled={checkingPayment}
             style={{ borderColor: primaryColor, color: primaryColor }}
           >
-            Ja fiz o pagamento
+            {checkingPayment ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Verificando...
+              </>
+            ) : (
+              "Ja fiz o pagamento"
+            )}
           </Button>
+
+          <p className="text-xs mt-4" style={{ color: textColor + "60" }}>
+            O pagamento sera confirmado automaticamente em alguns segundos apos a transferencia.
+          </p>
         </motion.div>
       </div>
     );
