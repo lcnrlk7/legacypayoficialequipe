@@ -42,20 +42,22 @@ export async function POST(request: NextRequest) {
 
 function getSettingDescription(key: string): string {
   const descriptions: Record<string, string> = {
-    pix_fee_percentage: "Taxa percentual padrão para transações PIX",
-    min_deposit: "Valor mínimo para depósito",
-    max_deposit: "Valor máximo para depósito por transação",
-    min_withdrawal: "Valor mínimo para saque",
-    max_withdrawal: "Valor máximo para saque por transação",
-    daily_withdrawal_limit: "Limite diário de saque",
-    auto_withdrawal_limit: "Saques até este valor são automáticos",
-    withdrawal_fee_percentage: "Taxa percentual da LegacyPay sobre saques",
-    withdrawal_fee_fixed: "Taxa fixa da LegacyPay por saque",
-    acquirer_withdrawal_fee: "Taxa fixa da MisticPay por saque",
-    white_route_percentage: "Taxa percentual da Rota White",
-    white_route_fixed: "Valor fixo da Rota White",
-    black_route_percentage: "Taxa percentual da Rota Black",
-    black_route_fixed: "Valor fixo da Rota Black",
+    // Taxas PIX In (Deposito)
+    pix_percentage_fee: "Taxa percentual PIX In - Rota Black",
+    pix_fixed_fee: "Taxa fixa PIX In - Rota Black",
+    white_pix_percentage_fee: "Taxa percentual PIX In - Rota White",
+    white_pix_fixed_fee: "Taxa fixa PIX In - Rota White",
+    // Taxas PIX Out (Saque)
+    withdrawal_fee: "Taxa padrao de saque",
+    withdrawal_fee_white: "Taxa de saque - Rota White",
+    withdrawal_fee_black: "Taxa de saque - Rota Black",
+    // Limites
+    min_deposit: "Valor minimo para deposito",
+    max_deposit: "Valor maximo para deposito por transacao",
+    min_withdrawal: "Valor minimo para saque",
+    max_withdrawal: "Valor maximo para saque por transacao",
+    daily_withdrawal_limit: "Limite diario de saque",
+    auto_withdraw_limit: "Saques ate este valor sao automaticos",
   }
   return descriptions[key] || ""
 }
