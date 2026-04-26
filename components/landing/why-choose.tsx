@@ -1,27 +1,27 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Percent, Globe, Zap, CreditCard } from "lucide-react";
+import { BadgePercent, MapPin, Banknote, QrCode } from "lucide-react";
 
 const benefits = [
   {
-    icon: Percent,
+    icon: BadgePercent,
     title: "Taxas que fazem sentido para quem vende muito",
     description: "Na LegacyPay, aplicamos taxas realmente justas, sempre. A taxa varia de 0% a 1% por venda, sem taxas escondidas.",
     highlight: true,
   },
   {
-    icon: Globe,
+    icon: MapPin,
     title: "Venda para o Brasil inteiro",
     description: "Expanda suas vendas e alcance clientes em todo o territorio nacional. Pagamentos instantaneos via PIX 24h por dia.",
   },
   {
-    icon: Zap,
+    icon: Banknote,
     title: "Dinheiro mais rapido no seu caixa",
     description: "PIX D+0. Receba suas vendas instantaneamente na sua conta, sem esperar dias para o dinheiro cair.",
   },
   {
-    icon: CreditCard,
+    icon: QrCode,
     title: "PIX instantaneo, mais conversao",
     description: "Ofereca pagamento via PIX para seus clientes. Rapido, seguro e sem complicacao - a forma preferida dos brasileiros.",
   },
