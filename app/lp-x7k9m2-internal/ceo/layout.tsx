@@ -158,7 +158,7 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
       <header className="lg:hidden glass sticky top-0 z-50 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Image src="/logo-icon.png" alt="LegacyPay" width={32} height={32} />
-          <span className="font-semibold text-white">Admin CEO</span>
+          <span className="font-semibold text-foreground">Admin CEO</span>
         </div>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -185,7 +185,7 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
               />
               <div>
                 <div className="flex items-baseline">
-                  <span className="font-bold text-white">Legacy</span>
+                  <span className="font-bold text-foreground">Legacy</span>
                   <span className="font-bold text-primary">Pay</span>
                 </div>
                 <span className="text-xs text-muted-foreground">Painel CEO</span>
@@ -203,7 +203,7 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
                   className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                     isActive
                       ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-secondary hover:text-white"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                   }`}
                 >
                   <item.icon className="w-5 h-5" />
@@ -219,7 +219,7 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
                 <Shield className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-sm font-medium text-white capitalize">
+                <p className="text-sm font-medium text-foreground capitalize">
                   {adminUser}
                 </p>
                 <p className="text-xs text-muted-foreground">CEO / Admin</p>
@@ -263,7 +263,7 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
                     />
                     <div>
                       <div className="flex items-baseline">
-                        <span className="font-bold text-white">Legacy</span>
+                        <span className="font-bold text-foreground">Legacy</span>
                         <span className="font-bold text-primary">Pay</span>
                       </div>
                       <span className="text-xs text-muted-foreground">
@@ -284,7 +284,7 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
                         className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
                           isActive
                             ? "bg-primary/10 text-primary"
-                            : "text-muted-foreground hover:bg-secondary hover:text-white"
+                            : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                         }`}
                       >
                         <item.icon className="w-5 h-5" />

@@ -70,7 +70,7 @@ export function AdminSidebar() {
           <Image src="/logo-icon.png" alt="LegacyPay" width={40} height={40} />
           <div>
             <div className="flex items-baseline">
-              <span className="text-xl font-bold text-white">Legacy</span>
+              <span className="text-xl font-bold text-foreground">Legacy</span>
               <span className="text-xl font-bold text-primary">Pay</span>
             </div>
             <p className="text-xs text-muted-foreground">Painel Admin</p>
