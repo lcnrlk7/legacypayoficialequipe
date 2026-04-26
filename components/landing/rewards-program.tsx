@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Trophy, Star, Zap, TrendingUp } from "lucide-react";
+import { Trophy, Star, ArrowRight, TrendingUp } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -144,7 +144,7 @@ export function RewardsProgram() {
                 href="/auth/register"
                 className="px-6 py-3 bg-primary text-black font-semibold rounded-xl hover:bg-primary/90 transition-colors flex items-center gap-2"
               >
-                <Zap className="w-5 h-5" />
+                <ArrowRight className="w-5 h-5" />
                 Crie sua conta tambem!
               </Link>
               <Link 
