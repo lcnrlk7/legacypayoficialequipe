@@ -61,6 +61,19 @@ export async function POST(request: NextRequest) {
 
     // Enviar push motivacional para todos
     if (action === "send_motivational_push") {
+      // Verificar se ha usuarios com push ativo primeiro
+      const pushStats = await sql`SELECT COUNT(*) as total FROM push_subscriptions`;
+      const totalSubs = parseInt(pushStats[0]?.total || "0");
+      
+      if (totalSubs === 0) {
+        return NextResponse.json({
+          success: false,
+          error: "Nenhum usuario ativou notificacoes push ainda. Os usuarios precisam ativar em Configuracoes > Notificacoes.",
+          sent: 0,
+          failed: 0
+        });
+      }
+
       const result = await sendMotivationalToAll();
       
       if (session) {
@@ -71,8 +84,10 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json({
-        success: true,
-        message: `Mensagem motivacional enviada para ${result.sent} usuarios`,
+        success: result.sent > 0,
+        message: result.sent > 0 
+          ? `Mensagem motivacional enviada para ${result.sent} usuarios` 
+          : "Nenhuma mensagem foi enviada. Verifique se ha usuarios com push ativo.",
         ...result
       });
     }
@@ -81,6 +96,19 @@ export async function POST(request: NextRequest) {
     if (action === "send_push_all") {
       if (!title || !message) {
         return NextResponse.json({ error: "Titulo e mensagem obrigatorios" }, { status: 400 });
+      }
+
+      // Verificar se ha usuarios com push ativo primeiro
+      const pushStats = await sql`SELECT COUNT(*) as total FROM push_subscriptions`;
+      const totalSubs = parseInt(pushStats[0]?.total || "0");
+      
+      if (totalSubs === 0) {
+        return NextResponse.json({
+          success: false,
+          error: "Nenhum usuario ativou notificacoes push ainda. Os usuarios precisam ativar em Configuracoes > Notificacoes.",
+          sent: 0,
+          failed: 0
+        });
       }
 
       const result = await sendPushToAllUsers({
