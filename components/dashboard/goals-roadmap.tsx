@@ -374,17 +374,55 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
             <div className={`bg-secondary rounded-xl p-4 border ${hasAvailableReward ? "border-primary" : "border-border"}`}>
               <p className="text-sm text-muted-foreground mb-3">Progresso Atual</p>
               
-              {/* Achievement Badge */}
-              <div className={`w-full h-24 rounded-lg bg-gradient-to-br ${currentLevel.color} flex items-center justify-center mb-4`}>
-                <Trophy className="w-12 h-12 text-white/80" />
-              </div>
-              
-              <h3 className="text-lg font-bold text-foreground text-center mb-1">
-                {currentLevel.name}
-              </h3>
+              {/* Achievement Badge ou Proxima Premiacao */}
+              {(() => {
+                // Encontrar proxima premiacao nao conquistada
+                const rewardMilestones = milestones.filter(m => m.hasBadge && m.badgeType);
+                const nextRewardMilestone = rewardMilestones.find(m => totalRevenue < m.value);
+                const hasImage = nextRewardMilestone && rewardImages[nextRewardMilestone.badgeType!];
+                
+                if (hasImage && nextRewardMilestone) {
+                  return (
+                    <>
+                      <div className="w-full h-28 rounded-lg bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center mb-4 relative overflow-hidden border border-primary/30">
+                        <Image 
+                          src={rewardImages[nextRewardMilestone.badgeType!]} 
+                          alt={achievementNames[nextRewardMilestone.badgeType!]}
+                          fill
+                          className="object-contain p-2"
+                        />
+                      </div>
+                      <h3 className="text-lg font-bold text-foreground text-center mb-1">
+                        Proxima Premiacao
+                      </h3>
+                      <p className="text-sm text-primary font-medium text-center mb-1">
+                        {achievementNames[nextRewardMilestone.badgeType!]}
+                      </p>
+                      <p className="text-xs text-muted-foreground text-center mb-4">
+                        Meta: {nextRewardMilestone.label} em faturamento
+                      </p>
+                    </>
+                  );
+                }
+                
+                // Se ja conquistou todas as premiacoes
+                return (
+                  <>
+                    <div className={`w-full h-24 rounded-lg bg-gradient-to-br ${currentLevel.color} flex items-center justify-center mb-4`}>
+                      <Trophy className="w-12 h-12 text-white/80" />
+                    </div>
+                    <h3 className="text-lg font-bold text-foreground text-center mb-1">
+                      {currentLevel.name}
+                    </h3>
+                    <p className="text-xs text-muted-foreground text-center mb-4">
+                      {totalRevenue >= 1000000 ? "Parabens! Voce conquistou todas as premiacoes!" : "Continue faturando para desbloquear premiacoes!"}
+                    </p>
+                  </>
+                );
+              })()}
               
               {/* Mensagem de recompensa disponivel */}
-              {hasAvailableReward ? (
+              {hasAvailableReward && (
                 <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 mb-4">
                   <p className="text-sm text-primary font-medium text-center mb-1">
                     Voce atingiu uma meta!
@@ -393,10 +431,6 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                     {nextAvailableReward && achievementNames[nextAvailableReward.badgeType!]} disponivel para resgate
                   </p>
                 </div>
-              ) : (
-                <p className="text-xs text-muted-foreground text-center mb-4">
-                  Voce esta so comecando a sua jornada!
-                </p>
               )}
 
               <div className="flex items-center justify-between text-sm mb-2">
