@@ -7,7 +7,7 @@ export async function POST() {
     await sql`
       CREATE TABLE IF NOT EXISTS user_rewards (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
         goal_value INTEGER NOT NULL,
         reward_type TEXT NOT NULL,
         delivered_at TIMESTAMPTZ DEFAULT NOW(),

@@ -82,9 +82,9 @@ export async function GET(request: NextRequest) {
 
     // Return all delivered rewards
     const rewards = await sql`
-      SELECT ur.*, u.full_name, u.email 
+      SELECT ur.*, p.name, p.email 
       FROM user_rewards ur
-      JOIN users u ON ur.user_id = u.id
+      JOIN profiles p ON ur.user_id = p.id
       ORDER BY ur.delivered_at DESC
     `;
     return NextResponse.json(rewards);

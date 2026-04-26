@@ -58,15 +58,14 @@ export async function GET(request: NextRequest) {
     // Buscar todos os usuarios (excluindo admins)
     const users = await sql`
       SELECT 
-        p.id,
-        p.name,
-        p.email,
-        p.phone,
-        p.created_at,
-        COALESCE(p.total_revenue, 0) as profile_revenue
-      FROM profiles p
-      WHERE p.is_admin = false OR p.is_admin IS NULL
-      ORDER BY p.created_at DESC
+        id,
+        name,
+        email,
+        phone,
+        created_at
+      FROM profiles
+      WHERE is_admin = false OR is_admin IS NULL
+      ORDER BY created_at DESC
     `;
 
     // Buscar faturamento calculado das transacoes para cada usuario
@@ -102,12 +101,8 @@ export async function GET(request: NextRequest) {
     // Calcular metas para cada usuario
     const usersArray = Array.isArray(users) ? users : [];
     const usersWithGoals = usersArray.map((user: any) => {
-      // Usar o maior valor entre profile_revenue e calculated_revenue do map
-      const calculatedRevenue = revenueMap.get(user.id) || 0;
-      const totalRevenue = Math.max(
-        Number(user.profile_revenue) || 0,
-        calculatedRevenue
-      );
+      // Usar o faturamento calculado das transacoes
+      const totalRevenue = revenueMap.get(user.id) || 0;
 
       const currentGoal = getCurrentGoal(totalRevenue);
       const nextGoal = getNextGoal(totalRevenue);
