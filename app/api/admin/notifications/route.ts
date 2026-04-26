@@ -34,7 +34,7 @@ export async function GET() {
 
     // Contar usuarios com push ativo
     const pushStats = await sql`
-      SELECT COUNT(*) as total FROM push_subscriptions
+      SELECT COUNT(*) as total FROM profiles WHERE notifications_push = true AND push_subscription IS NOT NULL
     `;
 
     return NextResponse.json({
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     // Enviar push motivacional para todos
     if (action === "send_motivational_push") {
       // Verificar se ha usuarios com push ativo primeiro
-      const pushStats = await sql`SELECT COUNT(*) as total FROM push_subscriptions`;
+      const pushStats = await sql`SELECT COUNT(*) as total FROM profiles WHERE notifications_push = true AND push_subscription IS NOT NULL`;
       const totalSubs = parseInt(pushStats[0]?.total || "0");
       
       if (totalSubs === 0) {
@@ -99,10 +99,10 @@ export async function POST(request: NextRequest) {
       }
 
       // Verificar se ha usuarios com push ativo primeiro
-      const pushStats = await sql`SELECT COUNT(*) as total FROM push_subscriptions`;
-      const totalSubs = parseInt(pushStats[0]?.total || "0");
+      const pushStats2 = await sql`SELECT COUNT(*) as total FROM profiles WHERE notifications_push = true AND push_subscription IS NOT NULL`;
+      const totalSubs2 = parseInt(pushStats2[0]?.total || "0");
       
-      if (totalSubs === 0) {
+      if (totalSubs2 === 0) {
         return NextResponse.json({
           success: false,
           error: "Nenhum usuario ativou notificacoes push ainda. Os usuarios precisam ativar em Configuracoes > Notificacoes.",

@@ -258,15 +258,15 @@ export async function sendPushToAllUsers(
     return { success: false, sent: 0, failed: 0 };
   }
 
-  // Buscar todas as subscriptions ativas
-  const subscriptions = await sql`
-    SELECT ps.*, p.id as user_id 
-    FROM push_subscriptions ps
-    JOIN profiles p ON ps.user_id = p.id
-    WHERE p.notifications_push = true
+  // Buscar todas as subscriptions ativas da coluna push_subscription em profiles
+  const users = await sql`
+    SELECT id, push_subscription 
+    FROM profiles 
+    WHERE notifications_push = true 
+    AND push_subscription IS NOT NULL
   `;
 
-  if (!subscriptions || subscriptions.length === 0) {
+  if (!users || users.length === 0) {
     return { success: false, sent: 0, failed: 0 };
   }
 
@@ -282,14 +282,21 @@ export async function sendPushToAllUsers(
   let sent = 0;
   let failed = 0;
 
-  for (const sub of subscriptions) {
+  for (const user of users) {
     try {
+      const sub = user.push_subscription as { endpoint: string; keys: { p256dh: string; auth: string } };
+      
+      if (!sub || !sub.endpoint || !sub.keys) {
+        failed++;
+        continue;
+      }
+
       await webpush.sendNotification(
         {
           endpoint: sub.endpoint,
           keys: {
-            p256dh: sub.p256dh,
-            auth: sub.auth,
+            p256dh: sub.keys.p256dh,
+            auth: sub.keys.auth,
           },
         },
         notificationPayload
@@ -298,8 +305,9 @@ export async function sendPushToAllUsers(
     } catch (err: unknown) {
       const error = err as { statusCode?: number };
       failed++;
+      // Se subscription expirou, limpar do profile
       if (error.statusCode === 410 || error.statusCode === 404) {
-        await sql`DELETE FROM push_subscriptions WHERE id = ${sub.id}`;
+        await sql`UPDATE profiles SET push_subscription = NULL, notifications_push = false WHERE id = ${user.id}`;
       }
     }
   }
