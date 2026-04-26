@@ -12,18 +12,18 @@ const benefits = [
   },
   {
     icon: Globe,
-    title: "Venda para o mundo inteiro",
-    description: "Expanda suas vendas para novos mercados. Aceite pagamentos em multiplas moedas com conversao automatica.",
+    title: "Venda para o Brasil inteiro",
+    description: "Expanda suas vendas e alcance clientes em todo o territorio nacional. Pagamentos instantaneos via PIX 24h por dia.",
   },
   {
     icon: Zap,
     title: "Dinheiro mais rapido no seu caixa",
-    description: "Pix D+0. Receba em ate 10 dias uteis no cartao (sem parcelas) ou em 30 dias com parcelas.",
+    description: "PIX D+0. Receba suas vendas instantaneamente na sua conta, sem esperar dias para o dinheiro cair.",
   },
   {
     icon: CreditCard,
-    title: "Mais formas de pagamento, mais conversao",
-    description: "Ofereaca as opcoes de pagamento que seu publico Pix, Cartao de Credito, Boleto, debito auto, e mais.",
+    title: "PIX instantaneo, mais conversao",
+    description: "Ofereca pagamento via PIX para seus clientes. Rapido, seguro e sem complicacao - a forma preferida dos brasileiros.",
   },
 ];
 
