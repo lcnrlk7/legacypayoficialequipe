@@ -208,67 +208,6 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
   const hasAvailableReward = availableRewards.length > 0;
   const nextAvailableReward = availableRewards[0];
 
-  // Funcao para renderizar um milestone
-  const renderMilestone = (milestone: typeof milestones[0]) => {
-    const status = getMilestoneStatus(milestone);
-    const isCompleted = status === "completed" || status === "pending" || status === "credited";
-    const hasRewardImage = milestone.hasBadge && milestone.badgeType && rewardImages[milestone.badgeType];
-    const isClickable = hasRewardImage;
-    
-    const handleClick = () => {
-      if (hasRewardImage) {
-        setPreviewMilestone(milestone);
-        setShowPreview(true);
-      }
-    };
-    
-    return (
-      <button
-        type="button"
-        onClick={handleClick}
-        disabled={!isClickable}
-        className={`relative w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 flex items-center justify-center transition-all overflow-hidden ${
-          isCompleted
-            ? "border-primary bg-primary/20"
-            : hasRewardImage
-              ? "border-primary/50 bg-gray-800/50 cursor-pointer hover:border-primary hover:scale-105"
-              : "border-gray-600 bg-gray-800/50 cursor-default"
-        } ${isClickable ? "hover:shadow-lg hover:shadow-primary/20" : ""}`}
-      >
-        {/* Imagem da premiacao para milestones com recompensa */}
-        {hasRewardImage ? (
-          <>
-            <Image
-              src={rewardImages[milestone.badgeType!]}
-              alt={achievementNames[milestone.badgeType!] || milestone.label}
-              fill
-              className={`object-cover ${isCompleted ? "opacity-100" : "opacity-50 grayscale"}`}
-            />
-            {/* Overlay com valor */}
-            <div className={`absolute inset-0 flex flex-col items-center justify-center ${isCompleted ? "bg-black/50" : "bg-black/60"}`}>
-              <span className={`text-[9px] sm:text-[10px] font-bold ${isCompleted ? "text-white" : "text-gray-300"}`}>
-                {milestone.label}
-              </span>
-              {isCompleted && (
-                <div className="w-3 h-3 sm:w-4 sm:h-4 rounded-full bg-green-500 flex items-center justify-center mt-0.5">
-                  <Check className="w-2 h-2 sm:w-3 sm:h-3 text-white" />
-                </div>
-              )}
-            </div>
-            {/* Borda brilhante para premiacoes */}
-            {!isCompleted && (
-              <div className="absolute inset-0 rounded-full border-2 border-primary/40 animate-pulse" />
-            )}
-          </>
-        ) : (
-          <span className={`text-[10px] sm:text-xs font-bold ${isCompleted ? "text-primary" : "text-gray-500"}`}>
-            {milestone.label}
-          </span>
-        )}
-      </button>
-    );
-  };
-
   if (isLoading) {
     return (
       <div className="bg-card border border-border rounded-2xl p-6 flex items-center justify-center min-h-[400px]">
@@ -293,97 +232,185 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
           Acompanhe as metas de faturamento e obtenha recompensas.
         </p>
 
-        <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex flex-col xl:flex-row gap-6">
           {/* Roadmap Grid - Snake/Labyrinth Layout */}
-          <div className="flex-1">
-            <div className="relative bg-secondary/30 rounded-xl p-4 sm:p-6 border border-border">
-              {/* Legenda */}
-              <div className="flex items-center gap-4 mb-6 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-primary" />
-                  <span>Atingida</span>
+          <div className="flex-1 overflow-x-auto">
+            <div className="min-w-[700px] py-4">
+              {/* Row 1: R$ 1K -> R$ 10K -> R$ 20K -> [Pulseira] -> R$ 50K */}
+              <div className="flex items-center mb-8">
+                {/* R$ 1K */}
+                <div className="flex flex-col items-center">
+                  <div className={`w-20 h-20 rounded-full border-3 flex items-center justify-center ${totalRevenue >= 1000 ? "border-primary bg-primary/30" : "border-gray-600 bg-gray-800/50"}`}>
+                    <span className={`text-sm font-bold ${totalRevenue >= 1000 ? "text-primary" : "text-gray-400"}`}>R$ 1K</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-full border border-primary/50 bg-primary/20" />
-                  <span>Com Premio</span>
+                
+                {/* Line */}
+                <div className={`h-1 w-16 ${totalRevenue >= 10000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* R$ 10K */}
+                <div className="flex flex-col items-center">
+                  <div className={`w-20 h-20 rounded-full border-3 flex items-center justify-center ${totalRevenue >= 10000 ? "border-primary bg-primary/30" : "border-gray-600 bg-gray-800/50"}`}>
+                    <span className={`text-sm font-bold ${totalRevenue >= 10000 ? "text-primary" : "text-gray-400"}`}>R$ 10K</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-gray-600" />
-                  <span>Bloqueada</span>
+                
+                {/* Line */}
+                <div className={`h-1 w-16 ${totalRevenue >= 20000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* R$ 20K */}
+                <div className="flex flex-col items-center">
+                  <div className={`w-20 h-20 rounded-full border-3 flex items-center justify-center ${totalRevenue >= 20000 ? "border-primary bg-primary/30" : "border-primary/50 bg-gray-800/50"}`}>
+                    <span className={`text-sm font-bold ${totalRevenue >= 20000 ? "text-primary" : "text-gray-400"}`}>R$ 20K</span>
+                  </div>
+                </div>
+                
+                {/* Line */}
+                <div className={`h-1 w-8 ${totalRevenue >= 20000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* Pulseira Image */}
+                <button
+                  onClick={() => {
+                    setPreviewMilestone(milestones.find(m => m.badgeType === "bracelet")!);
+                    setShowPreview(true);
+                  }}
+                  className={`w-20 h-20 rounded-full border-3 overflow-hidden relative transition-transform hover:scale-105 ${totalRevenue >= 20000 ? "border-primary" : "border-primary/50"}`}
+                >
+                  <Image src="/images/rewards/pulseira-20k.png" alt="Pulseira 20K" fill className={`object-cover ${totalRevenue >= 20000 ? "" : "grayscale opacity-50"}`} />
+                </button>
+                
+                {/* Line */}
+                <div className={`h-1 w-8 ${totalRevenue >= 50000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* R$ 50K */}
+                <div className="flex flex-col items-center">
+                  <div className={`w-20 h-20 rounded-full border-3 flex items-center justify-center ${totalRevenue >= 50000 ? "border-primary bg-primary/30" : "border-gray-600 bg-gray-800/50"}`}>
+                    <span className={`text-sm font-bold ${totalRevenue >= 50000 ? "text-primary" : "text-gray-400"}`}>R$ 50K</span>
+                  </div>
+                </div>
+                
+                {/* Vertical line down */}
+                <div className="flex flex-col items-center ml-4">
+                  <div className={`w-1 h-16 ${totalRevenue >= 75000 ? "bg-primary" : "bg-gray-700"}`} />
                 </div>
               </div>
 
-              {/* Snake Path Layout */}
-              <div className="space-y-3">
-                {/* Row 1: 1K -> 10K -> 20K -> 50K */}
-                <div className="flex items-center justify-start gap-1">
-                  {milestones.filter(m => m.row === 1).sort((a, b) => a.col - b.col).map((milestone, idx, arr) => {
-                    const status = getMilestoneStatus(milestone);
-                    const isCompleted = status === "completed" || status === "pending" || status === "credited";
-                    const nextIsCompleted = idx < arr.length - 1 && getMilestoneStatus(arr[idx + 1]) !== "locked";
-                    
-                    return (
-                      <div key={milestone.value} className="flex items-center">
-                        {renderMilestone(milestone)}
-                        {idx < arr.length - 1 && (
-                          <div className={`w-6 sm:w-10 h-0.5 ${nextIsCompleted || isCompleted ? "bg-primary" : "bg-gray-700"}`} />
-                        )}
-                      </div>
-                    );
-                  })}
-                  {/* Curva para baixo */}
-                  <div className="flex flex-col items-center ml-1">
-                    <div className="w-0.5 h-6 bg-gray-700" />
+              {/* Row 2: R$ 375K <- R$ 250K <- [100K Placa] <- R$ 100K <- R$ 75K */}
+              <div className="flex items-center mb-8 flex-row-reverse justify-end">
+                {/* R$ 75K */}
+                <div className="flex flex-col items-center">
+                  <div className={`w-20 h-20 rounded-full border-3 flex items-center justify-center ${totalRevenue >= 75000 ? "border-primary bg-primary/30" : "border-gray-600 bg-gray-800/50"}`}>
+                    <span className={`text-sm font-bold ${totalRevenue >= 75000 ? "text-primary" : "text-gray-400"}`}>R$ 75K</span>
                   </div>
                 </div>
-
-                {/* Row 2: 75K <- 100K <- 250K <- 375K (reversed) */}
-                <div className="flex items-center justify-start gap-1 pl-0">
-                  {/* Curva vindo de cima */}
-                  <div className="flex flex-col items-center mr-1">
-                    <div className="w-0.5 h-6 bg-gray-700" />
+                
+                {/* Line */}
+                <div className={`h-1 w-8 ${totalRevenue >= 100000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* R$ 100K */}
+                <div className="flex flex-col items-center">
+                  <div className={`w-20 h-20 rounded-full border-3 flex items-center justify-center ${totalRevenue >= 100000 ? "border-primary bg-primary/30" : "border-primary/50 bg-gray-800/50"}`}>
+                    <span className={`text-sm font-bold ${totalRevenue >= 100000 ? "text-primary" : "text-gray-400"}`}>R$ 100K</span>
                   </div>
-                  {milestones.filter(m => m.row === 2).sort((a, b) => a.col - b.col).map((milestone, idx, arr) => {
-                    const status = getMilestoneStatus(milestone);
-                    const isCompleted = status === "completed" || status === "pending" || status === "credited";
-                    
-                    return (
-                      <div key={milestone.value} className="flex items-center">
-                        {renderMilestone(milestone)}
-                        {idx < arr.length - 1 && (
-                          <div className={`w-6 sm:w-10 h-0.5 ${isCompleted ? "bg-primary" : "bg-gray-700"}`} />
-                        )}
-                      </div>
-                    );
-                  })}
                 </div>
-
-                {/* Row 3: 500K -> 750K -> 1M */}
-                <div className="flex items-center justify-start gap-1">
-                  {milestones.filter(m => m.row === 3).sort((a, b) => a.col - b.col).map((milestone, idx, arr) => {
-                    const status = getMilestoneStatus(milestone);
-                    const isCompleted = status === "completed" || status === "pending" || status === "credited";
-                    
-                    return (
-                      <div key={milestone.value} className="flex items-center">
-                        {renderMilestone(milestone)}
-                        {idx < arr.length - 1 && (
-                          <div className={`w-6 sm:w-10 h-0.5 ${isCompleted ? "bg-primary" : "bg-gray-700"}`} />
-                        )}
-                      </div>
-                    );
-                  })}
-                  {/* Final Trophy */}
-                  <div className="flex items-center ml-2">
-                    <Trophy className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-500" />
+                
+                {/* Line */}
+                <div className={`h-1 w-8 ${totalRevenue >= 100000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* 100K Placa Image */}
+                <button
+                  onClick={() => {
+                    setPreviewMilestone(milestones.find(m => m.badgeType === "plaque_100k")!);
+                    setShowPreview(true);
+                  }}
+                  className={`w-20 h-20 rounded-full border-3 overflow-hidden relative transition-transform hover:scale-105 ${totalRevenue >= 100000 ? "border-primary" : "border-primary/50"}`}
+                >
+                  <Image src="/images/rewards/placa-100k.png" alt="Placa 100K" fill className={`object-cover ${totalRevenue >= 100000 ? "" : "grayscale opacity-50"}`} />
+                </button>
+                
+                {/* Line */}
+                <div className={`h-1 w-16 ${totalRevenue >= 250000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* R$ 250K */}
+                <div className="flex flex-col items-center">
+                  <div className={`w-20 h-20 rounded-full border-3 flex items-center justify-center ${totalRevenue >= 250000 ? "border-primary bg-primary/30" : "border-gray-600 bg-gray-800/50"}`}>
+                    <span className={`text-sm font-bold ${totalRevenue >= 250000 ? "text-primary" : "text-gray-400"}`}>R$ 250K</span>
                   </div>
+                </div>
+                
+                {/* Line */}
+                <div className={`h-1 w-16 ${totalRevenue >= 375000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* R$ 375K */}
+                <div className="flex flex-col items-center">
+                  <div className={`w-20 h-20 rounded-full border-3 flex items-center justify-center ${totalRevenue >= 375000 ? "border-primary bg-primary/30" : "border-gray-600 bg-gray-800/50"}`}>
+                    <span className={`text-sm font-bold ${totalRevenue >= 375000 ? "text-primary" : "text-gray-400"}`}>R$ 375K</span>
+                  </div>
+                </div>
+                
+                {/* Vertical line down on the left */}
+                <div className="flex flex-col items-center mr-4">
+                  <div className={`w-1 h-16 ${totalRevenue >= 500000 ? "bg-primary" : "bg-gray-700"}`} />
                 </div>
               </div>
 
-              {/* Dica de clique */}
-              <p className="text-xs text-muted-foreground mt-4 text-center">
-                Clique nos circulos com borda laranja para ver a premiacao
-              </p>
+              {/* Row 3: R$ 500K -> [500K Placa] -> R$ 750K -> R$ 1M -> [1M Placa] */}
+              <div className="flex items-center">
+                {/* R$ 500K */}
+                <div className="flex flex-col items-center">
+                  <div className={`w-20 h-20 rounded-full border-3 flex items-center justify-center ${totalRevenue >= 500000 ? "border-primary bg-primary/30" : "border-primary/50 bg-gray-800/50"}`}>
+                    <span className={`text-sm font-bold ${totalRevenue >= 500000 ? "text-primary" : "text-gray-400"}`}>R$ 500K</span>
+                  </div>
+                </div>
+                
+                {/* Line */}
+                <div className={`h-1 w-8 ${totalRevenue >= 500000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* 500K Placa Image */}
+                <button
+                  onClick={() => {
+                    setPreviewMilestone(milestones.find(m => m.badgeType === "plaque_500k")!);
+                    setShowPreview(true);
+                  }}
+                  className={`w-20 h-20 rounded-full border-3 overflow-hidden relative transition-transform hover:scale-105 ${totalRevenue >= 500000 ? "border-primary" : "border-primary/50"}`}
+                >
+                  <Image src="/images/rewards/placa-500k.png" alt="Placa 500K" fill className={`object-cover ${totalRevenue >= 500000 ? "" : "grayscale opacity-50"}`} />
+                </button>
+                
+                {/* Line */}
+                <div className={`h-1 w-16 ${totalRevenue >= 750000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* R$ 750K */}
+                <div className="flex flex-col items-center">
+                  <div className={`w-20 h-20 rounded-full border-3 flex items-center justify-center ${totalRevenue >= 750000 ? "border-primary bg-primary/30" : "border-gray-600 bg-gray-800/50"}`}>
+                    <span className={`text-sm font-bold ${totalRevenue >= 750000 ? "text-primary" : "text-gray-400"}`}>R$ 750K</span>
+                  </div>
+                </div>
+                
+                {/* Line */}
+                <div className={`h-1 w-16 ${totalRevenue >= 1000000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* R$ 1M */}
+                <div className="flex flex-col items-center">
+                  <div className={`w-20 h-20 rounded-full border-3 flex items-center justify-center ${totalRevenue >= 1000000 ? "border-primary bg-primary/30" : "border-primary/50 bg-gray-800/50"}`}>
+                    <span className={`text-sm font-bold ${totalRevenue >= 1000000 ? "text-primary" : "text-gray-400"}`}>R$ 1M</span>
+                  </div>
+                </div>
+                
+                {/* Line */}
+                <div className={`h-1 w-8 ${totalRevenue >= 1000000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* 1M Placa Image */}
+                <button
+                  onClick={() => {
+                    setPreviewMilestone(milestones.find(m => m.badgeType === "plaque_1m")!);
+                    setShowPreview(true);
+                  }}
+                  className={`w-20 h-20 rounded-full border-3 overflow-hidden relative transition-transform hover:scale-105 ${totalRevenue >= 1000000 ? "border-primary" : "border-primary/50"}`}
+                >
+                  <Image src="/images/rewards/placa-1m.png" alt="Placa 1M" fill className={`object-cover ${totalRevenue >= 1000000 ? "" : "grayscale opacity-50"}`} />
+                </button>
+              </div>
             </div>
           </div>
 
