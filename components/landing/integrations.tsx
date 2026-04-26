@@ -25,10 +25,6 @@ export function Integrations() {
           transition={{ duration: 0.5 }}
           className="text-center mb-12"
         >
-          <span className="inline-block px-4 py-1.5 bg-zinc-800 border border-zinc-700 text-zinc-300 text-sm rounded-full mb-6">
-            Integracoes
-          </span>
-          
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
             LegacyPay esta conectada a integracoes amplas e flexiveis
           </h2>

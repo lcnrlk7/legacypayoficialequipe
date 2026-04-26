@@ -108,11 +108,6 @@ export function RewardsProgram() {
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.2 }}
           >
-            {/* Badge */}
-            <span className="inline-block px-4 py-1.5 bg-zinc-800 border border-zinc-700 text-zinc-300 text-sm rounded-full mb-6">
-              Programa de Premiacoes LegacyPay
-            </span>
-            
             {/* Title */}
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
               Quanto mais voce escala, mais voce ganha.

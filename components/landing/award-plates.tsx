@@ -51,10 +51,6 @@ export function AwardPlates() {
           transition={{ duration: 0.5 }}
           className="text-center mb-16"
         >
-          <span className="inline-block px-4 py-1.5 bg-primary/10 border border-primary/20 text-primary text-sm rounded-full mb-6">
-            Premiacoes
-          </span>
-          
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
             <span className="text-white">Placas de </span>
             <span className="text-primary">Premiacao LegacyPay</span>
