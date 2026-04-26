@@ -55,41 +55,43 @@ export async function GET(request: NextRequest) {
     const filter = searchParams.get("filter"); // "all" | "with_goals" | "pending_rewards"
     const search = searchParams.get("search");
 
-    // Buscar usuarios com faturamento total calculado das transacoes
-    const usersResult = await sql`
+    // Buscar todos os usuarios (excluindo admins)
+    const users = await sql`
       SELECT 
         p.id,
         p.name,
         p.email,
         p.phone,
         p.created_at,
-        COALESCE(p.total_revenue, 0) as profile_revenue,
-        COALESCE(
-          (SELECT SUM(amount) 
-           FROM transactions 
-           WHERE user_id = p.id 
-           AND type IN ('deposit', 'transfer_in', 'pix_in') 
-           AND status = 'completed'
-          ), 0
-        ) as calculated_revenue
+        COALESCE(p.total_revenue, 0) as profile_revenue
       FROM profiles p
       WHERE p.is_admin = false OR p.is_admin IS NULL
-      ORDER BY calculated_revenue DESC
+      ORDER BY p.created_at DESC
     `;
 
-    // Extrair rows do resultado
-    const users = usersResult.rows || usersResult || [];
-    
-    console.log("[v0] Users found:", users.length);
+    // Buscar faturamento calculado das transacoes para cada usuario
+    const transactions = await sql`
+      SELECT 
+        user_id,
+        SUM(amount) as total
+      FROM transactions 
+      WHERE type IN ('deposit', 'transfer_in', 'pix_in') 
+      AND status = 'completed'
+      GROUP BY user_id
+    `;
+
+    // Criar map de faturamento por usuario
+    const revenueMap = new Map();
+    for (const t of transactions) {
+      revenueMap.set(t.user_id, Number(t.total) || 0);
+    }
 
     // Buscar recompensas ja entregues
     let deliveredRewards: any[] = [];
     try {
-      const rewardsResult = await sql`SELECT user_id, goal_value FROM user_rewards`;
-      deliveredRewards = rewardsResult.rows || rewardsResult || [];
+      deliveredRewards = await sql`SELECT user_id, goal_value FROM user_rewards`;
     } catch (e) {
       // Table may not exist yet
-      console.log("[v0] user_rewards table not found, skipping");
     }
 
     // Criar um Set para lookup rapido
@@ -100,10 +102,11 @@ export async function GET(request: NextRequest) {
     // Calcular metas para cada usuario
     const usersArray = Array.isArray(users) ? users : [];
     const usersWithGoals = usersArray.map((user: any) => {
-      // Usar o maior valor entre profile_revenue e calculated_revenue
+      // Usar o maior valor entre profile_revenue e calculated_revenue do map
+      const calculatedRevenue = revenueMap.get(user.id) || 0;
       const totalRevenue = Math.max(
         Number(user.profile_revenue) || 0,
-        Number(user.calculated_revenue) || 0
+        calculatedRevenue
       );
 
       const currentGoal = getCurrentGoal(totalRevenue);
