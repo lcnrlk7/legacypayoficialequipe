@@ -2,45 +2,46 @@
 
 import { motion } from "framer-motion";
 import { Trophy } from "lucide-react";
+import Image from "next/image";
 
 const plates = [
   {
     amount: "10MIL",
-    label: "10 Mil",
+    label: "10 Mil em Saques",
+    image: "/images/plates/plate-10mil.jpg",
     iconColor: "text-zinc-400",
-    gradientFrom: "from-zinc-400",
-    gradientTo: "to-zinc-300",
-    glowColor: "shadow-zinc-500/20",
+    borderColor: "border-zinc-600",
+    textColor: "text-zinc-400",
   },
   {
     amount: "100MIL",
-    label: "100 Mil",
+    label: "100 Mil em Saques",
+    image: "/images/plates/plate-100mil.jpg",
     iconColor: "text-amber-400",
-    gradientFrom: "from-amber-500",
-    gradientTo: "to-yellow-400",
-    glowColor: "shadow-amber-500/20",
+    borderColor: "border-amber-500/50",
+    textColor: "text-amber-400",
   },
   {
     amount: "500MIL",
-    label: "500 Mil",
+    label: "500 Mil em Saques",
+    image: "/images/plates/plate-500mil.jpg",
     iconColor: "text-emerald-400",
-    gradientFrom: "from-emerald-500",
-    gradientTo: "to-green-400",
-    glowColor: "shadow-emerald-500/20",
+    borderColor: "border-emerald-500/50",
+    textColor: "text-emerald-400",
   },
   {
     amount: "1M",
-    label: "1 Milhao",
+    label: "1 Milhao em Saques",
+    image: "/images/plates/plate-1m.jpg",
     iconColor: "text-primary",
-    gradientFrom: "from-primary",
-    gradientTo: "to-orange-400",
-    glowColor: "shadow-primary/20",
+    borderColor: "border-primary/50",
+    textColor: "text-primary",
   },
 ];
 
 export function AwardPlates() {
   return (
-    <section className="py-24 relative overflow-hidden bg-gradient-to-b from-zinc-950 to-black">
+    <section className="py-24 relative overflow-hidden bg-black">
       <div className="container mx-auto px-4">
         {/* Section Header */}
         <motion.div
@@ -65,7 +66,7 @@ export function AwardPlates() {
         </motion.div>
 
         {/* Plates Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-5xl mx-auto">
           {plates.map((plate, index) => (
             <motion.div
               key={plate.amount}
@@ -75,18 +76,25 @@ export function AwardPlates() {
               transition={{ duration: 0.5, delay: index * 0.1 }}
               className="group"
             >
-              <div className={`relative bg-gradient-to-b from-zinc-900 to-black border border-zinc-800 rounded-2xl p-6 text-center hover:border-zinc-700 transition-all duration-300 hover:shadow-2xl ${plate.glowColor}`}>
-                {/* Amount */}
-                <h3 className={`text-2xl sm:text-3xl font-black bg-gradient-to-b ${plate.gradientFrom} ${plate.gradientTo} bg-clip-text text-transparent mb-4`}>
+              <div className="relative bg-zinc-950 border border-zinc-800 rounded-2xl p-4 md:p-6 text-center hover:border-zinc-700 transition-all duration-300">
+                {/* Amount Title */}
+                <h3 className={`text-xl sm:text-2xl md:text-3xl font-black ${plate.textColor} mb-4`}>
                   {plate.amount}
                 </h3>
                 
-                {/* Icon */}
-                <div className="w-16 h-16 mx-auto mb-4 relative">
-                  <div className={`absolute inset-0 bg-gradient-to-br ${plate.gradientFrom} ${plate.gradientTo} opacity-20 rounded-xl blur-lg group-hover:opacity-40 transition-opacity`} />
-                  <div className="relative w-full h-full bg-zinc-900 rounded-xl flex items-center justify-center border border-zinc-800 group-hover:border-zinc-700 transition-colors">
-                    <Trophy className={`w-8 h-8 ${plate.iconColor}`} />
-                  </div>
+                {/* Plate Image */}
+                <div className="relative w-full aspect-square max-w-[160px] mx-auto mb-4 rounded-xl overflow-hidden">
+                  <Image
+                    src={plate.image}
+                    alt={`Placa ${plate.amount}`}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                </div>
+                
+                {/* Trophy Icon */}
+                <div className={`w-12 h-12 mx-auto mb-3 bg-zinc-900 rounded-xl flex items-center justify-center border ${plate.borderColor}`}>
+                  <Trophy className={`w-6 h-6 ${plate.iconColor}`} />
                 </div>
                 
                 {/* Label */}
