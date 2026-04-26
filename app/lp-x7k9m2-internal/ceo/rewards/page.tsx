@@ -407,13 +407,31 @@ export default function UserGoalsPage() {
                   {user.next_goal && (
                     <span className="text-sm text-muted-foreground">
                       Proxima: {user.next_goal.label}
+                      {user.next_goal.reward && (
+                        <span className="text-primary ml-1">({user.next_goal.reward})</span>
+                      )}
                     </span>
                   )}
                 </div>
                 <Progress value={user.progress} className="h-2" />
-                <p className="text-xs text-muted-foreground mt-1">
-                  {user.progress.toFixed(0)}% para a proxima meta
-                </p>
+                <div className="flex items-center justify-between mt-1">
+                  <p className="text-xs text-muted-foreground">
+                    {user.progress.toFixed(0)}% para a proxima meta
+                  </p>
+                  {/* Mostrar proxima recompensa disponivel */}
+                  {!user.has_pending_rewards && user.next_goal && (
+                    <p className="text-xs text-muted-foreground">
+                      {(() => {
+                        const nextRewardGoal = goals.find(g => g.reward && g.value > user.total_revenue);
+                        if (nextRewardGoal) {
+                          const faltando = nextRewardGoal.value - user.total_revenue;
+                          return `Faltam ${formatCurrency(faltando)} para ${nextRewardGoal.reward}`;
+                        }
+                        return null;
+                      })()}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Rewards Section */}
