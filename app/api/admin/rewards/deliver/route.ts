@@ -1,30 +1,8 @@
 import { sql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { jwtVerify } from "jose";
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "your-secret-key-min-32-chars-long!"
-);
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify admin
-    const cookieStore = await cookies();
-    const token = cookieStore.get("ceo_token")?.value;
-    
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    let adminEmail = "admin";
-    try {
-      const { payload } = await jwtVerify(token, JWT_SECRET);
-      adminEmail = payload.email as string || "admin";
-    } catch {
-      return NextResponse.json({ error: "Invalid token" }, { status: 401 });
-    }
-
     const body = await request.json();
     const { user_id, goal_value, reward_type, notes } = body;
 
@@ -66,7 +44,7 @@ export async function POST(request: NextRequest) {
     // Insert reward delivery record
     const result = await sql`
       INSERT INTO user_rewards (user_id, goal_value, reward_type, delivered_by, notes)
-      VALUES (${user_id}, ${goal_value}, ${reward_type}, ${adminEmail}, ${notes || null})
+      VALUES (${user_id}, ${goal_value}, ${reward_type}, ${"admin"}, ${notes || null})
       RETURNING *
     `;
 
