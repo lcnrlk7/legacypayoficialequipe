@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Trophy, Star, Zap, Shield, HeadphonesIcon, TrendingUp } from "lucide-react";
+import { Trophy, Star, Zap, TrendingUp } from "lucide-react";
+import Image from "next/image";
 
 const rewardLevels = [
   {
@@ -74,16 +75,20 @@ export function RewardsProgram() {
                 </div>
                 
                 {/* Amount */}
-                <h3 className="text-6xl font-black bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent mb-4">
+                <h3 className="text-6xl font-black bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent mb-6">
                   10MIL
                 </h3>
                 
-                {/* Icon */}
-                <div className="w-24 h-24 mx-auto mb-6 relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-orange-600/30 rounded-2xl blur-xl" />
-                  <div className="relative w-full h-full bg-gradient-to-br from-zinc-800 to-zinc-900 rounded-2xl flex items-center justify-center border border-zinc-700">
-                    <Trophy className="w-12 h-12 text-primary" />
-                  </div>
+                {/* Plate Image */}
+                <div className="relative w-48 h-48 mx-auto mb-6">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-orange-600/30 rounded-2xl blur-2xl" />
+                  <Image
+                    src="/images/plates/plate-10mil.jpg"
+                    alt="Placa 10MIL LegacyPay"
+                    width={192}
+                    height={192}
+                    className="relative rounded-xl object-cover border border-zinc-700/50 shadow-2xl"
+                  />
                 </div>
                 
                 {/* Label */}
