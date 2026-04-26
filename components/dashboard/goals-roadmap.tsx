@@ -186,6 +186,17 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
     return `R$ ${value}`;
   };
 
+  // Encontrar recompensas disponiveis para resgate (atingidas mas nao solicitadas)
+  const availableRewards = milestones.filter(m => {
+    if (!m.hasBadge || !m.badgeType) return false;
+    if (totalRevenue < m.value) return false;
+    const reward = userRewards.find(r => r.type === m.badgeType);
+    return !reward; // Disponivel se ainda nao foi solicitada
+  });
+
+  const hasAvailableReward = availableRewards.length > 0;
+  const nextAvailableReward = availableRewards[0];
+
   if (isLoading) {
     return (
       <div className="bg-card border border-border rounded-2xl p-6 flex items-center justify-center min-h-[400px]">
@@ -219,24 +230,15 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                 {milestones.filter(m => m.row === 1).sort((a, b) => a.col - b.col).map((milestone, idx, arr) => {
                   const status = getMilestoneStatus(milestone);
                   const isCompleted = status === "completed" || status === "pending" || status === "credited";
-                  const isAvailable = milestone.hasBadge && status === "completed";
                   
                   return (
                     <div key={milestone.value} className="flex items-center">
-                      <motion.button
-                        onClick={() => {
-                          if (isAvailable) {
-                            setSelectedMilestone(milestone);
-                            setShowModal(true);
-                          }
-                        }}
-                        disabled={!isAvailable}
+                      <div
                         className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center transition-all ${
                           isCompleted
                             ? "border-primary bg-primary/20"
                             : "border-gray-600 bg-gray-800/50"
-                        } ${isAvailable ? "cursor-pointer hover:scale-105" : "cursor-default"}`}
-                        whileHover={isAvailable ? { scale: 1.05 } : {}}
+                        }`}
                       >
                         {milestone.hasBadge && isCompleted ? (
                           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center">
@@ -247,7 +249,7 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                             {milestone.label}
                           </span>
                         )}
-                      </motion.button>
+                      </div>
                       {idx < arr.length - 1 && (
                         <div className={`w-8 sm:w-12 h-1 ${
                           getMilestoneStatus(arr[idx + 1]) !== "locked" || isCompleted
@@ -270,24 +272,15 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                 {milestones.filter(m => m.row === 2).sort((a, b) => b.col - a.col).map((milestone, idx, arr) => {
                   const status = getMilestoneStatus(milestone);
                   const isCompleted = status === "completed" || status === "pending" || status === "credited";
-                  const isAvailable = milestone.hasBadge && status === "completed";
                   
                   return (
                     <div key={milestone.value} className="flex items-center flex-row-reverse">
-                      <motion.button
-                        onClick={() => {
-                          if (isAvailable) {
-                            setSelectedMilestone(milestone);
-                            setShowModal(true);
-                          }
-                        }}
-                        disabled={!isAvailable}
+                      <div
                         className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center transition-all ${
                           isCompleted
                             ? "border-primary bg-primary/20"
                             : "border-gray-600 bg-gray-800/50"
-                        } ${isAvailable ? "cursor-pointer hover:scale-105" : "cursor-default"}`}
-                        whileHover={isAvailable ? { scale: 1.05 } : {}}
+                        }`}
                       >
                         {milestone.hasBadge && isCompleted ? (
                           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center">
@@ -298,7 +291,7 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                             {milestone.label}
                           </span>
                         )}
-                      </motion.button>
+                      </div>
                       {idx < arr.length - 1 && (
                         <div className={`w-8 sm:w-12 h-1 ${
                           isCompleted ? "bg-primary" : "bg-gray-700"
@@ -319,24 +312,15 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                 {milestones.filter(m => m.row === 3).sort((a, b) => a.col - b.col).map((milestone, idx, arr) => {
                   const status = getMilestoneStatus(milestone);
                   const isCompleted = status === "completed" || status === "pending" || status === "credited";
-                  const isAvailable = milestone.hasBadge && status === "completed";
                   
                   return (
                     <div key={milestone.value} className="flex items-center">
-                      <motion.button
-                        onClick={() => {
-                          if (isAvailable) {
-                            setSelectedMilestone(milestone);
-                            setShowModal(true);
-                          }
-                        }}
-                        disabled={!isAvailable}
+                      <div
                         className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center transition-all ${
                           isCompleted
                             ? "border-primary bg-primary/20"
                             : "border-gray-600 bg-gray-800/50"
-                        } ${isAvailable ? "cursor-pointer hover:scale-105" : "cursor-default"}`}
-                        whileHover={isAvailable ? { scale: 1.05 } : {}}
+                        }`}
                       >
                         {milestone.hasBadge && isCompleted ? (
                           <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center">
@@ -347,7 +331,7 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                             {milestone.label}
                           </span>
                         )}
-                      </motion.button>
+                      </div>
                       {idx < arr.length - 1 && (
                         <div className={`w-8 sm:w-12 h-1 ${
                           isCompleted ? "bg-primary" : "bg-gray-700"
@@ -363,7 +347,7 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
           {/* Progress Panel */}
           <div className="w-full lg:w-72 space-y-4">
             {/* Current Progress Card */}
-            <div className="bg-secondary rounded-xl p-4 border border-border">
+            <div className={`bg-secondary rounded-xl p-4 border ${hasAvailableReward ? "border-primary" : "border-border"}`}>
               <p className="text-sm text-muted-foreground mb-3">Progresso Atual</p>
               
               {/* Achievement Badge */}
@@ -374,14 +358,43 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
               <h3 className="text-lg font-bold text-foreground text-center mb-1">
                 {currentLevel.name}
               </h3>
-              <p className="text-xs text-muted-foreground text-center mb-4">
-                Voce esta so comecando a sua jornada!
-              </p>
+              
+              {/* Mensagem de recompensa disponivel */}
+              {hasAvailableReward ? (
+                <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-primary font-medium text-center mb-1">
+                    Voce atingiu uma meta!
+                  </p>
+                  <p className="text-xs text-muted-foreground text-center">
+                    {nextAvailableReward && achievementNames[nextAvailableReward.badgeType!]} disponivel para resgate
+                  </p>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground text-center mb-4">
+                  Voce esta so comecando a sua jornada!
+                </p>
+              )}
 
               <div className="flex items-center justify-between text-sm mb-2">
                 <span className="text-muted-foreground">Status:</span>
-                <span className="text-primary font-medium">Em Progresso</span>
+                <span className="text-primary font-medium">
+                  {hasAvailableReward ? "Recompensa Disponivel" : "Em Progresso"}
+                </span>
               </div>
+
+              {/* Botao Resgatar Premiacao */}
+              {hasAvailableReward && nextAvailableReward && (
+                <Button
+                  onClick={() => {
+                    setSelectedMilestone(nextAvailableReward);
+                    setShowModal(true);
+                  }}
+                  className="w-full bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 mb-4"
+                >
+                  <Gift className="w-4 h-4 mr-2" />
+                  Resgatar Premiacao
+                </Button>
+              )}
 
               {/* Progress bar */}
               {nextMilestone && (
