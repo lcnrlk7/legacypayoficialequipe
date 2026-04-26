@@ -2,6 +2,7 @@ import { sql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { createMisticPayClient } from "@/lib/acquirers/misticpay";
 import { MedusaPayments } from "@/lib/acquirers/medusa";
+import { notifyPixGenerated } from "@/lib/push-notifications";
 
 export async function POST(request: NextRequest) {
   try {
@@ -194,6 +195,13 @@ export async function POST(request: NextRequest) {
           SET pix_transaction_id = ${txId}
           WHERE id = ${orderId}
         `;
+
+        // Enviar notificacao push para o vendedor
+        try {
+          await notifyPixGenerated(seller_id, total, orderId, customerName);
+        } catch (pushError) {
+          console.error("[Checkout] Push notification error:", pushError);
+        }
       }
     }
 

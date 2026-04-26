@@ -194,3 +194,168 @@ export async function notifyKYCApproved(userId: string): Promise<void> {
     },
   });
 }
+
+/**
+ * Enviar notificação de PIX gerado no checkout
+ */
+export async function notifyPixGenerated(
+  userId: string,
+  amount: number,
+  orderId: string,
+  customerName: string
+): Promise<void> {
+  const formattedAmount = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(amount);
+
+  await sendPushNotification(userId, {
+    title: "PIX Gerado!",
+    body: `${customerName} iniciou compra de ${formattedAmount}. Aguardando pagamento...`,
+    tag: `pix-generated-${orderId}`,
+    data: {
+      type: "pix_generated",
+      orderId,
+      amount,
+      url: "/dashboard/transactions",
+    },
+  });
+}
+
+/**
+ * Enviar notificação de pagamento confirmado no checkout
+ */
+export async function notifyCheckoutPayment(
+  userId: string,
+  amount: number,
+  customerName: string,
+  productName: string
+): Promise<void> {
+  const formattedAmount = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(amount);
+
+  await sendPushNotification(userId, {
+    title: "Venda Confirmada!",
+    body: `${customerName} comprou ${productName} por ${formattedAmount}`,
+    tag: `checkout-paid-${Date.now()}`,
+    data: {
+      type: "checkout_paid",
+      amount,
+      url: "/dashboard",
+    },
+  });
+}
+
+/**
+ * Enviar notificação para TODOS os usuários com push ativo
+ */
+export async function sendPushToAllUsers(
+  payload: PushNotificationPayload
+): Promise<{ success: boolean; sent: number; failed: number }> {
+  if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
+    return { success: false, sent: 0, failed: 0 };
+  }
+
+  // Buscar todas as subscriptions ativas
+  const subscriptions = await sql`
+    SELECT ps.*, p.id as user_id 
+    FROM push_subscriptions ps
+    JOIN profiles p ON ps.user_id = p.id
+    WHERE p.notifications_push = true
+  `;
+
+  if (!subscriptions || subscriptions.length === 0) {
+    return { success: false, sent: 0, failed: 0 };
+  }
+
+  const notificationPayload = JSON.stringify({
+    title: payload.title,
+    body: payload.body,
+    icon: payload.icon || "/icon-192x192.png",
+    badge: payload.badge || "/icon-192x192.png",
+    tag: payload.tag || `broadcast-${Date.now()}`,
+    data: payload.data,
+  });
+
+  let sent = 0;
+  let failed = 0;
+
+  for (const sub of subscriptions) {
+    try {
+      await webpush.sendNotification(
+        {
+          endpoint: sub.endpoint,
+          keys: {
+            p256dh: sub.p256dh,
+            auth: sub.auth,
+          },
+        },
+        notificationPayload
+      );
+      sent++;
+    } catch (err: unknown) {
+      const error = err as { statusCode?: number };
+      failed++;
+      if (error.statusCode === 410 || error.statusCode === 404) {
+        await sql`DELETE FROM push_subscriptions WHERE id = ${sub.id}`;
+      }
+    }
+  }
+
+  return { success: sent > 0, sent, failed };
+}
+
+/**
+ * Buscar mensagem motivacional aleatória
+ */
+export async function getRandomMotivationalMessage(): Promise<string | null> {
+  try {
+    const result = await sql`
+      SELECT message FROM motivational_messages 
+      WHERE is_active = true 
+      ORDER BY RANDOM() 
+      LIMIT 1
+    `;
+    return result.length > 0 ? result[0].message : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Enviar mensagem motivacional para um usuário
+ */
+export async function sendMotivationalMessage(userId: string): Promise<void> {
+  const message = await getRandomMotivationalMessage();
+  if (!message) return;
+
+  await sendPushNotification(userId, {
+    title: "LegacyPay",
+    body: message,
+    tag: `motivation-${Date.now()}`,
+    data: {
+      type: "motivation",
+      url: "/dashboard",
+    },
+  });
+}
+
+/**
+ * Enviar mensagem motivacional para todos os usuários
+ */
+export async function sendMotivationalToAll(): Promise<{ success: boolean; sent: number; failed: number }> {
+  const message = await getRandomMotivationalMessage();
+  if (!message) return { success: false, sent: 0, failed: 0 };
+
+  return sendPushToAllUsers({
+    title: "LegacyPay",
+    body: message,
+    tag: `motivation-broadcast-${Date.now()}`,
+    data: {
+      type: "motivation",
+      url: "/dashboard",
+    },
+  });
+}
