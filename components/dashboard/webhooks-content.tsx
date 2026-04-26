@@ -159,30 +159,69 @@ export function WebhooksContent({
           {[
             {
               event: "charge.created",
-              desc: "Quando uma nova cobrança é criada",
+              desc: "Quando uma nova cobrança PIX é criada",
+              category: "PIX",
             },
-            { event: "charge.paid", desc: "Quando uma cobrança é paga" },
+            { 
+              event: "charge.paid", 
+              desc: "Quando uma cobrança PIX é paga com sucesso",
+              category: "PIX",
+            },
             {
               event: "charge.expired",
-              desc: "Quando uma cobrança expira",
+              desc: "Quando uma cobrança PIX expira sem pagamento",
+              category: "PIX",
+            },
+            {
+              event: "checkout.order_created",
+              desc: "Quando um novo pedido é criado no checkout",
+              category: "Checkout",
+            },
+            {
+              event: "checkout.payment_pending",
+              desc: "Quando o PIX do checkout é gerado e aguarda pagamento",
+              category: "Checkout",
+            },
+            {
+              event: "checkout.payment_confirmed",
+              desc: "Quando o pagamento do checkout é confirmado",
+              category: "Checkout",
+            },
+            {
+              event: "checkout.payment_failed",
+              desc: "Quando o pagamento do checkout falha ou expira",
+              category: "Checkout",
             },
             {
               event: "transfer.completed",
-              desc: "Quando uma transferência é concluída",
+              desc: "Quando uma transferência/saque é concluída",
+              category: "Transferencias",
             },
             {
               event: "transfer.failed",
-              desc: "Quando uma transferência falha",
+              desc: "Quando uma transferência/saque falha",
+              category: "Transferencias",
             },
           ].map((item) => (
             <div
               key={item.event}
               className="flex items-center justify-between p-4 bg-secondary/50 rounded-xl"
             >
-              <div>
-                <code className="text-sm text-primary font-mono">
-                  {item.event}
-                </code>
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <code className="text-sm text-primary font-mono">
+                    {item.event}
+                  </code>
+                  <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                    item.category === "Checkout" 
+                      ? "bg-orange-500/20 text-orange-500"
+                      : item.category === "PIX"
+                      ? "bg-green-500/20 text-green-500"
+                      : "bg-blue-500/20 text-blue-500"
+                  }`}>
+                    {item.category}
+                  </span>
+                </div>
                 <p className="text-sm text-muted-foreground mt-1">
                   {item.desc}
                 </p>
@@ -251,7 +290,7 @@ export function WebhooksContent({
         )}
       </motion.div>
 
-      {/* Payload Example */}
+      {/* Payload Examples */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -259,11 +298,17 @@ export function WebhooksContent({
         className="bg-card border border-border rounded-2xl p-6"
       >
         <h2 className="text-lg font-semibold text-foreground mb-4">
-          Exemplo de Payload
+          Exemplos de Payload
         </h2>
 
-        <div className="bg-secondary rounded-xl p-4">
-          <pre className="text-sm text-foreground font-mono overflow-x-auto">
+        <div className="space-y-4">
+          <div>
+            <p className="text-sm text-muted-foreground mb-2">
+              <span className="px-2 py-0.5 rounded bg-green-500/20 text-green-500 text-xs font-medium mr-2">PIX</span>
+              charge.paid
+            </p>
+            <div className="bg-secondary rounded-xl p-4">
+              <pre className="text-sm text-foreground font-mono overflow-x-auto">
 {`{
   "event": "charge.paid",
   "timestamp": "2024-01-15T10:30:00Z",
@@ -276,7 +321,81 @@ export function WebhooksContent({
     "paid_at": "2024-01-15T10:30:00Z"
   }
 }`}
-          </pre>
+              </pre>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm text-muted-foreground mb-2">
+              <span className="px-2 py-0.5 rounded bg-orange-500/20 text-orange-500 text-xs font-medium mr-2">Checkout</span>
+              checkout.order_created
+            </p>
+            <div className="bg-secondary rounded-xl p-4">
+              <pre className="text-sm text-foreground font-mono overflow-x-auto">
+{`{
+  "event": "checkout.order_created",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "data": {
+    "order_id": "ord_xyz789",
+    "checkout_id": "chk_abc123",
+    "checkout_slug": "meu-produto",
+    "customer": {
+      "name": "Maria Santos",
+      "email": "maria@email.com",
+      "phone": "(11) 99999-9999",
+      "cpf": "***.***.***-**"
+    },
+    "items": [
+      {
+        "product_id": "prod_123",
+        "product_name": "Curso de Marketing",
+        "quantity": 1,
+        "unit_price": 297.00
+      }
+    ],
+    "subtotal": 297.00,
+    "discount": 0.00,
+    "total": 297.00,
+    "coupon_code": null,
+    "status": "pending",
+    "pix": {
+      "qr_code": "00020126...",
+      "copy_paste": "00020126..."
+    },
+    "created_at": "2024-01-15T10:30:00Z"
+  }
+}`}
+              </pre>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm text-muted-foreground mb-2">
+              <span className="px-2 py-0.5 rounded bg-orange-500/20 text-orange-500 text-xs font-medium mr-2">Checkout</span>
+              checkout.payment_confirmed
+            </p>
+            <div className="bg-secondary rounded-xl p-4">
+              <pre className="text-sm text-foreground font-mono overflow-x-auto">
+{`{
+  "event": "checkout.payment_confirmed",
+  "timestamp": "2024-01-15T10:35:00Z",
+  "data": {
+    "order_id": "ord_xyz789",
+    "checkout_id": "chk_abc123",
+    "checkout_slug": "meu-produto",
+    "customer": {
+      "name": "Maria Santos",
+      "email": "maria@email.com"
+    },
+    "total": 297.00,
+    "status": "paid",
+    "paid_at": "2024-01-15T10:35:00Z",
+    "transaction_id": "txn_abc123"
+  }
+}`}
+              </pre>
+            </div>
+          </div>
         </div>
       </motion.div>
     </div>

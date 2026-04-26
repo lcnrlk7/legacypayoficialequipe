@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, Calendar, ChevronDown } from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -30,6 +30,8 @@ const monthNames = [
   "Jul", "Ago", "Set", "Out", "Nov", "Dez"
 ];
 
+type ChartPeriod = "month" | "year";
+
 const formatCurrency = (value: number) => {
   if (value >= 1000) {
     return `R$ ${(value / 1000).toFixed(1)}K`;
@@ -38,44 +40,82 @@ const formatCurrency = (value: number) => {
 };
 
 export function SalesChart({ transactions }: SalesChartProps) {
+  const [period, setPeriod] = useState<ChartPeriod>("year");
+  const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
+
   const chartData = useMemo(() => {
-    // Agrupar transacoes por mes
-    const monthlyData: Record<string, number> = {};
-    
-    // Inicializar todos os meses do ano atual
-    const currentYear = new Date().getFullYear();
-    for (let i = 0; i < 12; i++) {
-      const key = `${currentYear}-${String(i + 1).padStart(2, '0')}`;
-      monthlyData[key] = 0;
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+
+    if (period === "year") {
+      // Agrupar transacoes por mes do ano atual
+      const monthlyData: Record<string, number> = {};
+      
+      // Inicializar todos os meses do ano atual
+      for (let i = 0; i < 12; i++) {
+        const key = `${currentYear}-${String(i + 1).padStart(2, '0')}`;
+        monthlyData[key] = 0;
+      }
+
+      // Somar transacoes de deposito por mes (incluir pendentes tambem)
+      transactions
+        .filter(t => 
+          ["deposit", "transfer_in", "pix_in", "received"].includes(t.type) && 
+          ["completed", "pending", "processing"].includes(t.status)
+        )
+        .forEach(t => {
+          const date = new Date(t.created_at);
+          if (date.getFullYear() === currentYear) {
+            const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            if (monthlyData[key] !== undefined) {
+              // Valor ja esta em reais
+              monthlyData[key] += (Number(t.amount) || 0);
+            }
+          }
+        });
+
+      // Converter para array de dados do grafico
+      return Object.entries(monthlyData)
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([key, value]) => {
+          const [, month] = key.split('-');
+          return {
+            name: monthNames[parseInt(month) - 1],
+            vendas: value,
+          };
+        });
+    } else {
+      // Agrupar por dia do mes atual
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const dailyData: Record<number, number> = {};
+      
+      for (let i = 1; i <= daysInMonth; i++) {
+        dailyData[i] = 0;
+      }
+
+      transactions
+        .filter(t => 
+          ["deposit", "transfer_in", "pix_in", "received"].includes(t.type) && 
+          ["completed", "pending", "processing"].includes(t.status)
+        )
+        .forEach(t => {
+          const date = new Date(t.created_at);
+          if (date.getFullYear() === currentYear && date.getMonth() === currentMonth) {
+            const day = date.getDate();
+            dailyData[day] += (Number(t.amount) || 0);
+          }
+        });
+
+      return Object.entries(dailyData).map(([day, value]) => ({
+        name: day,
+        vendas: value,
+      }));
     }
-
-    // Somar transacoes de deposito por mes
-    transactions
-      .filter(t => 
-        ["deposit", "transfer_in", "pix_in"].includes(t.type) && 
-        t.status === "completed"
-      )
-      .forEach(t => {
-        const date = new Date(t.created_at);
-        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-        if (monthlyData[key] !== undefined) {
-          monthlyData[key] += Number(t.amount) || 0;
-        }
-      });
-
-    // Converter para array de dados do grafico
-    return Object.entries(monthlyData)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .map(([key, value]) => {
-        const [, month] = key.split('-');
-        return {
-          name: monthNames[parseInt(month) - 1],
-          vendas: value,
-        };
-      });
-  }, [transactions]);
+  }, [transactions, period]);
 
   const totalVendas = chartData.reduce((sum, item) => sum + item.vendas, 0);
+  const maxValue = Math.max(...chartData.map(d => d.vendas), 1);
 
   return (
     <motion.div
@@ -94,17 +134,46 @@ export function SalesChart({ transactions }: SalesChartProps) {
             Visualize o desempenho das suas vendas
           </p>
         </div>
-        <div className="text-right">
-          <p className="text-2xl font-bold text-primary">
-            {formatCurrency(totalVendas)}
-          </p>
-          <p className="text-xs text-muted-foreground">Total no ano</p>
+        <div className="flex items-center gap-4">
+          {/* Period Selector */}
+          <div className="relative">
+            <button
+              onClick={() => setShowPeriodDropdown(!showPeriodDropdown)}
+              className="flex items-center gap-2 px-3 py-2 bg-secondary border border-border rounded-xl text-sm text-foreground hover:bg-secondary/80 transition-colors"
+            >
+              <Calendar className="w-4 h-4 text-muted-foreground" />
+              {period === "year" ? "Este ano" : "Este mes"}
+              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showPeriodDropdown ? "rotate-180" : ""}`} />
+            </button>
+            {showPeriodDropdown && (
+              <div className="absolute right-0 top-full mt-2 w-36 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden">
+                <button
+                  onClick={() => { setPeriod("month"); setShowPeriodDropdown(false); }}
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-secondary transition-colors ${period === "month" ? "bg-primary/10 text-primary" : "text-foreground"}`}
+                >
+                  Este mes
+                </button>
+                <button
+                  onClick={() => { setPeriod("year"); setShowPeriodDropdown(false); }}
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-secondary transition-colors ${period === "year" ? "bg-primary/10 text-primary" : "text-foreground"}`}
+                >
+                  Este ano
+                </button>
+              </div>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-bold text-primary">
+              {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalVendas)}
+            </p>
+            <p className="text-xs text-muted-foreground">Total {period === "year" ? "no ano" : "no mes"}</p>
+          </div>
         </div>
       </div>
 
       {/* Chart */}
-      <div className="h-[250px] sm:h-[300px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="w-full" style={{ minHeight: "300px", height: "300px" }}>
+        <ResponsiveContainer width="100%" height={300} minWidth={0}>
           <AreaChart
             data={chartData}
             margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
@@ -133,6 +202,7 @@ export function SalesChart({ transactions }: SalesChartProps) {
               tick={{ fill: '#888', fontSize: 12 }}
               tickFormatter={(value) => formatCurrency(value)}
               width={60}
+              domain={[0, maxValue * 1.1]}
             />
             <Tooltip
               contentStyle={{

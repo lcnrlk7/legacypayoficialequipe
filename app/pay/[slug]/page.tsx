@@ -62,8 +62,29 @@ export async function generateMetadata({ params }: PageProps) {
   }
 
   const data = checkout as any;
+  
+  // Usar titulo customizado se existir, senao usa o padrao
+  const title = data.seo_title || `LegacyPay - ${data.name || "Checkout"}`;
+  
+  // Configurar favicon customizado se existir
+  const icons = data.favicon_url 
+    ? {
+        icon: [
+          { url: data.favicon_url, type: "image/png" },
+          { url: data.favicon_url, sizes: "32x32", type: "image/png" },
+        ],
+        shortcut: data.favicon_url,
+        apple: data.favicon_url,
+      }
+    : {
+        icon: "/checkout-favicon.png",
+        shortcut: "/checkout-favicon.png",
+        apple: "/checkout-favicon.png",
+      };
+
   return {
-    title: data.name || "Checkout",
+    title,
     description: data.description || `Checkout - ${data.name}`,
+    icons,
   };
 }

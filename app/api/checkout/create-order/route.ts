@@ -18,13 +18,14 @@ export async function POST(request: NextRequest) {
       payment_method,
     } = body;
 
-    if (!checkout_id || !seller_id || !customer || !items || items.length === 0) {
+    if (!checkout_id || !seller_id || !items || items.length === 0) {
       return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
     }
 
-    if (!customer.email || !customer.name) {
-      return NextResponse.json({ error: "Nome e email sao obrigatorios" }, { status: 400 });
-    }
+    // Customer pode ser vazio se nenhum campo for obrigatorio
+    const customerData = customer || {};
+    const customerName = customerData.name || "Cliente";
+    const customerEmail = customerData.email || `cliente-${Date.now()}@checkout.local`;
 
     // Buscar dados do vendedor
     const sellerResult = await sql`
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
         payment_status, delivery_status, status
       ) VALUES (
         ${checkout_id}, ${seller_id},
-        ${customer.name}, ${customer.email}, ${customer.phone || null}, ${customer.cpf || null},
+        ${customerName}, ${customerEmail}, ${customerData.phone || null}, ${customerData.cpf || null},
         ${subtotal}, ${discount || 0}, ${total},
         ${coupon_code || null}, ${payment_method || 'pix'},
         'pending', 'pending', 'pending'
@@ -195,6 +196,27 @@ export async function POST(request: NextRequest) {
         `;
       }
     }
+
+    // Registrar no log do admin
+    await sql`
+      INSERT INTO admin_logs (type, action, title, description, user_id, amount, metadata)
+      VALUES (
+        'checkout_order',
+        'created',
+        ${'Nova venda: ' + items.map((i: any) => i.product_name).join(', ')},
+        ${'Cliente: ' + customerName + ' - ' + customerEmail},
+        ${seller_id},
+        ${total / 100},
+        ${JSON.stringify({
+          order_id: orderId,
+          checkout_id,
+          customer_name: customerName,
+          customer_email: customerEmail,
+          items: items.map((i: any) => ({ name: i.product_name, price: i.product_price })),
+          pix_generated: pixResult.success
+        })}
+      )
+    `;
 
     return NextResponse.json({ 
       success: true, 

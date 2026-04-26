@@ -24,6 +24,7 @@ import {
   Settings,
   Webhook,
   ArrowLeft,
+  ShoppingCart,
   type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ const menuItems: { href: string; icon: LucideIcon; label: string; showBadge?: bo
   { href: "/admin/team", icon: UsersRound, label: "Equipe" },
   { href: "/admin/kyc", icon: UserCheck, label: "KYC" },
   { href: "/admin/transactions", icon: TrendingUp, label: "Transacoes" },
+  { href: "/admin/checkouts", icon: ShoppingCart, label: "Checkouts" },
   { href: "/admin/withdrawals", icon: Wallet, label: "Saques" },
   { href: "/admin/fees", icon: Percent, label: "Taxas" },
   { href: "/admin/reports", icon: FileText, label: "Relatorios" },

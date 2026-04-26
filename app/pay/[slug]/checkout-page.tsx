@@ -2,35 +2,39 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import {
-  ShoppingCart,
-  Minus,
-  Plus,
-  Trash2,
+import { 
+  ShoppingCart, 
+  Clock, 
+  Shield, 
+  CheckCircle2, 
+  User, 
+  Mail, 
+  Phone, 
   CreditCard,
+  Copy,
+  ChevronDown,
+  ChevronUp,
   Tag,
-  CheckCircle,
-  Loader2,
-  Lock,
-  Clock,
   Package,
+  Lock,
+  FileText,
+  MapPin,
+  Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
-import Image from "next/image";
 
 interface Product {
   id: string;
   name: string;
-  description: string | null;
+  description?: string | null;
   price: number;
-  compare_price: number | null;
-  image_url: string | null;
-  custom_price: number | null;
-  is_digital: boolean;
-  stock: number;
+  compare_price?: number | null;
+  custom_price?: number | null;
+  image_url?: string | null;
+  banner_url?: string | null;
+  is_digital?: boolean;
+  product_type?: string;
 }
 
 interface Checkout {
@@ -42,105 +46,72 @@ interface Checkout {
   logo_url?: string | null;
   banner_url?: string | null;
   primary_color?: string;
-  secondary_color?: string;
-  text_color?: string;
   bg_color?: string;
-  pix_enabled?: boolean;
-  card_enabled?: boolean;
+  text_color?: string;
   show_timer?: boolean;
+  timer_enabled?: boolean;
   timer_minutes?: number;
-  show_stock?: boolean;
+  require_name?: boolean;
+  require_email?: boolean;
   require_phone?: boolean;
   require_cpf?: boolean;
-  headline?: string | null;
-  subheadline?: string | null;
-  cta_text?: string;
-  success_message?: string;
+  require_address?: boolean;
   products?: Product[];
 }
 
-interface CartItem {
-  product: Product;
-  quantity: number;
-}
-
 export function CheckoutPage({ checkout }: { checkout: Checkout }) {
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [step, setStep] = useState<"products" | "info" | "payment" | "pix" | "success">("products");
-  const [pixData, setPixData] = useState<{ qrCode?: string; copyPaste?: string } | null>(null);
-  const [couponCode, setCouponCode] = useState("");
-  const [couponDiscount, setCouponDiscount] = useState(0);
-  const [couponApplied, setCouponApplied] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const products = checkout.products || [];
+  const primaryColor = checkout.primary_color || "#f97316";
+  const bgColor = checkout.bg_color || "#0a0a0a";
+  const textColor = checkout.text_color || "#ffffff";
+  
+  // Se tiver apenas 1 produto, ja seleciona automaticamente
+  const singleProduct = products.length === 1 ? products[0] : null;
+  
+  // Verifica se precisa mostrar formulario
+  const needsForm = checkout.require_name || checkout.require_email || 
+                    checkout.require_phone || checkout.require_cpf || checkout.require_address;
+  
+  // States
+  const [step, setStep] = useState<"checkout" | "pix" | "success">("checkout");
   const [timeLeft, setTimeLeft] = useState((checkout.timer_minutes || 15) * 60);
-
-  // Customer info
-  const [customerInfo, setCustomerInfo] = useState({
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(singleProduct);
+  const [quantity, setQuantity] = useState(1);
+  const [couponCode, setCouponCode] = useState("");
+  const [couponApplied, setCouponApplied] = useState<{ code: string; discount: number } | null>(null);
+  const [couponError, setCouponError] = useState("");
+  const [expandDescription, setExpandDescription] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [pixData, setPixData] = useState<{ qrCode?: string; copyPaste?: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  
+  // Form data
+  const [formData, setFormData] = useState({
     name: "",
     email: "",
     phone: "",
     cpf: "",
+    address: "",
+    city: "",
+    state: "",
+    cep: "",
   });
 
-  // Timer countdown
+  // Timer
   useEffect(() => {
-    if (!checkout.show_timer || step === "success") return;
-
+    if (!checkout.timer_enabled && !checkout.show_timer) return;
     const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
     }, 1000);
-
     return () => clearInterval(timer);
-  }, [checkout.show_timer, step]);
+  }, [checkout.timer_enabled, checkout.show_timer]);
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  const formatTimeUnit = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return { h, m, s };
   };
-
-  const getProductPrice = (product: Product) => {
-    return product.custom_price ?? product.price;
-  };
-
-  const addToCart = (product: Product) => {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.product.id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [...prev, { product, quantity: 1 }];
-    });
-  };
-
-  const updateQuantity = (productId: string, delta: number) => {
-    setCart((prev) =>
-      prev
-        .map((item) =>
-          item.product.id === productId
-            ? { ...item, quantity: Math.max(0, item.quantity + delta) }
-            : item
-        )
-        .filter((item) => item.quantity > 0)
-    );
-  };
-
-  const subtotal = cart.reduce(
-    (acc, item) => acc + getProductPrice(item.product) * item.quantity,
-    0
-  );
-  const discount = couponDiscount;
-  const total = Math.max(0, subtotal - discount);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -149,52 +120,89 @@ export function CheckoutPage({ checkout }: { checkout: Checkout }) {
     }).format(value);
   };
 
-  const applyCoupon = async () => {
-    if (!couponCode) return;
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length <= 2) return `(${numbers}`;
+    if (numbers.length <= 7) return `(${numbers.slice(0, 2)}) ${numbers.slice(2)}`;
+    return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
+  };
 
-    setLoading(true);
+  const formatCPF = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+    if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+  };
+
+  const formatCEP = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    if (numbers.length <= 5) return numbers;
+    return `${numbers.slice(0, 5)}-${numbers.slice(5, 8)}`;
+  };
+
+  const getProductPrice = (product: Product) => {
+    return product.custom_price || product.price;
+  };
+
+  // Calculos
+  const productPrice = selectedProduct ? getProductPrice(selectedProduct) : 0;
+  const subtotal = productPrice * quantity;
+  const discount = couponApplied ? couponApplied.discount : 0;
+  const total = Math.max(0, subtotal - discount);
+
+  // Apply coupon
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    
+    setCouponError("");
     try {
       const res = await fetch("/api/checkout/validate-coupon", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: couponCode,
+        body: JSON.stringify({ 
+          code: couponCode, 
           checkout_id: checkout.id,
-          subtotal,
+          subtotal 
         }),
       });
-
-      if (res.ok) {
-        const data = await res.json();
-        setCouponDiscount(data.discount);
-        setCouponApplied(couponCode);
+      
+      const data = await res.json();
+      
+      if (res.ok && data.valid) {
+        setCouponApplied({ code: couponCode, discount: data.discount_amount || data.discount });
       } else {
-        alert("Cupom invalido ou expirado");
+        setCouponError(data.error || "Cupom invalido");
       }
-    } catch (err) {
-      console.error("Error applying coupon:", err);
-    } finally {
-      setLoading(false);
+    } catch {
+      setCouponError("Erro ao validar cupom");
     }
   };
 
-  const handleSubmitOrder = async () => {
-    if (!customerInfo.name || !customerInfo.email) {
-      alert("Preencha nome e email");
+  // Validate form
+  const validateForm = () => {
+    if (checkout.require_name && !formData.name.trim()) return false;
+    if (checkout.require_email && !formData.email.trim()) return false;
+    if (checkout.require_phone && !formData.phone.trim()) return false;
+    if (checkout.require_cpf && !formData.cpf.trim()) return false;
+    if (checkout.require_address && (!formData.address.trim() || !formData.city.trim() || !formData.state.trim() || !formData.cep.trim())) return false;
+    return true;
+  };
+
+  // Submit order and get PIX
+  const handleSubmit = async () => {
+    if (!selectedProduct) {
+      alert("Selecione um produto");
       return;
     }
-
-    if (checkout.require_phone && !customerInfo.phone) {
-      alert("Telefone e obrigatorio");
-      return;
-    }
-
-    if (checkout.require_cpf && !customerInfo.cpf) {
-      alert("CPF e obrigatorio");
+    
+    if (needsForm && !validateForm()) {
+      alert("Por favor, preencha todos os campos obrigatorios");
       return;
     }
 
     setLoading(true);
+    
     try {
       const res = await fetch("/api/checkout/create-order", {
         method: "POST",
@@ -202,25 +210,24 @@ export function CheckoutPage({ checkout }: { checkout: Checkout }) {
         body: JSON.stringify({
           checkout_id: checkout.id,
           seller_id: checkout.user_id,
-          customer: customerInfo,
-          items: cart.map((item) => ({
-            product_id: item.product.id,
-            product_name: item.product.name,
-            product_price: getProductPrice(item.product),
-            quantity: item.quantity,
-          })),
+          items: [{ 
+            product_id: selectedProduct.id, 
+            product_name: selectedProduct.name,
+            product_price: productPrice,
+            quantity, 
+            unit_price: productPrice 
+          }],
+          customer: formData,
+          coupon_code: couponApplied?.code,
           subtotal,
           discount,
           total,
-          coupon_code: couponApplied,
-          payment_method: "pix",
         }),
       });
 
       const data = await res.json();
-      
+
       if (res.ok) {
-        // Se tiver dados do PIX, mostra tela do QR Code
         if (data.pix && data.pix.qrCode) {
           setPixData({
             qrCode: data.pix.qrCode,
@@ -228,114 +235,99 @@ export function CheckoutPage({ checkout }: { checkout: Checkout }) {
           });
           setStep("pix");
         } else {
-          // Se nao tiver PIX, vai direto para sucesso
           setStep("success");
         }
       } else {
         alert(data.error || "Erro ao criar pedido");
       }
-    } catch (err) {
-      console.error("Error creating order:", err);
+    } catch {
       alert("Erro ao processar pedido");
     } finally {
       setLoading(false);
     }
   };
 
-  // Custom styles based on checkout settings
-  const styles = {
-    "--primary": checkout.primary_color,
-    "--bg": checkout.bg_color,
-    "--text": checkout.text_color,
-  } as React.CSSProperties;
+  const copyPixCode = () => {
+    if (pixData?.copyPaste) {
+      navigator.clipboard.writeText(pixData.copyPaste);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const time = formatTimeUnit(timeLeft);
 
   // PIX Screen
-  if (step === "pix" && pixData) {
+  if (step === "pix") {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center p-4"
-        style={{ backgroundColor: checkout.bg_color || "#0a0a0a" }}
-      >
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: bgColor }}>
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
+          initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="text-center max-w-md w-full"
+          className="w-full max-w-md text-center"
         >
-          <div
-            className="w-16 h-16 rounded-full mx-auto mb-4 flex items-center justify-center"
-            style={{ backgroundColor: (checkout.primary_color || "#f97316") + "20" }}
+          <div 
+            className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
+            style={{ backgroundColor: primaryColor + "20" }}
           >
-            <CreditCard
-              className="w-8 h-8"
-              style={{ color: checkout.primary_color || "#f97316" }}
-            />
+            <CreditCard className="w-10 h-10" style={{ color: primaryColor }} />
           </div>
-          <h1
-            className="text-2xl font-bold mb-2"
-            style={{ color: checkout.text_color || "#ffffff" }}
-          >
+          
+          <h1 className="text-2xl font-bold mb-2" style={{ color: textColor }}>
             Pagamento via PIX
           </h1>
-          <p className="text-sm mb-6" style={{ color: (checkout.text_color || "#ffffff") + "99" }}>
+          <p className="text-sm mb-6" style={{ color: textColor + "99" }}>
             Escaneie o QR Code ou copie o codigo para pagar
           </p>
-          
+
           {/* QR Code */}
-          <div className="bg-white p-4 rounded-xl mb-4 inline-block">
-            <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(pixData.copyPaste || '')}`}
-              alt="QR Code PIX"
-              className="w-48 h-48"
-            />
-          </div>
-          
-          {/* Copy Paste */}
+          {pixData?.copyPaste && (
+            <div className="bg-white p-4 rounded-2xl mb-6 inline-block">
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(pixData.copyPaste)}`}
+                alt="QR Code PIX"
+                className="w-48 h-48"
+              />
+            </div>
+          )}
+
+          {/* Copy Code */}
           <div className="mb-6">
-            <p className="text-xs mb-2" style={{ color: (checkout.text_color || "#ffffff") + "99" }}>
+            <p className="text-xs mb-2" style={{ color: textColor + "99" }}>
               Ou copie o codigo PIX:
             </p>
-            <div className="relative">
-              <input
-                type="text"
-                value={pixData.copyPaste || ''}
+            <div className="flex gap-2">
+              <Input
+                value={pixData?.copyPaste || ""}
                 readOnly
-                className="w-full p-3 pr-20 rounded-lg text-sm bg-black/30 border border-white/10"
-                style={{ color: checkout.text_color || "#ffffff" }}
+                className="flex-1 bg-white/10 border-white/20 text-xs"
+                style={{ color: textColor }}
               />
               <Button
-                size="sm"
-                className="absolute right-1 top-1/2 -translate-y-1/2"
-                style={{ backgroundColor: checkout.primary_color || "#f97316" }}
-                onClick={() => {
-                  navigator.clipboard.writeText(pixData.copyPaste || '');
-                  alert('Codigo copiado!');
-                }}
+                style={{ backgroundColor: primaryColor }}
+                onClick={copyPixCode}
               >
-                Copiar
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </Button>
             </div>
           </div>
-          
+
           {/* Total */}
-          <div
+          <div 
             className="p-4 rounded-xl mb-6"
-            style={{ backgroundColor: (checkout.primary_color || "#f97316") + "10" }}
+            style={{ backgroundColor: primaryColor + "15" }}
           >
-            <p className="text-sm" style={{ color: (checkout.text_color || "#ffffff") + "99" }}>
-              Valor a pagar:
-            </p>
-            <p
-              className="text-3xl font-bold"
-              style={{ color: checkout.primary_color || "#f97316" }}
-            >
+            <p className="text-sm" style={{ color: textColor + "99" }}>Valor a pagar:</p>
+            <p className="text-3xl font-bold" style={{ color: primaryColor }}>
               {formatCurrency(total)}
             </p>
           </div>
-          
+
           <Button
             className="w-full"
             variant="outline"
             onClick={() => setStep("success")}
+            style={{ borderColor: primaryColor, color: primaryColor }}
           >
             Ja fiz o pagamento
           </Button>
@@ -347,441 +339,470 @@ export function CheckoutPage({ checkout }: { checkout: Checkout }) {
   // Success Screen
   if (step === "success") {
     return (
-      <div
-        className="min-h-screen flex items-center justify-center p-4"
-        style={{ backgroundColor: checkout.bg_color }}
-      >
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: bgColor }}>
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
+          initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="text-center max-w-md"
+          className="w-full max-w-md text-center"
         >
-          <div
+          <div 
             className="w-20 h-20 rounded-full mx-auto mb-6 flex items-center justify-center"
-            style={{ backgroundColor: checkout.primary_color + "20" }}
+            style={{ backgroundColor: "#22c55e20" }}
           >
-            <CheckCircle
-              className="w-10 h-10"
-              style={{ color: checkout.primary_color }}
-            />
+            <CheckCircle2 className="w-10 h-10 text-green-500" />
           </div>
-          <h1
-            className="text-2xl font-bold mb-4"
-            style={{ color: checkout.text_color }}
-          >
-            Pedido Realizado!
+          
+          <h1 className="text-2xl font-bold mb-2" style={{ color: textColor }}>
+            Pedido Confirmado!
           </h1>
-          <p style={{ color: checkout.text_color + "99" }}>
-            {checkout.success_message}
+          <p className="text-sm mb-6" style={{ color: textColor + "99" }}>
+            Seu pagamento foi processado com sucesso. Voce recebera um email com os detalhes do pedido.
           </p>
+
+          <div 
+            className="p-4 rounded-xl"
+            style={{ backgroundColor: "#22c55e10" }}
+          >
+            <p className="text-sm text-green-500">
+              Obrigado pela sua compra!
+            </p>
+          </div>
         </motion.div>
       </div>
     );
   }
 
-  return (
-    <div
-      className="min-h-screen"
-      style={{ backgroundColor: checkout.bg_color, color: checkout.text_color }}
-    >
-      {/* Timer Bar */}
-      {checkout.show_timer && timeLeft > 0 && (
-        <div
-          className="sticky top-0 z-50 py-2 px-4 text-center text-sm font-medium"
-          style={{ backgroundColor: checkout.primary_color }}
-        >
-          <Clock className="w-4 h-4 inline-block mr-2" />
-          Oferta expira em: {formatTime(timeLeft)}
+  // No products
+  if (products.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ backgroundColor: bgColor }}>
+        <div className="text-center">
+          <Package className="w-16 h-16 mx-auto mb-4" style={{ color: textColor + "40" }} />
+          <h1 className="text-xl font-bold mb-2" style={{ color: textColor }}>Checkout em Configuracao</h1>
+          <p style={{ color: textColor + "60" }}>Este checkout ainda nao possui produtos.</p>
         </div>
-      )}
+      </div>
+    );
+  }
 
+  // Main checkout page - Two column layout
+  return (
+    <div className="min-h-screen" style={{ backgroundColor: bgColor, color: textColor }}>
       {/* Header */}
-      <header className="py-6 px-4 border-b border-white/10">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {checkout.logo_url ? (
-              <img
-                src={checkout.logo_url}
-                alt={checkout.name}
-                className="h-10 w-auto"
-              />
-            ) : (
-              <div
-                className="w-10 h-10 rounded-lg flex items-center justify-center"
-                style={{ backgroundColor: checkout.primary_color }}
-              >
-                <ShoppingCart className="w-5 h-5 text-white" />
-              </div>
-            )}
-            <span className="font-bold text-lg">{checkout.name}</span>
+      <header className="border-b border-white/10 py-4 px-4">
+        <div className="max-w-6xl mx-auto flex items-center gap-3">
+          <div 
+            className="w-10 h-10 rounded-lg flex items-center justify-center"
+            style={{ backgroundColor: primaryColor }}
+          >
+            <ShoppingCart className="w-5 h-5 text-white" />
           </div>
-          {cart.length > 0 && (
-            <div className="flex items-center gap-2">
-              <ShoppingCart className="w-5 h-5" />
-              <span className="font-medium">{cart.length} item(ns)</span>
-            </div>
-          )}
+          <span className="font-semibold">{checkout.name}</span>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto p-4 pb-24">
-        {/* Headline */}
-        {checkout.headline && (
-          <div className="text-center py-8">
-            <h1 className="text-3xl font-bold mb-2">{checkout.headline}</h1>
-            {checkout.subheadline && (
-              <p style={{ color: checkout.text_color + "99" }}>
-                {checkout.subheadline}
+      {/* Main Content */}
+      <main className="max-w-6xl mx-auto p-4 lg:p-8">
+        {/* Title and Description */}
+        {selectedProduct && (
+          <div className="text-center mb-8">
+            <h1 className="text-xl lg:text-2xl font-bold mb-3">{selectedProduct.name}</h1>
+            {selectedProduct.description && (
+              <p className="text-sm max-w-3xl mx-auto leading-relaxed" style={{ color: textColor + "99" }}>
+                {selectedProduct.description}
               </p>
             )}
           </div>
         )}
 
-        {step === "products" && (
-          <>
-            {/* Products Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-              {(checkout.products || []).map((product) => (
-                <motion.div
-                  key={product.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <Card
-                    className="overflow-hidden border-0"
-                    style={{ backgroundColor: checkout.secondary_color }}
-                  >
-                    {product.image_url && (
-                      <div className="aspect-video relative">
-                        <img
-                          src={product.image_url}
-                          alt={product.name}
-                          className="w-full h-full object-cover"
-                        />
-                        {product.is_digital && (
-                          <div className="absolute top-2 right-2 px-2 py-1 bg-blue-500 text-white text-xs rounded">
-                            Digital
-                          </div>
-                        )}
+        {/* Two Column Layout */}
+        <div className="grid lg:grid-cols-2 gap-8">
+          {/* Left Column - Product */}
+          <div>
+            {selectedProduct ? (
+              <div className="rounded-xl overflow-hidden border border-white/10 bg-white/5">
+                {/* Product Image */}
+                {(selectedProduct.image_url || selectedProduct.banner_url) && (
+                  <div className="aspect-video relative">
+                    <img
+                      src={selectedProduct.banner_url || selectedProduct.image_url || ""}
+                      alt={selectedProduct.name}
+                      className="w-full h-full object-cover"
+                    />
+                    {selectedProduct.is_digital && (
+                      <span 
+                        className="absolute top-3 right-3 px-3 py-1 rounded text-xs font-medium"
+                        style={{ backgroundColor: primaryColor, color: "#fff" }}
+                      >
+                        Digital
+                      </span>
+                    )}
+                  </div>
+                )}
+                
+                {/* Product Info */}
+                <div className="p-5">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <p className="text-xs mb-1" style={{ color: textColor + "60" }}>Total</p>
+                      <p className="text-2xl font-bold" style={{ color: primaryColor }}>
+                        {formatCurrency(productPrice)}
+                      </p>
+                    </div>
+                    <div 
+                      className="flex items-center gap-2 px-3 py-2 rounded-lg"
+                      style={{ backgroundColor: "rgba(255,255,255,0.1)" }}
+                    >
+                      <Package className="w-4 h-4" />
+                      <span className="text-sm">{quantity} item</span>
+                    </div>
+                  </div>
+
+                  {/* Product Card */}
+                  <div className="flex items-start gap-3 p-4 rounded-xl bg-white/5 mb-5">
+                    {(selectedProduct.image_url || selectedProduct.banner_url) ? (
+                      <img 
+                        src={selectedProduct.image_url || selectedProduct.banner_url || ""} 
+                        alt="" 
+                        className="w-14 h-14 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div 
+                        className="w-14 h-14 rounded-lg flex items-center justify-center"
+                        style={{ backgroundColor: primaryColor + "20" }}
+                      >
+                        <Package className="w-7 h-7" style={{ color: primaryColor }} />
                       </div>
                     )}
-                    <CardContent className="p-4">
-                      <h3
-                        className="font-semibold text-lg mb-1"
-                        style={{ color: checkout.text_color }}
-                      >
-                        {product.name}
-                      </h3>
-                      {product.description && (
-                        <p
-                          className="text-sm mb-3 line-clamp-2"
-                          style={{ color: checkout.text_color + "99" }}
-                        >
-                          {product.description}
-                        </p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold mb-1">{selectedProduct.name}</p>
+                      {selectedProduct.description && (
+                        <>
+                          <p className="text-sm leading-relaxed" style={{ color: textColor + "80" }}>
+                            {expandDescription 
+                              ? selectedProduct.description 
+                              : (selectedProduct.description.length > 120 
+                                  ? selectedProduct.description.substring(0, 120) + "..." 
+                                  : selectedProduct.description)}
+                          </p>
+                          {selectedProduct.description.length > 120 && (
+                            <button
+                              onClick={() => setExpandDescription(!expandDescription)}
+                              className="text-sm mt-2 flex items-center gap-1 font-medium"
+                              style={{ color: primaryColor }}
+                            >
+                              {expandDescription ? "Ver menos" : "Ver mais"}
+                              {expandDescription ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </button>
+                          )}
+                        </>
                       )}
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span
-                            className="text-2xl font-bold"
-                            style={{ color: checkout.primary_color }}
-                          >
-                            {formatCurrency(getProductPrice(product))}
-                          </span>
-                          {product.compare_price &&
-                            product.compare_price > getProductPrice(product) && (
-                              <span
-                                className="text-sm ml-2 line-through"
-                                style={{ color: checkout.text_color + "66" }}
-                              >
-                                {formatCurrency(product.compare_price)}
-                              </span>
-                            )}
-                        </div>
-                        <Button
-                          onClick={() => addToCart(product)}
-                          style={{
-                            backgroundColor: checkout.primary_color,
-                            color: "#fff",
-                          }}
-                        >
-                          <Plus className="w-4 h-4 mr-1" />
-                          Adicionar
-                        </Button>
-                      </div>
-                      {checkout.show_stock && product.stock > 0 && product.stock < 10 && (
-                        <p className="text-xs mt-2 text-yellow-500">
-                          Apenas {product.stock} em estoque!
-                        </p>
-                      )}
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </div>
+                    </div>
+                  </div>
 
-            {/* Cart Summary */}
-            {cart.length > 0 && (
-              <Card
-                className="border-0 mb-4"
-                style={{ backgroundColor: checkout.secondary_color }}
-              >
-                <CardContent className="p-4">
-                  <h3
-                    className="font-semibold mb-4"
-                    style={{ color: checkout.text_color }}
-                  >
-                    Seu Carrinho
-                  </h3>
-                  <div className="space-y-3">
-                    {cart.map((item) => (
-                      <div
-                        key={item.product.id}
-                        className="flex items-center justify-between"
-                      >
-                        <div className="flex-1">
-                          <p
-                            className="font-medium"
-                            style={{ color: checkout.text_color }}
-                          >
-                            {item.product.name}
-                          </p>
-                          <p
-                            className="text-sm"
-                            style={{ color: checkout.text_color + "99" }}
-                          >
-                            {formatCurrency(getProductPrice(item.product))} x{" "}
-                            {item.quantity}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => updateQuantity(item.product.id, -1)}
-                          >
-                            <Minus className="w-3 h-3" />
-                          </Button>
-                          <span className="w-8 text-center">{item.quantity}</span>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => updateQuantity(item.product.id, 1)}
-                          >
-                            <Plus className="w-3 h-3" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
+                  {/* Quantity */}
+                  <div className="flex items-center gap-3 mb-5 pb-5 border-b border-white/10">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: primaryColor }} />
+                    <span className="text-sm">Qtd. {quantity}</span>
+                    <span className="ml-auto font-semibold">{formatCurrency(productPrice)}</span>
                   </div>
 
                   {/* Coupon */}
-                  <div className="mt-4 pt-4 border-t border-white/10">
+                  <div className="mb-5">
+                    <p className="text-sm font-medium mb-2">Cupom de Desconto</p>
                     <div className="flex gap-2">
-                      <Input
-                        placeholder="Cupom de desconto"
-                        value={couponCode}
-                        onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                        className="flex-1"
-                        disabled={!!couponApplied}
-                      />
+                      <div className="flex-1 relative">
+                        <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: textColor + "40" }} />
+                        <Input
+                          placeholder="CODIGO DO CUPOM"
+                          value={couponCode}
+                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                          className="pl-10 bg-white/5 border-white/10 uppercase h-11"
+                          style={{ color: textColor }}
+                        />
+                      </div>
                       <Button
-                        variant="outline"
                         onClick={applyCoupon}
-                        disabled={loading || !!couponApplied}
+                        className="h-11 px-5"
+                        style={{ backgroundColor: primaryColor, color: "#000" }}
                       >
-                        {couponApplied ? (
-                          <CheckCircle className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <Tag className="w-4 h-4" />
-                        )}
+                        Aplicar
                       </Button>
                     </div>
+                    {couponError && (
+                      <p className="text-red-400 text-xs mt-2">{couponError}</p>
+                    )}
+                    {couponApplied && (
+                      <p className="text-green-400 text-xs mt-2">
+                        Cupom aplicado: -{formatCurrency(couponApplied.discount)}
+                      </p>
+                    )}
                   </div>
 
                   {/* Totals */}
-                  <div className="mt-4 pt-4 border-t border-white/10 space-y-2">
+                  <div className="space-y-2 pt-4 border-t border-white/10">
                     <div className="flex justify-between text-sm">
-                      <span style={{ color: checkout.text_color + "99" }}>
-                        Subtotal
-                      </span>
+                      <span style={{ color: textColor + "80" }}>Subtotal Produto</span>
                       <span>{formatCurrency(subtotal)}</span>
                     </div>
-                    {discount > 0 && (
-                      <div className="flex justify-between text-sm text-green-500">
-                        <span>Desconto ({couponApplied})</span>
-                        <span>-{formatCurrency(discount)}</span>
+                    {couponApplied && (
+                      <div className="flex justify-between text-sm text-green-400">
+                        <span>Desconto</span>
+                        <span>-{formatCurrency(couponApplied.discount)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between font-bold text-lg">
+                    <div className="flex justify-between text-sm">
+                      <span style={{ color: textColor + "80" }}>Subtotal Geral</span>
+                      <span>{formatCurrency(total)}</span>
+                    </div>
+                    <div className="flex justify-between font-bold text-lg pt-3 border-t border-white/10">
                       <span>Total</span>
-                      <span style={{ color: checkout.primary_color }}>
-                        {formatCurrency(total)}
-                      </span>
+                      <span style={{ color: primaryColor }}>{formatCurrency(total)}</span>
                     </div>
                   </div>
-
-                  <Button
-                    className="w-full mt-4"
-                    size="lg"
-                    onClick={() => setStep("info")}
-                    style={{
-                      backgroundColor: checkout.primary_color,
-                      color: "#fff",
+                </div>
+              </div>
+            ) : (
+              /* Product Selection */
+              <div className="space-y-4">
+                <h2 className="text-lg font-bold mb-4">Selecione um produto</h2>
+                {products.map((product) => (
+                  <div
+                    key={product.id}
+                    onClick={() => setSelectedProduct(product)}
+                    className="p-4 rounded-xl border cursor-pointer transition-all hover:border-orange-500"
+                    style={{ 
+                      backgroundColor: "rgba(255,255,255,0.05)",
+                      borderColor: selectedProduct?.id === product.id ? primaryColor : "rgba(255,255,255,0.1)"
                     }}
                   >
-                    {checkout.cta_text || "Continuar"}
-                  </Button>
-                </CardContent>
-              </Card>
+                    <div className="flex gap-4">
+                      {(product.image_url || product.banner_url) && (
+                        <img src={product.image_url || product.banner_url || ""} alt="" className="w-20 h-20 rounded-lg object-cover" />
+                      )}
+                      <div className="flex-1">
+                        <p className="font-semibold">{product.name}</p>
+                        {product.description && (
+                          <p className="text-sm mt-1" style={{ color: textColor + "80" }}>{product.description}</p>
+                        )}
+                        <p className="font-bold mt-2" style={{ color: primaryColor }}>
+                          {formatCurrency(getProductPrice(product))}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
-          </>
-        )}
+          </div>
 
-        {step === "info" && (
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-          >
-            <Card
-              className="border-0"
-              style={{ backgroundColor: checkout.secondary_color }}
-            >
-              <CardContent className="p-6">
-                <h3
-                  className="font-semibold text-lg mb-4"
-                  style={{ color: checkout.text_color }}
-                >
-                  Seus Dados
-                </h3>
-                <div className="space-y-4">
-                  <div>
-                    <Label style={{ color: checkout.text_color }}>Nome Completo *</Label>
-                    <Input
-                      placeholder="Seu nome"
-                      value={customerInfo.name}
-                      onChange={(e) =>
-                        setCustomerInfo({ ...customerInfo, name: e.target.value })
-                      }
-                      className="mt-1"
-                    />
-                  </div>
-                  <div>
-                    <Label style={{ color: checkout.text_color }}>Email *</Label>
-                    <Input
-                      type="email"
-                      placeholder="seu@email.com"
-                      value={customerInfo.email}
-                      onChange={(e) =>
-                        setCustomerInfo({ ...customerInfo, email: e.target.value })
-                      }
-                      className="mt-1"
-                    />
-                  </div>
-                  {checkout.require_phone && (
-                    <div>
-                      <Label style={{ color: checkout.text_color }}>Telefone *</Label>
-                      <Input
-                        placeholder="(11) 99999-9999"
-                        value={customerInfo.phone}
-                        onChange={(e) =>
-                          setCustomerInfo({ ...customerInfo, phone: e.target.value })
-                        }
-                        className="mt-1"
-                      />
-                    </div>
-                  )}
-                  {checkout.require_cpf && (
-                    <div>
-                      <Label style={{ color: checkout.text_color }}>CPF *</Label>
-                      <Input
-                        placeholder="000.000.000-00"
-                        value={customerInfo.cpf}
-                        onChange={(e) =>
-                          setCustomerInfo({ ...customerInfo, cpf: e.target.value })
-                        }
-                        className="mt-1"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Order Summary */}
-                <div className="mt-6 pt-6 border-t border-white/10">
-                  <h4
-                    className="font-medium mb-3"
-                    style={{ color: checkout.text_color }}
+          {/* Right Column - Timer + Form */}
+          <div>
+            {/* Timer */}
+            {(checkout.timer_enabled || checkout.show_timer) && (
+              <div className="text-center mb-6">
+                <p className="text-xs uppercase tracking-widest mb-3 font-medium" style={{ color: textColor + "60" }}>
+                  Oferta termina em
+                </p>
+                <div className="flex items-center justify-center gap-2">
+                  <div 
+                    className="w-14 h-14 rounded-lg flex items-center justify-center text-xl font-bold"
+                    style={{ backgroundColor: primaryColor, color: "#000" }}
                   >
-                    Resumo do Pedido
-                  </h4>
-                  {cart.map((item) => (
-                    <div
-                      key={item.product.id}
-                      className="flex justify-between text-sm mb-1"
-                    >
-                      <span style={{ color: checkout.text_color + "99" }}>
-                        {item.quantity}x {item.product.name}
-                      </span>
-                      <span>
-                        {formatCurrency(getProductPrice(item.product) * item.quantity)}
-                      </span>
-                    </div>
-                  ))}
-                  {discount > 0 && (
-                    <div className="flex justify-between text-sm text-green-500 mt-2">
-                      <span>Desconto</span>
-                      <span>-{formatCurrency(discount)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between font-bold text-lg mt-3 pt-3 border-t border-white/10">
-                    <span>Total</span>
-                    <span style={{ color: checkout.primary_color }}>
-                      {formatCurrency(total)}
-                    </span>
+                    {time.h.toString().padStart(2, "0")}
+                  </div>
+                  <span className="text-2xl font-bold" style={{ color: primaryColor }}>:</span>
+                  <div 
+                    className="w-14 h-14 rounded-lg flex items-center justify-center text-xl font-bold"
+                    style={{ backgroundColor: primaryColor, color: "#000" }}
+                  >
+                    {time.m.toString().padStart(2, "0")}
+                  </div>
+                  <span className="text-2xl font-bold" style={{ color: primaryColor }}>:</span>
+                  <div 
+                    className="w-14 h-14 rounded-lg flex items-center justify-center text-xl font-bold"
+                    style={{ backgroundColor: primaryColor, color: "#000" }}
+                  >
+                    {time.s.toString().padStart(2, "0")}
                   </div>
                 </div>
+              </div>
+            )}
 
-                <div className="flex gap-3 mt-6">
-                  <Button
-                    variant="outline"
-                    onClick={() => setStep("products")}
-                    className="flex-1"
-                  >
-                    Voltar
-                  </Button>
-                  <Button
-                    onClick={handleSubmitOrder}
-                    disabled={loading}
-                    className="flex-1"
-                    style={{
-                      backgroundColor: checkout.primary_color,
-                      color: "#fff",
+            {/* Steps */}
+            <div className="flex items-center justify-center gap-3 mb-6">
+              {[1, 2, 3].map((s, i) => (
+                <div key={s} className="flex items-center gap-3">
+                  <div 
+                    className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold"
+                    style={{ 
+                      backgroundColor: s === 1 ? primaryColor : "rgba(255,255,255,0.1)",
+                      color: s === 1 ? "#000" : textColor + "50"
                     }}
                   >
-                    {loading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <>
-                        <Lock className="w-4 h-4 mr-2" />
-                        Finalizar Pedido
-                      </>
-                    )}
-                  </Button>
+                    {s}
+                  </div>
+                  {i < 2 && <div className="w-10 h-px" style={{ backgroundColor: "rgba(255,255,255,0.15)" }} />}
                 </div>
+              ))}
+            </div>
 
-                <p
-                  className="text-xs text-center mt-4"
-                  style={{ color: checkout.text_color + "66" }}
-                >
-                  <Lock className="w-3 h-3 inline-block mr-1" />
-                  Pagamento seguro. Seus dados estao protegidos.
-                </p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+            {/* Form Card */}
+            <div className="rounded-xl border border-white/10 p-6" style={{ backgroundColor: "rgba(255,255,255,0.03)" }}>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-bold">Dados pessoais</h2>
+                <div className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "#22c55e" }}>
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Ambiente seguro</span>
+                </div>
+              </div>
+
+              {needsForm ? (
+                <div className="space-y-4">
+                  {(checkout.require_name !== false) && (
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: textColor + "40" }} />
+                      <Input
+                        placeholder="Nome completo"
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="pl-10 bg-white/5 border-white/10 h-12"
+                        style={{ color: textColor }}
+                      />
+                    </div>
+                  )}
+
+                  {(checkout.require_email !== false) && (
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: textColor + "40" }} />
+                      <Input
+                        type="email"
+                        placeholder="E-mail"
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        className="pl-10 bg-white/5 border-white/10 h-12"
+                        style={{ color: textColor }}
+                      />
+                    </div>
+                  )}
+
+                  {checkout.require_phone && (
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: textColor + "40" }} />
+                      <Input
+                        placeholder="(00) 00000-0000"
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
+                        className="pl-10 bg-white/5 border-white/10 h-12"
+                        style={{ color: textColor }}
+                        maxLength={15}
+                      />
+                    </div>
+                  )}
+
+                  {checkout.require_cpf && (
+                    <div className="relative">
+                      <FileText className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: textColor + "40" }} />
+                      <Input
+                        placeholder="CPF ou CNPJ"
+                        value={formData.cpf}
+                        onChange={(e) => setFormData({ ...formData, cpf: formatCPF(e.target.value) })}
+                        className="pl-10 bg-white/5 border-white/10 h-12"
+                        style={{ color: textColor }}
+                        maxLength={18}
+                      />
+                    </div>
+                  )}
+
+                  {checkout.require_address && (
+                    <>
+                      <div className="relative">
+                        <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: textColor + "40" }} />
+                        <Input
+                          placeholder="CEP"
+                          value={formData.cep}
+                          onChange={(e) => setFormData({ ...formData, cep: formatCEP(e.target.value) })}
+                          className="pl-10 bg-white/5 border-white/10 h-12"
+                          style={{ color: textColor }}
+                          maxLength={9}
+                        />
+                      </div>
+                      <Input
+                        placeholder="Endereco completo"
+                        value={formData.address}
+                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                        className="bg-white/5 border-white/10 h-12"
+                        style={{ color: textColor }}
+                      />
+                      <div className="grid grid-cols-2 gap-3">
+                        <Input
+                          placeholder="Cidade"
+                          value={formData.city}
+                          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                          className="bg-white/5 border-white/10 h-12"
+                          style={{ color: textColor }}
+                        />
+                        <Input
+                          placeholder="Estado"
+                          value={formData.state}
+                          onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase() })}
+                          className="bg-white/5 border-white/10 h-12"
+                          style={{ color: textColor }}
+                          maxLength={2}
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Security Info */}
+                  <div className="p-4 rounded-xl bg-white/5 text-sm space-y-2.5 mt-4" style={{ color: textColor + "70" }}>
+                    <div className="flex items-start gap-2.5">
+                      <Shield className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#22c55e" }} />
+                      <span>Usamos seus dados de forma segura para garantir a sua satisfacao;</span>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#22c55e" }} />
+                      <span>Enviar o seu comprovante de compra e pagamento;</span>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#22c55e" }} />
+                      <span>Ativar sua devolucao caso nao fique satisfeito;</span>
+                    </div>
+                    <div className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" style={{ color: "#22c55e" }} />
+                      <span>Acompanhar o andamento do seu pedido.</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <CreditCard className="w-12 h-12 mx-auto mb-4" style={{ color: primaryColor }} />
+                  <p className="text-base font-medium mb-2">Pagamento via PIX</p>
+                  <p className="text-sm" style={{ color: textColor + "60" }}>
+                    Clique em continuar para gerar o QR Code
+                  </p>
+                </div>
+              )}
+
+              {/* Submit Button */}
+              <Button
+                className="w-full h-14 text-base font-bold mt-6"
+                style={{ backgroundColor: primaryColor, color: "#000" }}
+                onClick={handleSubmit}
+                disabled={loading || !selectedProduct}
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <span className="w-5 h-5 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                    Processando...
+                  </span>
+                ) : (
+                  "Continuar"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       </main>
     </div>
   );

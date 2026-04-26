@@ -11,6 +11,8 @@ import {
   Percent,
   ArrowUpRight,
   CheckCircle,
+  DollarSign,
+  Banknote,
 } from "lucide-react";
 
 interface Transaction {
@@ -28,6 +30,7 @@ interface StatsCardsProps {
   blockedBalance?: number;
   transactions: Transaction[];
   periodFilter: string;
+  allTransactions?: Transaction[];
 }
 
 const formatCurrency = (value: number) => {
@@ -41,49 +44,72 @@ export function StatsCards({
   balance, 
   blockedBalance = 0, 
   transactions,
-  periodFilter 
+  periodFilter,
+  allTransactions
 }: StatsCardsProps) {
   const stats = useMemo(() => {
-    // Filtrar transacoes completadas
-    const completedDeposits = transactions.filter(
-      t => ["deposit", "transfer_in", "pix_in"].includes(t.type) && t.status === "completed"
+    const filteredTx = transactions;
+    
+    const depositTypes = ["deposit", "transfer_in", "pix_in", "received", "sale"];
+    const withdrawalTypes = ["withdrawal", "transfer_out", "pix_out", "sent"];
+    
+    // BRUTO: Total de todas as transacoes (pendentes + processando + aprovadas)
+    const allDeposits = filteredTx.filter(
+      t => depositTypes.includes(t.type) && ["completed", "pending", "processing"].includes(t.status)
     );
-    const completedWithdrawals = transactions.filter(
-      t => ["withdrawal", "transfer_out", "pix_out"].includes(t.type) && t.status === "completed"
-    );
-    const allCompleted = transactions.filter(t => t.status === "completed");
-
-    // Volume transacionado (total de entradas)
-    const volumeTransacionado = completedDeposits.reduce(
+    const valorBruto = allDeposits.reduce(
       (sum, t) => sum + (Number(t.amount) || 0), 0
+    );
+    
+    // LIQUIDO: Apenas transacoes aprovadas/completadas
+    const approvedDeposits = filteredTx.filter(
+      t => depositTypes.includes(t.type) && t.status === "completed"
+    );
+    const valorLiquido = approvedDeposits.reduce(
+      (sum, t) => sum + (Number(t.amount) || 0), 0
+    );
+    
+    // Saques completados
+    const completedWithdrawals = filteredTx.filter(
+      t => withdrawalTypes.includes(t.type) && t.status === "completed"
     );
 
     // Calcular crescimento comparando com periodo anterior
+    const txForComparison = allTransactions || transactions;
     const now = new Date();
     const currentMonth = now.getMonth();
-    const lastMonthDeposits = transactions.filter(t => {
+    const currentYear = now.getFullYear();
+    
+    // Transacoes aprovadas do mes anterior
+    const lastMonthApproved = txForComparison.filter(t => {
       const date = new Date(t.created_at);
-      return date.getMonth() === currentMonth - 1 && 
-        ["deposit", "transfer_in", "pix_in"].includes(t.type) && 
+      const isLastMonth = (
+        (date.getMonth() === currentMonth - 1 && date.getFullYear() === currentYear) ||
+        (currentMonth === 0 && date.getMonth() === 11 && date.getFullYear() === currentYear - 1)
+      );
+      return isLastMonth && 
+        depositTypes.includes(t.type) && 
         t.status === "completed";
     });
-    const lastMonthVolume = lastMonthDeposits.reduce(
+    
+    const lastMonthVolume = lastMonthApproved.reduce(
       (sum, t) => sum + (Number(t.amount) || 0), 0
     );
+    
     const volumeGrowth = lastMonthVolume > 0 
-      ? ((volumeTransacionado - lastMonthVolume) / lastMonthVolume) * 100 
-      : volumeTransacionado > 0 ? 100 : 0;
+      ? ((valorLiquido - lastMonthVolume) / lastMonthVolume) * 100 
+      : valorLiquido > 0 ? 100 : 0;
 
-    // Ticket medio
-    const ticketMedio = completedDeposits.length > 0 
-      ? volumeTransacionado / completedDeposits.length 
+    // Ticket medio (baseado em aprovadas)
+    const ticketMedio = approvedDeposits.length > 0 
+      ? valorLiquido / approvedDeposits.length 
       : 0;
 
-    // Total de transacoes
-    const totalTransacoes = allCompleted.length;
+    // Total de transacoes (todas)
+    const totalTransacoes = allDeposits.length;
 
-    // Descontos em taxas (total de fees)
-    const descontosTaxas = completedDeposits.reduce(
+    // Descontos em taxas (total de fees das aprovadas)
+    const descontosTaxas = approvedDeposits.reduce(
       (sum, t) => sum + (Number(t.fee) || 0), 0
     );
 
@@ -96,16 +122,15 @@ export function StatsCards({
     }, 0);
 
     // Conversao PIX (aprovados / total)
-    const pixTransactions = transactions.filter(
-      t => ["deposit", "transfer_in", "pix_in"].includes(t.type)
-    );
-    const pixApproved = pixTransactions.filter(t => t.status === "completed").length;
-    const pixConversion = pixTransactions.length > 0 
-      ? (pixApproved / pixTransactions.length) * 100 
+    const pixTotal = allDeposits.length;
+    const pixApproved = approvedDeposits.length;
+    const pixConversion = pixTotal > 0 
+      ? (pixApproved / pixTotal) * 100 
       : 0;
 
     return {
-      volumeTransacionado,
+      valorBruto,
+      valorLiquido,
       volumeGrowth,
       ticketMedio,
       totalTransacoes,
@@ -113,9 +138,9 @@ export function StatsCards({
       totalRetirado,
       pixConversion,
       pixApproved,
-      pixTotal: pixTransactions.length,
+      pixTotal,
     };
-  }, [transactions]);
+  }, [transactions, allTransactions]);
 
   const cards = [
     {
@@ -137,8 +162,17 @@ export function StatsCards({
       subtitleColor: "text-yellow-500",
     },
     {
-      label: "Volume Transacionado",
-      value: formatCurrency(stats.volumeTransacionado),
+      label: "Valor Bruto",
+      value: formatCurrency(stats.valorBruto),
+      icon: DollarSign,
+      color: "text-blue-500",
+      bgColor: "bg-blue-500/10",
+      subtitle: "Total de transacoes",
+      subtitleColor: "text-muted-foreground",
+    },
+    {
+      label: "Valor Liquido",
+      value: formatCurrency(stats.valorLiquido),
       icon: stats.volumeGrowth >= 0 ? TrendingUp : TrendingDown,
       color: stats.volumeGrowth >= 0 ? "text-green-500" : "text-red-500",
       bgColor: stats.volumeGrowth >= 0 ? "bg-green-500/10" : "bg-red-500/10",
@@ -149,27 +183,18 @@ export function StatsCards({
       label: "Ticket Medio",
       value: formatCurrency(stats.ticketMedio),
       icon: Receipt,
-      color: "text-blue-500",
-      bgColor: "bg-blue-500/10",
-      subtitle: "Por transacao",
+      color: "text-cyan-500",
+      bgColor: "bg-cyan-500/10",
+      subtitle: "Por transacao aprovada",
       subtitleColor: "text-muted-foreground",
     },
     {
       label: "Total de Transacoes",
       value: stats.totalTransacoes.toString(),
-      icon: Receipt,
+      icon: Banknote,
       color: "text-purple-500",
       bgColor: "bg-purple-500/10",
       subtitle: periodFilter,
-      subtitleColor: "text-muted-foreground",
-    },
-    {
-      label: "Descontos em Taxas",
-      value: formatCurrency(stats.descontosTaxas),
-      icon: Percent,
-      color: "text-orange-500",
-      bgColor: "bg-orange-500/10",
-      subtitle: "Total de taxas pagas",
       subtitleColor: "text-muted-foreground",
     },
     {
