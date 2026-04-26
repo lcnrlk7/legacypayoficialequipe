@@ -65,44 +65,44 @@ export function RewardsProgram() {
             {/* Main Card */}
             <div className="relative max-w-sm mx-auto lg:mx-0">
               {/* Glow effect */}
-              <div className="absolute -inset-4 bg-gradient-to-r from-primary/20 via-orange-500/10 to-primary/20 rounded-3xl blur-2xl" />
+              <div className="absolute -inset-4 bg-gradient-to-r from-yellow-500/20 via-primary/10 to-yellow-500/20 rounded-3xl blur-2xl" />
               
-              <div className="relative bg-gradient-to-b from-zinc-900 to-black border border-zinc-800 rounded-2xl p-8 text-center">
+              <div className="relative bg-gradient-to-b from-zinc-900 to-black border border-yellow-500/30 rounded-2xl p-8 text-center">
                 {/* Badge */}
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="px-4 py-1 bg-primary text-black text-xs font-bold rounded-full">
-                    DESTAQUE
+                  <span className="px-4 py-1 bg-gradient-to-r from-yellow-500 to-primary text-black text-xs font-bold rounded-full">
+                    CONQUISTA MAXIMA
                   </span>
                 </div>
                 
                 {/* Amount */}
-                <h3 className="text-6xl font-black bg-gradient-to-b from-white to-zinc-400 bg-clip-text text-transparent mb-6">
-                  10MIL
+                <h3 className="text-5xl font-black bg-gradient-to-b from-yellow-400 to-primary bg-clip-text text-transparent mb-6">
+                  1 MILHAO
                 </h3>
                 
                 {/* Plate Image */}
-                <div className="relative w-48 h-48 mx-auto mb-6">
-                  <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-orange-600/30 rounded-2xl blur-2xl" />
+                <div className="relative w-56 h-56 mx-auto mb-6">
+                  <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/30 to-primary/30 rounded-2xl blur-2xl" />
                   <Image
-                    src="/images/plates/plate-10mil.jpg"
-                    alt="Placa 10MIL LegacyPay"
-                    width={192}
-                    height={192}
-                    className="relative rounded-xl object-cover border border-zinc-700/50 shadow-2xl"
+                    src="/images/rewards/placa-1m.png"
+                    alt="Placa 1 Milhao Faturados LegacyPay"
+                    width={224}
+                    height={224}
+                    className="relative rounded-xl object-contain border border-yellow-500/30 shadow-2xl"
                   />
                 </div>
                 
                 {/* Label */}
-                <p className="text-sm text-muted-foreground mb-4">LegacyPay</p>
+                <p className="text-sm text-yellow-400 font-semibold mb-4">LegacyPay</p>
                 
-                <p className="text-xs text-zinc-500 leading-relaxed">
-                  O primeiro grande marco dentro da LegacyPay. Os 10 mil em saques simbolizam o inicio de uma jornada de sucesso. A partir daqui, os resultados comecam a se transformar em resultados reais.
+                <p className="text-xs text-zinc-400 leading-relaxed">
+                  Um marco extraordinario. Parabens por alcancar 1 milhao em faturamento! Seu esforco, dedicacao e visao te trouxeram ate aqui. Que essa conquista seja apenas o comeco de um legado ainda maior.
                 </p>
               </div>
               
               {/* Label below card */}
               <div className="text-center mt-6">
-                <p className="text-sm text-muted-foreground">10 MIL EM SAQUES - <span className="text-primary">LegacyPay</span></p>
+                <p className="text-sm text-muted-foreground">1 MILHAO FATURADOS - <span className="text-yellow-400">LegacyPay</span></p>
               </div>
             </div>
           </motion.div>
