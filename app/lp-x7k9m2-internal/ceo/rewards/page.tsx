@@ -1,78 +1,75 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
-  Gift,
   Trophy,
-  Package,
-  Clock,
-  Truck,
-  Loader2,
-  Plus,
-  X,
+  Target,
+  Users,
+  TrendingUp,
   Search,
+  Loader2,
+  Gift,
   CheckCircle,
-  XCircle,
+  Clock,
+  Star,
+  Phone,
+  Mail,
   User,
+  Filter,
+  Award,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 
-interface Reward {
-  id: string;
-  user_id: string;
-  type: string;
-  amount: number;
-  status: "pending" | "credited" | "cancelled";
-  credited_at: string | null;
-  created_at: string;
-  profiles: {
-    name: string | null;
-    email: string | null;
-    balance: number | null;
-  } | null;
+interface Goal {
+  value: number;
+  label: string;
+  reward: string | null;
 }
 
-interface UserProfile {
+interface UserGoal {
   id: string;
   name: string | null;
   email: string;
-  balance: number;
+  phone: string | null;
+  created_at: string;
+  total_revenue: number;
+  current_goal: Goal | null;
+  next_goal: Goal | null;
+  progress: number;
+  achieved_rewards: Goal[];
+  has_pending_rewards: boolean;
 }
 
-export default function RewardsPage() {
-  const [rewards, setRewards] = useState<Reward[]>([]);
-  const [users, setUsers] = useState<UserProfile[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [search, setSearch] = useState("");
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
+interface Stats {
+  total_users: number;
+  users_with_goals: number;
+  users_with_pending_rewards: number;
+  total_revenue: number;
+}
 
-  const [formData, setFormData] = useState({
-    user_id: "",
-    type: "Placa 100K",
-    amount: "1000",
-  });
+export default function UserGoalsPage() {
+  const [users, setUsers] = useState<UserGoal[]>([]);
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [goals, setGoals] = useState<Goal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "with_goals" | "pending_rewards">("all");
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [filter]);
 
   async function loadData() {
     try {
       setIsLoading(true);
-      
-      // Busca premiações
-      const rewardsRes = await fetch("/api/admin/rewards");
-      const rewardsData = await rewardsRes.json();
-      setRewards(rewardsData.rewards || []);
-
-      // Busca usuários para o select
-      const usersRes = await fetch("/api/admin/users");
-      const usersData = await usersRes.json();
-      setUsers(usersData.users || []);
+      const res = await fetch(`/api/admin/user-goals?filter=${filter}`);
+      const data = await res.json();
+      setUsers(data.users || []);
+      setStats(data.stats || null);
+      setGoals(data.goals || []);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {
@@ -80,122 +77,35 @@ export default function RewardsPage() {
     }
   }
 
-  async function handleCreateReward() {
-    if (!formData.user_id || !formData.type || !formData.amount) {
-      alert("Preencha todos os campos");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const res = await fetch("/api/admin/rewards", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          user_id: formData.user_id,
-          type: formData.type,
-          amount: parseFloat(formData.amount),
-        }),
-      });
-
-      if (res.ok) {
-        await loadData();
-        closeModal();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Erro ao criar premiação");
-      }
-    } catch (error) {
-      console.error("Error creating reward:", error);
-      alert("Erro ao criar premiação");
-    } finally {
-      setIsSaving(false);
-    }
-  }
-
-  async function updateRewardStatus(id: string, status: string) {
-    setUpdatingId(id);
-    try {
-      const res = await fetch("/api/admin/rewards", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, status }),
-      });
-
-      if (res.ok) {
-        await loadData();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Erro ao atualizar");
-      }
-    } catch (error) {
-      console.error("Error updating reward:", error);
-    } finally {
-      setUpdatingId(null);
-    }
-  }
-
-  async function deleteReward(id: string) {
-    if (!confirm("Tem certeza que deseja excluir esta premiação?")) return;
-
-    try {
-      const res = await fetch(`/api/admin/rewards?id=${id}`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        await loadData();
-      } else {
-        const data = await res.json();
-        alert(data.error || "Erro ao excluir");
-      }
-    } catch (error) {
-      console.error("Error deleting reward:", error);
-    }
-  }
-
-  function closeModal() {
-    setShowModal(false);
-    setFormData({
-      user_id: "",
-      type: "Placa 100K",
-      amount: "1000",
-    });
-  }
-
   const formatCurrency = (value: number) => {
+    if (value >= 1000000) {
+      return `R$ ${(value / 1000000).toFixed(1)}M`;
+    }
+    if (value >= 1000) {
+      return `R$ ${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}K`;
+    }
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
     }).format(value);
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("pt-BR", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const formatCurrencyFull = (value: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
   };
 
-  const filteredRewards = rewards.filter((r) => {
+  const filteredUsers = users.filter((u) => {
     if (!search) return true;
     const searchLower = search.toLowerCase();
     return (
-      r.profiles?.name?.toLowerCase().includes(searchLower) ||
-      r.profiles?.email?.toLowerCase().includes(searchLower) ||
-      r.type.toLowerCase().includes(searchLower)
+      u.name?.toLowerCase().includes(searchLower) ||
+      u.email?.toLowerCase().includes(searchLower) ||
+      u.phone?.includes(search)
     );
   });
-
-  const stats = {
-    total: rewards.length,
-    pending: rewards.filter((r) => r.status === "pending").length,
-    credited: rewards.filter((r) => r.status === "credited").length,
-    cancelled: rewards.filter((r) => r.status === "cancelled").length,
-  };
 
   if (isLoading) {
     return (
@@ -208,256 +118,285 @@ export default function RewardsPage() {
   return (
     <div className="p-6 lg:p-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white mb-2">
-            Sistema de Premiações
-          </h1>
-          <p className="text-muted-foreground">
-            Gerencie premiações dos usuários
-          </p>
-        </div>
-        <Button
-          onClick={() => setShowModal(true)}
-          className="bg-primary hover:bg-primary/90"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Premiação
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground mb-2">
+          Acompanhamento de Metas
+        </h1>
+        <p className="text-muted-foreground">
+          Visualize o progresso de faturamento dos usuarios e metas atingidas
+        </p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="glass rounded-2xl p-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-card border border-border rounded-2xl p-6"
+        >
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-xl bg-primary/10">
-              <Trophy className="w-6 h-6 text-primary" />
+              <Users className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-white">{stats.total}</p>
-              <p className="text-sm text-muted-foreground">Total</p>
+              <p className="text-2xl font-bold text-foreground">
+                {stats?.total_users || 0}
+              </p>
+              <p className="text-sm text-muted-foreground">Total de Usuarios</p>
             </div>
           </div>
-        </div>
-        <div className="glass rounded-2xl p-6">
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="bg-card border border-border rounded-2xl p-6"
+        >
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-yellow-400/10">
-              <Clock className="w-6 h-6 text-yellow-400" />
+            <div className="p-3 rounded-xl bg-green-500/10">
+              <Target className="w-6 h-6 text-green-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-white">{stats.pending}</p>
-              <p className="text-sm text-muted-foreground">Pendentes</p>
+              <p className="text-2xl font-bold text-foreground">
+                {stats?.users_with_goals || 0}
+              </p>
+              <p className="text-sm text-muted-foreground">Com Metas Atingidas</p>
             </div>
           </div>
-        </div>
-        <div className="glass rounded-2xl p-6">
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-card border border-border rounded-2xl p-6"
+        >
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-green-400/10">
-              <CheckCircle className="w-6 h-6 text-green-400" />
+            <div className="p-3 rounded-xl bg-yellow-500/10">
+              <Gift className="w-6 h-6 text-yellow-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-white">{stats.credited}</p>
-              <p className="text-sm text-muted-foreground">Creditadas</p>
+              <p className="text-2xl font-bold text-foreground">
+                {stats?.users_with_pending_rewards || 0}
+              </p>
+              <p className="text-sm text-muted-foreground">Recompensas Pendentes</p>
             </div>
           </div>
-        </div>
-        <div className="glass rounded-2xl p-6">
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="bg-card border border-border rounded-2xl p-6"
+        >
           <div className="flex items-center gap-4">
-            <div className="p-3 rounded-xl bg-red-400/10">
-              <XCircle className="w-6 h-6 text-red-400" />
+            <div className="p-3 rounded-xl bg-blue-500/10">
+              <TrendingUp className="w-6 h-6 text-blue-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-white">{stats.cancelled}</p>
-              <p className="text-sm text-muted-foreground">Canceladas</p>
+              <p className="text-2xl font-bold text-foreground">
+                {formatCurrency(stats?.total_revenue || 0)}
+              </p>
+              <p className="text-sm text-muted-foreground">Faturamento Total</p>
             </div>
           </div>
+        </motion.div>
+      </div>
+
+      {/* Goals Legend */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="bg-card border border-border rounded-2xl p-6"
+      >
+        <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
+          <Trophy className="w-5 h-5 text-primary" />
+          Metas de Faturamento
+        </h3>
+        <div className="flex flex-wrap gap-3">
+          {goals.map((goal) => (
+            <div
+              key={goal.value}
+              className={`px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-2 ${
+                goal.reward
+                  ? "bg-primary/10 text-primary border border-primary/20"
+                  : "bg-secondary text-muted-foreground"
+              }`}
+            >
+              {goal.reward && <Gift className="w-4 h-4" />}
+              <span>{goal.label}</span>
+              {goal.reward && (
+                <span className="text-xs opacity-70">({goal.reward})</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </motion.div>
+
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nome, email ou telefone..."
+            className="bg-secondary pl-10"
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant={filter === "all" ? "default" : "outline"}
+            onClick={() => setFilter("all")}
+            size="sm"
+          >
+            <Users className="w-4 h-4 mr-2" />
+            Todos
+          </Button>
+          <Button
+            variant={filter === "with_goals" ? "default" : "outline"}
+            onClick={() => setFilter("with_goals")}
+            size="sm"
+          >
+            <Target className="w-4 h-4 mr-2" />
+            Com Metas
+          </Button>
+          <Button
+            variant={filter === "pending_rewards" ? "default" : "outline"}
+            onClick={() => setFilter("pending_rewards")}
+            size="sm"
+            className={filter === "pending_rewards" ? "" : "text-yellow-500 border-yellow-500/50 hover:bg-yellow-500/10"}
+          >
+            <Gift className="w-4 h-4 mr-2" />
+            Com Recompensas
+          </Button>
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por usuário ou tipo..."
-          className="bg-secondary pl-10"
-        />
-      </div>
-
-      {/* Rewards List */}
-      <div className="glass rounded-2xl overflow-hidden">
-        {filteredRewards.length === 0 ? (
-          <div className="p-12 text-center">
-            <Gift className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground">Nenhuma premiação encontrada</p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Clique em "Nova Premiação" para criar
-            </p>
+      {/* Users List */}
+      <div className="space-y-4">
+        {filteredUsers.length === 0 ? (
+          <div className="bg-card border border-border rounded-2xl p-12 text-center">
+            <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">Nenhum usuario encontrado</p>
           </div>
         ) : (
-          <div className="divide-y divide-white/5">
-            {filteredRewards.map((reward) => (
-              <motion.div
-                key={reward.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="p-4 hover:bg-secondary/50 transition-colors"
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="p-2 rounded-lg bg-primary/10">
-                      <Gift className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-white">
-                        {reward.profiles?.name || reward.profiles?.email || "Usuário"}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {reward.type} - {formatCurrency(reward.amount)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDate(reward.created_at)}
-                      </p>
+          filteredUsers.map((user, index) => (
+            <motion.div
+              key={user.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.03 }}
+              className={`bg-card border rounded-2xl p-5 ${
+                user.has_pending_rewards
+                  ? "border-yellow-500/30 bg-yellow-500/5"
+                  : "border-border"
+              }`}
+            >
+              <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+                {/* User Info */}
+                <div className="flex items-start gap-4 flex-1 min-w-0">
+                  <div className={`p-3 rounded-xl shrink-0 ${
+                    user.current_goal 
+                      ? "bg-green-500/10" 
+                      : "bg-secondary"
+                  }`}>
+                    <User className={`w-6 h-6 ${
+                      user.current_goal ? "text-green-500" : "text-muted-foreground"
+                    }`} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-foreground truncate">
+                      {user.name || "Sem nome"}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1 truncate">
+                        <Mail className="w-3 h-3 shrink-0" />
+                        {user.email}
+                      </span>
+                      {user.phone && (
+                        <span className="flex items-center gap-1">
+                          <Phone className="w-3 h-3 shrink-0" />
+                          {user.phone}
+                        </span>
+                      )}
                     </div>
                   </div>
+                </div>
+
+                {/* Revenue */}
+                <div className="lg:text-right shrink-0">
+                  <p className="text-2xl font-bold text-primary">
+                    {formatCurrencyFull(user.total_revenue)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Faturamento Total</p>
+                </div>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    {updatingId === reward.id ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                    {user.current_goal ? (
+                      <>
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span className="text-sm text-green-500 font-medium">
+                          Meta atingida: {user.current_goal.label}
+                        </span>
+                      </>
                     ) : (
                       <>
-                        <select
-                          value={reward.status}
-                          onChange={(e) =>
-                            updateRewardStatus(reward.id, e.target.value)
-                          }
-                          className={`text-xs px-3 py-1.5 rounded-full border-0 cursor-pointer ${
-                            reward.status === "pending"
-                              ? "bg-yellow-400/10 text-yellow-400"
-                              : reward.status === "credited"
-                              ? "bg-green-400/10 text-green-400"
-                              : "bg-red-400/10 text-red-400"
-                          }`}
-                        >
-                          <option value="pending">Pendente</option>
-                          <option value="credited">Creditada</option>
-                          <option value="cancelled">Cancelada</option>
-                        </select>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteReward(reward.id)}
-                          className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
+                        <Clock className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          Nenhuma meta atingida ainda
+                        </span>
                       </>
                     )}
                   </div>
+                  {user.next_goal && (
+                    <span className="text-sm text-muted-foreground">
+                      Proxima: {user.next_goal.label}
+                    </span>
+                  )}
                 </div>
-              </motion.div>
-            ))}
-          </div>
+                <Progress value={user.progress} className="h-2" />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {user.progress.toFixed(0)}% para a proxima meta
+                </p>
+              </div>
+
+              {/* Achieved Rewards */}
+              {user.achieved_rewards.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
+                    <Award className="w-4 h-4 text-yellow-500" />
+                    Recompensas a Entregar:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {user.achieved_rewards.map((reward) => (
+                      <div
+                        key={reward.value}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20"
+                      >
+                        <Gift className="w-4 h-4 text-yellow-500" />
+                        <span className="text-sm text-yellow-500 font-medium">
+                          {reward.reward}
+                        </span>
+                        <span className="text-xs text-yellow-500/70">
+                          ({reward.label})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          ))
         )}
       </div>
-
-      {/* Modal */}
-      <AnimatePresence>
-        {showModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-            onClick={closeModal}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md bg-card rounded-2xl border border-border p-6"
-            >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-white">
-                  Nova Premiação
-                </h3>
-                <Button variant="ghost" size="sm" onClick={closeModal}>
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">
-                    Usuário *
-                  </label>
-                  <select
-                    value={formData.user_id}
-                    onChange={(e) =>
-                      setFormData({ ...formData, user_id: e.target.value })
-                    }
-                    className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-foreground"
-                  >
-                    <option value="">Selecione um usuário</option>
-                    {users.map((user) => (
-                      <option key={user.id} value={user.id}>
-                        {user.name || user.email} - {formatCurrency(user.balance || 0)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">
-                    Tipo de Premiação *
-                  </label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) =>
-                      setFormData({ ...formData, type: e.target.value })
-                    }
-                    className="w-full bg-secondary border border-border rounded-lg px-3 py-2 text-foreground"
-                  >
-                    <option value="Pulseira Inicial">Pulseira Inicial</option>
-                    <option value="Placa 50K">Placa 50K</option>
-                    <option value="Placa 100K">Placa 100K</option>
-                    <option value="Placa 500K">Placa 500K</option>
-                    <option value="Placa 1M">Placa 1M</option>
-                    <option value="Placa 5M">Placa 5M</option>
-                    <option value="Placa 10M">Placa 10M</option>
-                    <option value="Bônus Especial">Bônus Especial</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-sm text-muted-foreground mb-1 block">
-                    Valor (R$) *
-                  </label>
-                  <Input
-                    type="number"
-                    value={formData.amount}
-                    onChange={(e) =>
-                      setFormData({ ...formData, amount: e.target.value })
-                    }
-                    placeholder="1000"
-                    className="bg-secondary"
-                  />
-                </div>
-
-                <Button
-                  onClick={handleCreateReward}
-                  disabled={isSaving}
-                  className="w-full bg-primary hover:bg-primary/90"
-                >
-                  {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Criar Premiação
-                </Button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
