@@ -19,6 +19,7 @@ import {
   Shield,
   UserCog,
   Bell,
+  BellRing,
   Activity,
   Gift,
   Percent,
@@ -82,6 +83,11 @@ const menuItems = [
     label: "Notificacoes",
     href: "/lp-x7k9m2-internal/ceo/notifications",
     icon: Bell,
+  },
+  {
+    label: "Push Notifications",
+    href: "/lp-x7k9m2-internal/ceo/push",
+    icon: BellRing,
   },
   {
     label: "Webhooks",
