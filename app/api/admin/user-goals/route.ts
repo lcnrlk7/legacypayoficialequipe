@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
 
     // Buscar usuarios com faturamento total calculado das transacoes
-    let query = sql`
+    const usersResult = await sql`
       SELECT 
         p.id,
         p.name,
@@ -73,19 +73,23 @@ export async function GET(request: NextRequest) {
           ), 0
         ) as calculated_revenue
       FROM profiles p
-      WHERE p.is_admin = false
+      WHERE p.is_admin = false OR p.is_admin IS NULL
       ORDER BY calculated_revenue DESC
     `;
 
-    let users = await query;
+    // Extrair rows do resultado
+    const users = usersResult.rows || usersResult || [];
+    
+    console.log("[v0] Users found:", users.length);
 
     // Buscar recompensas ja entregues
     let deliveredRewards: any[] = [];
     try {
-      deliveredRewards = await sql`SELECT user_id, goal_value FROM user_rewards`;
+      const rewardsResult = await sql`SELECT user_id, goal_value FROM user_rewards`;
+      deliveredRewards = rewardsResult.rows || rewardsResult || [];
     } catch (e) {
       // Table may not exist yet
-      console.log("user_rewards table not found, skipping");
+      console.log("[v0] user_rewards table not found, skipping");
     }
 
     // Criar um Set para lookup rapido
@@ -94,7 +98,8 @@ export async function GET(request: NextRequest) {
     );
 
     // Calcular metas para cada usuario
-    const usersWithGoals = users.map((user: any) => {
+    const usersArray = Array.isArray(users) ? users : [];
+    const usersWithGoals = usersArray.map((user: any) => {
       // Usar o maior valor entre profile_revenue e calculated_revenue
       const totalRevenue = Math.max(
         Number(user.profile_revenue) || 0,
