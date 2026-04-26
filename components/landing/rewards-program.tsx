@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import { Trophy, Star, Zap, TrendingUp } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 const rewardLevels = [
   {
@@ -139,13 +140,20 @@ export function RewardsProgram() {
             
             {/* CTA Buttons */}
             <div className="flex flex-wrap gap-4">
-              <button className="px-6 py-3 bg-primary text-black font-semibold rounded-xl hover:bg-primary/90 transition-colors flex items-center gap-2">
+              <Link 
+                href="/auth/register"
+                className="px-6 py-3 bg-primary text-black font-semibold rounded-xl hover:bg-primary/90 transition-colors flex items-center gap-2"
+              >
                 <Zap className="w-5 h-5" />
                 Crie sua conta tambem!
-              </button>
-              <button className="px-6 py-3 bg-zinc-800 text-white rounded-xl hover:bg-zinc-700 transition-colors">
+              </Link>
+              <Link 
+                href="https://wa.me/5534999353187?text=Ola! Gostaria de saber mais sobre a LegacyPay"
+                target="_blank"
+                className="px-6 py-3 bg-zinc-800 text-white rounded-xl hover:bg-zinc-700 transition-colors"
+              >
                 Fale com suporte
-              </button>
+              </Link>
             </div>
           </motion.div>
         </div>

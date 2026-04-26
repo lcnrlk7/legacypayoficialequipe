@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { BadgePercent, MapPin, Banknote, QrCode } from "lucide-react";
+import Link from "next/link";
 
 const benefits = [
   {
@@ -55,9 +56,12 @@ export function WhyChoose() {
             <p className="text-primary font-medium mb-2">Sem burocracia. Sem limitacoes.</p>
             <p className="text-muted-foreground mb-8">Apenas estrutura para escalar.</p>
             
-            <button className="px-6 py-3 bg-primary text-black font-semibold rounded-xl hover:bg-primary/90 transition-colors">
+            <Link 
+              href="/auth/register"
+              className="inline-block px-6 py-3 bg-primary text-black font-semibold rounded-xl hover:bg-primary/90 transition-colors"
+            >
               Crie sua conta na LegacyPay
-            </button>
+            </Link>
           </motion.div>
 
           {/* Right Side - Benefit Cards */}
