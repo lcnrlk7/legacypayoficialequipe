@@ -44,7 +44,7 @@ const menuItems: { href: string; icon: LucideIcon; label: string; showBadge?: bo
   { href: "/admin/rewards", icon: Gift, label: "Premiacoes" },
   { href: "/admin/affiliates", icon: Users, label: "Afiliados" },
   { href: "/admin/notifications", icon: Bell, label: "Notificacoes" },
-  { href: "/admin/push", icon: BellRing, label: "Push Notifications" },
+  { href: "/admin/lp-x7k9m2-internal/push", icon: BellRing, label: "Push Notifications" },
   { href: "/admin/webhooks", icon: Webhook, label: "Webhooks" },
   { href: "/admin/logs", icon: ScrollText, label: "Logs" },
   { href: "/admin/acquirers", icon: Building2, label: "Adquirentes" },
