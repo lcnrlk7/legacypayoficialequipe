@@ -79,6 +79,20 @@ export async function GET(request: NextRequest) {
 
     let users = await query;
 
+    // Buscar recompensas ja entregues
+    let deliveredRewards: any[] = [];
+    try {
+      deliveredRewards = await sql`SELECT user_id, goal_value FROM user_rewards`;
+    } catch (e) {
+      // Table may not exist yet
+      console.log("user_rewards table not found, skipping");
+    }
+
+    // Criar um Set para lookup rapido
+    const deliveredSet = new Set(
+      deliveredRewards.map((r: any) => `${r.user_id}-${r.goal_value}`)
+    );
+
     // Calcular metas para cada usuario
     const usersWithGoals = users.map((user: any) => {
       // Usar o maior valor entre profile_revenue e calculated_revenue
@@ -94,7 +108,13 @@ export async function GET(request: NextRequest) {
       // Encontrar todas as metas atingidas com recompensa
       const achievedRewards = GOALS.filter(
         g => g.reward && totalRevenue >= g.value
-      );
+      ).map(g => ({
+        ...g,
+        delivered: deliveredSet.has(`${user.id}-${g.value}`)
+      }));
+
+      // Recompensas pendentes = atingidas mas nao entregues
+      const pendingRewards = achievedRewards.filter(r => !r.delivered);
 
       return {
         id: user.id,
@@ -107,7 +127,8 @@ export async function GET(request: NextRequest) {
         next_goal: nextGoal,
         progress,
         achieved_rewards: achievedRewards,
-        has_pending_rewards: achievedRewards.length > 0,
+        pending_rewards: pendingRewards,
+        has_pending_rewards: pendingRewards.length > 0,
       };
     });
 

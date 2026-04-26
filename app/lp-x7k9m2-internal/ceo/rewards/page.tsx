@@ -27,6 +27,7 @@ interface Goal {
   value: number;
   label: string;
   reward: string | null;
+  delivered?: boolean;
 }
 
 interface UserGoal {
@@ -40,6 +41,7 @@ interface UserGoal {
   next_goal: Goal | null;
   progress: number;
   achieved_rewards: Goal[];
+  pending_rewards: Goal[];
   has_pending_rewards: boolean;
 }
 
@@ -57,6 +59,17 @@ export default function UserGoalsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "with_goals" | "pending_rewards">("all");
+  const [deliveringReward, setDeliveringReward] = useState<string | null>(null);
+  const [setupDone, setSetupDone] = useState(false);
+
+  // Setup rewards table on first load
+  useEffect(() => {
+    if (!setupDone) {
+      fetch("/api/admin/setup-rewards-table", { method: "POST" })
+        .then(() => setSetupDone(true))
+        .catch(() => setSetupDone(true));
+    }
+  }, [setupDone]);
 
   useEffect(() => {
     loadData();
@@ -74,6 +87,37 @@ export default function UserGoalsPage() {
       console.error("Error loading data:", error);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function deliverReward(userId: string, goalValue: number, rewardType: string) {
+    const key = `${userId}-${goalValue}`;
+    setDeliveringReward(key);
+    try {
+      const res = await fetch("/api/admin/rewards/deliver", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: userId,
+          goal_value: goalValue,
+          reward_type: rewardType,
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        // Reload data to update UI
+        await loadData();
+        alert(data.message || "Recompensa marcada como entregue!");
+      } else {
+        alert(data.error || "Erro ao marcar recompensa");
+      }
+    } catch (error) {
+      console.error("Error delivering reward:", error);
+      alert("Erro ao conectar com o servidor");
+    } finally {
+      setDeliveringReward(null);
     }
   }
 
@@ -371,26 +415,73 @@ export default function UserGoalsPage() {
               {/* Achieved Rewards */}
               {user.achieved_rewards.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-border">
-                  <p className="text-sm font-medium text-foreground mb-2 flex items-center gap-2">
-                    <Award className="w-4 h-4 text-yellow-500" />
-                    Recompensas a Entregar:
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {user.achieved_rewards.map((reward) => (
-                      <div
-                        key={reward.value}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20"
-                      >
-                        <Gift className="w-4 h-4 text-yellow-500" />
-                        <span className="text-sm text-yellow-500 font-medium">
-                          {reward.reward}
-                        </span>
-                        <span className="text-xs text-yellow-500/70">
-                          ({reward.label})
-                        </span>
+                  {/* Pending Rewards */}
+                  {user.pending_rewards && user.pending_rewards.length > 0 && (
+                    <>
+                      <p className="text-sm font-medium text-foreground mb-3 flex items-center gap-2">
+                        <Award className="w-4 h-4 text-yellow-500" />
+                        Recompensas Pendentes:
+                      </p>
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {user.pending_rewards.map((reward) => (
+                          <div
+                            key={reward.value}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20"
+                          >
+                            <Gift className="w-4 h-4 text-yellow-500" />
+                            <span className="text-sm text-yellow-500 font-medium">
+                              {reward.reward}
+                            </span>
+                            <span className="text-xs text-yellow-500/70">
+                              ({reward.label})
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="ml-2 h-7 text-xs border-green-500/50 text-green-500 hover:bg-green-500/10"
+                              onClick={() => deliverReward(user.id, reward.value, reward.reward!)}
+                              disabled={deliveringReward === `${user.id}-${reward.value}`}
+                            >
+                              {deliveringReward === `${user.id}-${reward.value}` ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <>
+                                  <CheckCircle className="w-3 h-3 mr-1" />
+                                  Entregar
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </>
+                  )}
+
+                  {/* Delivered Rewards */}
+                  {user.achieved_rewards.filter(r => r.delivered).length > 0 && (
+                    <>
+                      <p className="text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        Recompensas Entregues:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {user.achieved_rewards.filter(r => r.delivered).map((reward) => (
+                          <div
+                            key={reward.value}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20"
+                          >
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            <span className="text-sm text-green-500 font-medium">
+                              {reward.reward}
+                            </span>
+                            <span className="text-xs text-green-500/70">
+                              ({reward.label})
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
             </motion.div>
