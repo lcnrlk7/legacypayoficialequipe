@@ -11,7 +11,15 @@ import { MedusaPayments } from "@/lib/acquirers/medusa";
  */
 export async function POST(request: NextRequest) {
   try {
-    const sessionUser = await verifyAuth(request);
+    // Extrair token do header Authorization
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "");
+    
+    if (!token) {
+      return NextResponse.json({ error: "Token não fornecido" }, { status: 401 });
+    }
+    
+    const sessionUser = await verifyAuth(token);
     if (!sessionUser) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
@@ -27,7 +35,7 @@ export async function POST(request: NextRequest) {
       SELECT w.*, p.route_type
       FROM withdrawals w
       JOIN profiles p ON w.user_id = p.id
-      WHERE w.id = ${withdrawal_id} AND w.user_id = ${sessionUser.id}
+      WHERE w.id = ${withdrawal_id} AND w.user_id = ${sessionUser.userId}
     `;
 
     if (withdrawals.length === 0) {
@@ -55,7 +63,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Buscar configuração da adquirente
-    const acquirer = await getAcquirerForUser(sessionUser.id);
+    const acquirer = await getAcquirerForUser(sessionUser.userId);
     
     if (!acquirer || acquirer.code !== "medusa") {
       return NextResponse.json({
@@ -106,7 +114,7 @@ export async function POST(request: NextRequest) {
         await sql`
           UPDATE profiles 
           SET balance = balance + ${Number(withdrawal.amount)}
-          WHERE id = ${sessionUser.id}
+          WHERE id = ${sessionUser.userId}
         `;
 
         // Notificar usuário
@@ -114,7 +122,7 @@ export async function POST(request: NextRequest) {
           INSERT INTO user_notifications (id, user_id, title, message, type, created_at)
           VALUES (
             ${crypto.randomUUID()},
-            ${sessionUser.id},
+            ${sessionUser.userId},
             'Saque Falhou',
             ${`Seu saque de R$ ${Number(withdrawal.amount).toFixed(2)} falhou. O valor foi devolvido ao seu saldo.`},
             'error',
@@ -129,7 +137,7 @@ export async function POST(request: NextRequest) {
           INSERT INTO user_notifications (id, user_id, title, message, type, created_at)
           VALUES (
             ${crypto.randomUUID()},
-            ${sessionUser.id},
+            ${sessionUser.userId},
             'Saque Concluído!',
             ${`Seu saque de R$ ${Number(withdrawal.net_amount).toFixed(2)} foi enviado para a chave PIX ${withdrawal.pix_key}.`},
             'success',
