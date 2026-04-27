@@ -23,17 +23,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Chave PIX obrigatoria" }, { status: 400 });
     }
 
-    // Get system settings for fees and limits
-    const settings = await sql`SELECT * FROM system_settings LIMIT 1`;
-    const systemSettings = settings[0] || {
-      withdrawal_fee_percentage: 1.5,
-      min_withdrawal: 3,
-      max_withdrawal: 50000,
-    };
+    // Get user route type to determine fee
+    const userProfile = await sql`SELECT balance, route_type FROM profiles WHERE id = ${user.id}`;
+    const userBalance = userProfile[0]?.balance || 0;
+    const routeType = userProfile[0]?.route_type || 'black';
 
-    const minWithdrawal = systemSettings.min_withdrawal || 3;
-    const maxWithdrawal = systemSettings.max_withdrawal || 50000;
-    const feePercentage = systemSettings.withdrawal_fee_percentage || 1.5;
+    // Taxa fixa de saque baseada na rota
+    const withdrawalFee = routeType === 'black' ? 5 : 2; // Medusa R$ 5, MisticPay R$ 2
+    const minWithdrawal = routeType === 'black' ? 25 : 15;
+    const maxWithdrawal = 50000;
 
     if (amount < minWithdrawal) {
       return NextResponse.json({ error: `Valor minimo: R$ ${minWithdrawal}` }, { status: 400 });
@@ -43,14 +41,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Valor maximo: R$ ${maxWithdrawal}` }, { status: 400 });
     }
 
-    // Calculate fee
-    const fee = (amount * feePercentage) / 100;
-    const totalDebit = amount + fee;
-    const netAmount = amount; // What recipient receives
-
-    // Get user balance
-    const userProfile = await sql`SELECT balance FROM profiles WHERE id = ${user.id}`;
-    const userBalance = userProfile[0]?.balance || 0;
+    // Calculate fee (fixed fee, not percentage)
+    const fee = withdrawalFee;
+    const netAmount = amount - fee; // What recipient receives
+    const totalDebit = amount; // Total debited from balance
 
     if (totalDebit > userBalance) {
       return NextResponse.json({ error: "Saldo insuficiente" }, { status: 400 });
@@ -70,8 +64,7 @@ export async function POST(request: NextRequest) {
         pix_key, 
         pix_key_type,
         status,
-        created_at,
-        updated_at
+        created_at
       ) VALUES (
         ${user.id}, 
         ${amount}, 
@@ -80,7 +73,6 @@ export async function POST(request: NextRequest) {
         ${pixKey}, 
         ${pixKeyType || 'PIX'},
         ${status},
-        NOW(),
         NOW()
       )
       RETURNING *
