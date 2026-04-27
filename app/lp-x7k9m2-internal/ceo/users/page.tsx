@@ -677,74 +677,89 @@ export default function UsersPage() {
                   className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                    Taxa Percentual (%)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="100"
-                    placeholder={editForm.route_type === "white" ? "0" : "5"}
-                    value={editForm.fee_percentage}
-                    onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
-                        fee_percentage: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    White: 0% | Black: 5%
-                  </p>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                    Taxa Fixa (R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    placeholder={editForm.route_type === "white" ? "1.50" : "1.00"}
-                    value={editForm.fixed_fee}
-                    onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
-                        fixed_fee: e.target.value,
-                      })
-                    }
-                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    White: R$ 1,50 | Black: R$ 1,00
-                  </p>
+              {/* Taxas PIX In (Deposito) */}
+              <div className="p-4 bg-green-500/5 border border-green-500/20 rounded-xl space-y-4">
+                <h3 className="text-sm font-semibold text-green-400 flex items-center gap-2">
+                  <DollarSign className="w-4 h-4" />
+                  Taxa PIX In (Deposito)
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                      Taxa Percentual (%)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max="100"
+                      placeholder={editForm.route_type === "white" ? "0" : "5"}
+                      value={editForm.fee_percentage}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          fee_percentage: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      White: 0% | Black: 5%
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                      Taxa Fixa (R$)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      placeholder={editForm.route_type === "white" ? "1.50" : "1.00"}
+                      value={editForm.fixed_fee}
+                      onChange={(e) =>
+                        setEditForm({
+                          ...editForm,
+                          fixed_fee: e.target.value,
+                        })
+                      }
+                      className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      White: R$ 1,50 | Black: R$ 1,00
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                  Taxa de Saque (R$)
-                </label>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  placeholder={editForm.route_type === "white" ? "2.00" : "5.00"}
-                  value={editForm.withdrawal_fee}
-                  onChange={(e) =>
-                    setEditForm({
-                      ...editForm,
-                      withdrawal_fee: e.target.value,
-                    })
-                  }
-                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Padrão Rota White: R$ 2,00 | Padrão Rota Black: R$ 5,00
-                </p>
+
+              {/* Taxa PIX Out (Saque) */}
+              <div className="p-4 bg-orange-500/5 border border-orange-500/20 rounded-xl">
+                <h3 className="text-sm font-semibold text-orange-400 flex items-center gap-2 mb-4">
+                  <ArrowUpDown className="w-4 h-4" />
+                  Taxa PIX Out (Saque)
+                </h3>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Taxa de Saque (R$)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    placeholder={editForm.route_type === "white" ? "2.00" : "5.00"}
+                    value={editForm.withdrawal_fee}
+                    onChange={(e) =>
+                      setEditForm({
+                        ...editForm,
+                        withdrawal_fee: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Padrao Rota White: R$ 2,00 | Padrao Rota Black: R$ 5,00
+                  </p>
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground mb-2 block">
