@@ -912,15 +912,58 @@ export default function IntegrationPage() {
                   </code>
                 </div>
 
+                {/* Explicacao Credenciais */}
+                <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4">
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Suas Credenciais</h4>
+                  <div className="space-y-3 text-xs">
+                    <div className="bg-background/50 rounded-lg p-3 border border-border">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                        <span className="font-semibold text-foreground">Client ID</span>
+                      </div>
+                      <p className="text-muted-foreground">Identificador da sua integracao. Comeca com <code className="text-primary">cli_</code></p>
+                    </div>
+                    <div className="bg-background/50 rounded-lg p-3 border border-border">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                        <span className="font-semibold text-foreground">Client Secret</span>
+                      </div>
+                      <p className="text-muted-foreground">Senha secreta da integracao. Comeca com <code className="text-primary">sec_</code>. <strong>Nunca compartilhe!</strong></p>
+                    </div>
+                    <div className="bg-background/50 rounded-lg p-3 border border-border">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        <span className="font-semibold text-foreground">Webhook Secret</span>
+                      </div>
+                      <p className="text-muted-foreground">Para validar notificacoes. Comeca com <code className="text-primary">whsec_</code></p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Auth */}
                 <div className="bg-secondary/30 rounded-xl p-4">
-                  <h4 className="text-sm font-semibold text-foreground mb-2">Autenticacao</h4>
+                  <h4 className="text-sm font-semibold text-foreground mb-2">Autenticacao (Basic Auth)</h4>
                   <p className="text-sm text-muted-foreground mb-3">
-                    Use Basic Auth com suas credenciais (client_id:client_secret) codificadas em Base64:
+                    Junte Client ID + Client Secret com dois pontos e codifique em Base64:
                   </p>
-                  <code className="block p-3 bg-background rounded-lg text-sm font-mono">
+                  <code className="block p-3 bg-background rounded-lg text-xs font-mono mb-3">
                     Authorization: Basic base64(client_id:client_secret)
                   </code>
+                  <p className="text-xs text-muted-foreground mb-2">Exemplo em JavaScript:</p>
+                  <code className="block p-2 bg-background rounded-lg text-xs font-mono">
+                    {`const credentials = btoa(client_id + ":" + client_secret);`}
+                  </code>
+                </div>
+
+                {/* Erro comum */}
+                <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4">
+                  <h4 className="text-sm font-semibold text-red-400 mb-2">Erro: Credenciais Invalidas?</h4>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li>- Verifique se esta usando <strong>Client ID</strong> e <strong>Client Secret</strong> (nao API Key)</li>
+                    <li>- Codifique em <strong>Base64</strong> no formato <code className="text-primary">cli_xxx:sec_xxx</code></li>
+                    <li>- Use header <code className="text-primary">Authorization: Basic ...</code> (nao Bearer)</li>
+                    <li>- Certifique que a integracao esta <strong>ativa</strong></li>
+                  </ul>
                 </div>
 
                 {/* Tutorial Section */}
