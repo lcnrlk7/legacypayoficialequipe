@@ -134,6 +134,8 @@ export async function POST(request: NextRequest) {
     if (!requiresApproval && acquirer) {
       const detectedPixKeyType = pixKeyType || mapPixKeyType(pixKey);
       
+      console.log(`[Withdrawal] Processando saque automático: valor=${netAmount}, pixKey=${pixKey}, acquirer=${acquirer.code}`);
+      
       const withdrawalResult = await processWithdrawal(
         netAmount,
         pixKey,
@@ -142,12 +144,31 @@ export async function POST(request: NextRequest) {
         `Saque LegacyPay - ${user.name || user.email}`
       );
 
+      console.log("[Withdrawal] Resultado do processamento:", withdrawalResult);
+
       if (withdrawalResult.success && withdrawalResult.withdrawalId) {
         acquirerWithdrawalId = withdrawalResult.withdrawalId;
         withdrawalStatus = "processing";
       } else {
         // Se falhar no processamento automático, deixar como pendente para aprovação manual
         console.error("[Withdrawal] Falha ao processar saque automático:", withdrawalResult.error);
+        
+        // Se o erro é de saldo insuficiente na adquirente, retornar erro ao usuário
+        if (withdrawalResult.error?.toLowerCase().includes("saldo insuficiente")) {
+          // Devolver o saldo ao usuário
+          await sql`
+            UPDATE profiles 
+            SET balance = balance + ${amount}
+            WHERE id = ${sessionUser.id}
+          `;
+          
+          return NextResponse.json({
+            success: false,
+            error: "Sistema temporariamente indisponível para saques. Tente novamente em alguns minutos.",
+          }, { status: 503 });
+        }
+        
+        // Para outros erros, deixar pendente para aprovação manual
         withdrawalStatus = "pending";
       }
     }

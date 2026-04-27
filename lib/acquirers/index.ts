@@ -303,10 +303,32 @@ export async function createWithdrawal(
       }
 
       case "medusa": {
+        // Verificar se a licenseKey está configurada (necessária para saques)
+        if (!config.api_secret) {
+          console.error("[Medusa] License key não configurada para saques");
+          return { success: false, error: "License key da Medusa não configurada. Configure api_secret na adquirente." };
+        }
+
         const client = new MedusaPayments({
           secretKey: config.api_key,
           licenseKey: config.api_secret
         });
+
+        // Verificar saldo disponível na Medusa antes de tentar o saque
+        try {
+          const balanceCheck = await client.checkBalance();
+          console.log("[Medusa] Saldo disponível:", balanceCheck.available / 100);
+          
+          if (balanceCheck.available < (amount * 100)) {
+            return { 
+              success: false, 
+              error: `Saldo insuficiente na Medusa. Disponível: R$ ${(balanceCheck.available / 100).toFixed(2)}, Necessário: R$ ${amount.toFixed(2)}` 
+            };
+          }
+        } catch (balanceError) {
+          console.error("[Medusa] Erro ao verificar saldo:", balanceError);
+          // Continuar mesmo se não conseguir verificar o saldo
+        }
 
         // Buscar dados do usuário para o saque
         let beneficiaryName = "Cliente";
@@ -318,7 +340,7 @@ export async function createWithdrawal(
           `;
           if (userData.length > 0) {
             beneficiaryName = userData[0].name || "Cliente";
-            beneficiaryDocument = userData[0].cpf_cnpj || "00000000000";
+            beneficiaryDocument = (userData[0].cpf_cnpj || "00000000000").replace(/\D/g, "");
           }
         }
 
@@ -333,19 +355,29 @@ export async function createWithdrawal(
         const MEDUSA_WITHDRAWAL_FEE = 5.00; // Taxa fixa da Medusa para saques
         const amountToSend = amount + MEDUSA_WITHDRAWAL_FEE;
 
-        const result = await client.requestSimpleWithdrawal(
-          amountToSend * 100, // Converter para centavos
-          pixKey,
-          beneficiaryName,
-          beneficiaryDocument,
-          withdrawalWebhookUrl
-        );
+        console.log(`[Medusa] Iniciando saque: valor=${amount}, comTaxa=${amountToSend}, pixKey=${pixKey}, beneficiario=${beneficiaryName}`);
 
-        return {
-          success: true,
-          withdrawalId: result.id,
-          status: result.status,
-        };
+        try {
+          const result = await client.requestSimpleWithdrawal(
+            amountToSend * 100, // Converter para centavos
+            pixKey,
+            beneficiaryName,
+            beneficiaryDocument,
+            withdrawalWebhookUrl
+          );
+
+          console.log("[Medusa] Saque criado com sucesso:", result);
+
+          return {
+            success: true,
+            withdrawalId: result.id,
+            status: result.status,
+          };
+        } catch (withdrawError) {
+          const errorMessage = withdrawError instanceof Error ? withdrawError.message : "Erro desconhecido ao processar saque";
+          console.error("[Medusa] Erro ao criar saque:", errorMessage);
+          return { success: false, error: errorMessage };
+        }
       }
 
       default:
