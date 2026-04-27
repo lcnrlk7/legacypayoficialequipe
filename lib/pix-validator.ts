@@ -466,13 +466,21 @@ export function formatCurrency(value: number): string {
 /**
  * Calculates withdrawal fee based on amount
  */
-export function calculateWithdrawalFee(amount: number, feePercentage: number = 1.5): { amount: number; fee: number; total: number } {
-  const fee = amount * (feePercentage / 100);
-  const total = amount + fee;
-
+export function calculateWithdrawalFee(
+  amount: number, 
+  fixedFee: number = 5, 
+  acquirerFee: number = 5
+): { amount: number; fee: number; acquirerFee: number; totalFee: number; netAmount: number; total: number } {
+  // Taxa fixa da LegacyPay + Taxa fixa da adquirente (Medusa/MisticPay)
+  const totalFee = fixedFee + acquirerFee;
+  const netAmount = amount - totalFee;
+  
   return {
     amount,
-    fee: Number(fee.toFixed(2)),
-    total: Number(total.toFixed(2)),
+    fee: Number(fixedFee.toFixed(2)),
+    acquirerFee: Number(acquirerFee.toFixed(2)),
+    totalFee: Number(totalFee.toFixed(2)),
+    netAmount: Number(Math.max(0, netAmount).toFixed(2)),
+    total: Number(amount.toFixed(2)), // Total debitado do saldo
   };
 }
