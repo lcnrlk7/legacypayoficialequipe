@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import { sendPushNotification } from "@/lib/push-notifications";
 
 export type NotificationType = "deposit" | "withdrawal" | "transaction" | "pix" | "kyc" | "system" | "success" | "error" | "warning" | "info";
 
@@ -7,13 +8,16 @@ export interface CreateNotificationParams {
   title: string;
   message: string;
   type: NotificationType;
+  sendPush?: boolean;
+  pushData?: Record<string, unknown>;
 }
 
 /**
- * Cria uma notificacao no banco de dados para o usuario
+ * Cria uma notificacao no banco de dados e envia push notification
  */
-export async function createNotification({ userId, title, message, type }: CreateNotificationParams): Promise<void> {
+export async function createNotification({ userId, title, message, type, sendPush = true, pushData }: CreateNotificationParams): Promise<void> {
   try {
+    // Salvar no banco de dados
     await sql`
       INSERT INTO user_notifications (id, user_id, title, message, type, read, created_at)
       VALUES (
@@ -26,8 +30,40 @@ export async function createNotification({ userId, title, message, type }: Creat
         NOW()
       )
     `;
+    
+    // Enviar push notification se habilitado
+    if (sendPush) {
+      await sendPushNotification(userId, {
+        title,
+        body: message,
+        tag: `${type}-${Date.now()}`,
+        data: {
+          type,
+          url: getUrlForType(type),
+          ...pushData
+        }
+      });
+    }
   } catch (error) {
     console.error("[Notifications] Erro ao criar notificacao:", error);
+  }
+}
+
+/**
+ * Retorna a URL de destino baseada no tipo de notificacao
+ */
+function getUrlForType(type: NotificationType): string {
+  switch (type) {
+    case "deposit":
+    case "transaction":
+    case "pix":
+      return "/dashboard/transactions";
+    case "withdrawal":
+      return "/dashboard/wallet";
+    case "kyc":
+      return "/dashboard/settings";
+    default:
+      return "/dashboard";
   }
 }
 
