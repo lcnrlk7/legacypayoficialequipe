@@ -125,16 +125,20 @@ export async function POST(request: NextRequest) {
 
     // Buscar adquirente baseado na rota do usuário
     const acquirer = await getAcquirerForUser(sessionUser.id);
-    const acquirerId = acquirer?.id || null;
 
     let acquirerWithdrawalId = null;
     let withdrawalStatus = requiresApproval ? "pending" : "processing";
 
+    // Descontar saldo do usuário ANTES de processar
+    await sql`
+      UPDATE profiles 
+      SET balance = balance - ${amount}
+      WHERE id = ${sessionUser.id}
+    `;
+
     // Se não requer aprovação, processar automaticamente
     if (!requiresApproval && acquirer) {
       const detectedPixKeyType = pixKeyType || mapPixKeyType(pixKey);
-      
-      console.log(`[Withdrawal] Processando saque automático: valor=${netAmount}, pixKey=${pixKey}, acquirer=${acquirer.code}`);
       
       const withdrawalResult = await processWithdrawal(
         netAmount,
@@ -144,18 +148,15 @@ export async function POST(request: NextRequest) {
         `Saque LegacyPay - ${user.name || user.email}`
       );
 
-      console.log("[Withdrawal] Resultado do processamento:", withdrawalResult);
-
       if (withdrawalResult.success && withdrawalResult.withdrawalId) {
-        acquirerWithdrawalId = withdrawalResult.withdrawalId;
+        acquirerWithdrawalId = String(withdrawalResult.withdrawalId);
         withdrawalStatus = "processing";
       } else {
-        // Se falhar no processamento automático, deixar como pendente para aprovação manual
+        // Se falhar no processamento automático
         console.error("[Withdrawal] Falha ao processar saque automático:", withdrawalResult.error);
         
-        // Se o erro é de saldo insuficiente na adquirente, retornar erro ao usuário
+        // Se o erro é de saldo insuficiente na adquirente, devolver saldo e retornar erro
         if (withdrawalResult.error?.toLowerCase().includes("saldo insuficiente")) {
-          // Devolver o saldo ao usuário
           await sql`
             UPDATE profiles 
             SET balance = balance + ${amount}
@@ -172,13 +173,6 @@ export async function POST(request: NextRequest) {
         withdrawalStatus = "pending";
       }
     }
-
-    // Descontar saldo do usuário
-    await sql`
-      UPDATE profiles 
-      SET balance = balance - ${amount}
-      WHERE id = ${sessionUser.id}
-    `;
 
     // Salvar saque no banco
     const withdrawalId = crypto.randomUUID();
