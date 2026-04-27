@@ -606,21 +606,25 @@ export async function getSystemFeesForUser(userId: string): Promise<FeeConfig> {
     };
     
     // Taxa percentual de deposito personalizada (PIX In)
-    if (user?.fee_percentage !== null && user?.fee_percentage !== undefined) {
-      fees.pixPercentageFee = Number(user.fee_percentage);
+    const userFeePercentage = user?.fee_percentage;
+    if (userFeePercentage !== null && userFeePercentage !== undefined && String(userFeePercentage).trim() !== '') {
+      fees.pixPercentageFee = Number(userFeePercentage);
     }
     
     // Taxa fixa de deposito personalizada (PIX In)
-    if (user?.fixed_fee !== null && user?.fixed_fee !== undefined) {
-      fees.pixFixedFee = Number(user.fixed_fee);
+    const userFixedFee = user?.fixed_fee;
+    if (userFixedFee !== null && userFixedFee !== undefined && String(userFixedFee).trim() !== '') {
+      fees.pixFixedFee = Number(userFixedFee);
     }
     
     // Taxa de saque personalizada (PIX Out)
-    if (user?.withdrawal_fee !== null && user?.withdrawal_fee !== undefined) {
-      fees.withdrawalFee = Number(user.withdrawal_fee);
+    const userWithdrawalFee = user?.withdrawal_fee;
+    if (userWithdrawalFee !== null && userWithdrawalFee !== undefined && String(userWithdrawalFee).trim() !== '') {
+      fees.withdrawalFee = Number(userWithdrawalFee);
     }
     
-    console.log(`[Acquirer] Taxas do usuario ${userId}: PIX In=${fees.pixPercentageFee}%+R$${fees.pixFixedFee}, PIX Out=R$${fees.withdrawalFee}`);
+    console.log(`[Acquirer] Usuario ${userId} - DB: fee_percentage=${userFeePercentage}, fixed_fee=${userFixedFee}, withdrawal_fee=${userWithdrawalFee}`);
+    console.log(`[Acquirer] Usuario ${userId} - FINAL: PIX In=${fees.pixPercentageFee}%+R$${fees.pixFixedFee}, PIX Out=R$${fees.withdrawalFee}`);
     
     return fees;
   } catch (error) {
