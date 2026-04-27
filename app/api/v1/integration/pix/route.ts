@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
     `;
 
     if (integrationResult.length === 0) {
-      console.log("[v0] Credenciais não encontradas - client_id:", clientId?.substring(0, 10) + "...");
       return NextResponse.json(
         { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
         { status: 401 }

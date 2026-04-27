@@ -8,11 +8,11 @@ const MAX_INTEGRATIONS = 7
 
 // Gerar credenciais seguras
 function generateClientId(): string {
-  return `lp_${uuidv4().replace(/-/g, "").substring(0, 24)}`
+  return `cli_${uuidv4().replace(/-/g, "").substring(0, 24)}`
 }
 
 function generateClientSecret(): string {
-  return `sk_${crypto.randomBytes(32).toString("hex")}`
+  return `sec_${crypto.randomBytes(32).toString("hex")}`
 }
 
 function generateWebhookSecret(): string {
@@ -121,50 +121,30 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Integracao nao encontrada" }, { status: 404 })
     }
 
-    // Construir query de update dinamicamente
-    const updates: string[] = []
-    const values: unknown[] = []
-    
-    if (name !== undefined) {
-      updates.push(`name = $${values.length + 1}`)
-      values.push(name.trim())
-    }
-    if (description !== undefined) {
-      updates.push(`description = $${values.length + 1}`)
-      values.push(description?.trim() || null)
-    }
-    if (website_url !== undefined) {
-      updates.push(`website_url = $${values.length + 1}`)
-      values.push(website_url?.trim() || null)
-    }
-    if (webhook_url !== undefined) {
-      updates.push(`webhook_url = $${values.length + 1}`)
-      values.push(webhook_url?.trim() || null)
-    }
-    if (is_active !== undefined) {
-      updates.push(`is_active = $${values.length + 1}`)
-      values.push(is_active)
-    }
-    if (regenerate_secret === "client") {
-      updates.push(`client_secret = $${values.length + 1}`)
-      values.push(generateClientSecret())
-    }
-    if (regenerate_secret === "webhook") {
-      updates.push(`webhook_secret = $${values.length + 1}`)
-      values.push(generateWebhookSecret())
-    }
+    // Buscar dados atuais da integracao
+    const currentData = await sql`
+      SELECT * FROM user_integrations WHERE id = ${id}
+    `
+    const current = currentData[0]
 
-    updates.push(`updated_at = NOW()`)
+    // Preparar valores para update (manter valor atual se nao foi enviado)
+    const newName = name !== undefined ? name.trim() : current.name
+    const newDescription = description !== undefined ? (description?.trim() || null) : current.description
+    const newWebsiteUrl = website_url !== undefined ? (website_url?.trim() || null) : current.website_url
+    const newWebhookUrl = webhook_url !== undefined ? (webhook_url?.trim() || null) : current.webhook_url
+    const newIsActive = is_active !== undefined ? is_active : current.is_active
+    const newClientSecret = regenerate_secret === "client" ? generateClientSecret() : current.client_secret
+    const newWebhookSecret = regenerate_secret === "webhook" ? generateWebhookSecret() : current.webhook_secret
 
     const integrations = await sql`
       UPDATE user_integrations 
-      SET name = ${name?.trim() || existing[0].name},
-          description = ${description?.trim() || null},
-          website_url = ${website_url?.trim() || null},
-          webhook_url = ${webhook_url?.trim() || null},
-          is_active = ${is_active ?? true},
-          client_secret = ${regenerate_secret === "client" ? generateClientSecret() : null}::text,
-          webhook_secret = ${regenerate_secret === "webhook" ? generateWebhookSecret() : null}::text,
+      SET name = ${newName},
+          description = ${newDescription},
+          website_url = ${newWebsiteUrl},
+          webhook_url = ${newWebhookUrl},
+          is_active = ${newIsActive},
+          client_secret = ${newClientSecret},
+          webhook_secret = ${newWebhookSecret},
           updated_at = NOW()
       WHERE id = ${id}
       RETURNING *
