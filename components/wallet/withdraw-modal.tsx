@@ -60,8 +60,8 @@ export function WithdrawModal({
 
   // Calculate fee when amount changes
   const amount = parseFloat(withdrawAmount) || 0;
-  // Taxa fixa de saque (apenas taxa da adquirente - Medusa R$ 5)
-  const withdrawalFee = systemSettings.acquirerWithdrawalFee || 5;
+  // Taxa fixa de saque (Medusa R$ 5)
+  const withdrawalFee = systemSettings.withdrawalFee || 5;
   const feeCalculation = calculateWithdrawalFee(amount, 0, withdrawalFee);
 
   // Handle saved key selection - go directly to confirm
@@ -135,7 +135,7 @@ export function WithdrawModal({
   };
 
   const displayError = localError || error;
-  const minWithdrawal = systemSettings.minWithdrawal || 3;
+  const minWithdrawal = systemSettings.minWithdrawal || 25;
   const maxWithdrawal = systemSettings.maxWithdrawal || 50000;
 
   // Success state

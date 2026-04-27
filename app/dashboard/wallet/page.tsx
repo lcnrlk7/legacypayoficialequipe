@@ -59,11 +59,10 @@ export default function WalletPage() {
   const [systemSettings, setSystemSettings] = useState({
     minDeposit: 5,
     maxDeposit: 100000,
-    minWithdrawal: 10, // Minimo R$ 10 para sobrar algo apos taxa de R$ 5
+    minWithdrawal: 25, // Minimo R$ 25 para rota black
     maxWithdrawal: 50000,
     autoWithdrawalLimit: 500,
-    withdrawalFixedFee: 0, // Sem taxa LegacyPay
-    acquirerWithdrawalFee: 5, // Taxa da adquirente (Medusa R$ 5)
+    withdrawalFee: 5, // Taxa de saque (Medusa R$ 5)
   });
   const [userRoute, setUserRoute] = useState<string>('black');
 
@@ -79,15 +78,17 @@ export default function WalletPage() {
       const response = await fetch("/api/user/fees");
       const data = await response.json();
       if (data.fees) {
-        // Taxa da adquirente baseada na rota (somente taxa da adquirente, sem taxa LegacyPay)
         const route = data.route_type || 'black';
-        const acquirerFee = route === 'black' ? 5 : 2; // Medusa R$ 5, MisticPay R$ 2
+        // Taxa de saque: Medusa R$ 5, MisticPay R$ 2
+        const withdrawFee = route === 'black' ? 5 : 2;
+        // Minimo de saque: R$ 25 para black, R$ 15 para white
+        const minWithdraw = route === 'black' ? 25 : 15;
         
         setUserRoute(route);
         setSystemSettings(prev => ({
           ...prev,
-          withdrawalFixedFee: 0, // Sem taxa LegacyPay
-          acquirerWithdrawalFee: acquirerFee,
+          withdrawalFee: withdrawFee,
+          minWithdrawal: minWithdraw,
         }));
       }
     } catch (err) {
@@ -100,7 +101,14 @@ export default function WalletPage() {
       const response = await fetch("/api/settings");
       const data = await response.json();
       if (data.settings) {
-        setSystemSettings(data.settings);
+        // Manter valores locais e apenas atualizar os que vem da API
+        setSystemSettings(prev => ({
+          ...prev,
+          minDeposit: data.settings.minDeposit || prev.minDeposit,
+          maxDeposit: data.settings.maxDeposit || prev.maxDeposit,
+          maxWithdrawal: data.settings.maxWithdrawal || prev.maxWithdrawal,
+          autoWithdrawalLimit: data.settings.autoWithdrawalLimit || prev.autoWithdrawalLimit,
+        }));
       }
     } catch (err) {
       console.error("Error loading settings:", err);
@@ -209,12 +217,12 @@ const handleDeposit = async () => {
       return;
     }
 
-    // Taxas fixas
-    const totalFee = systemSettings.withdrawalFixedFee + systemSettings.acquirerWithdrawalFee;
-    const netAmount = amount - totalFee;
+    // Taxa fixa de saque
+    const withdrawalFee = systemSettings.withdrawalFee || 5;
+    const netAmount = amount - withdrawalFee;
 
     if (netAmount <= 0) {
-      setError(`Valor muito baixo. Apos taxas de R$ ${totalFee.toFixed(2).replace('.', ',')}, nao sobraria valor para transferir.`);
+      setError(`Valor muito baixo. Apos taxa de R$ ${withdrawalFee.toFixed(2).replace('.', ',')}, nao sobraria valor para transferir.`);
       return;
     }
 
@@ -563,11 +571,11 @@ const handleDeposit = async () => {
           <ul className="space-y-3 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
-              Taxa de saque: R$ {systemSettings.acquirerWithdrawalFee.toFixed(2).replace('.', ',')}
+              Taxa de saque: R$ {(systemSettings.withdrawalFee || 5).toFixed(2).replace('.', ',')}
             </li>
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
-              Valor minimo: R$ {systemSettings.minWithdrawal.toFixed(2).replace('.', ',')}
+              Valor minimo: R$ {(systemSettings.minWithdrawal || 25).toFixed(2).replace('.', ',')}
             </li>
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
