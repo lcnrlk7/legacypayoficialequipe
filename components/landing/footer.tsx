@@ -8,7 +8,7 @@ const footerLinks = {
   Produto: [
     { label: "Recursos", href: "#features" },
     { label: "Taxas", href: "#taxas" },
-    { label: "API Docs", href: "/dashboard/integration" },
+    { label: "API Docs", href: "/docs" },
     { label: "Status", href: "#" },
   ],
   Empresa: [
@@ -27,7 +27,7 @@ const footerLinks = {
     { label: "FAQ", href: "#faq" },
     { label: "Discord", href: "https://discord.gg/vFfknE9kuJ", external: true },
     { label: "Central de Ajuda", href: "https://discord.gg/vFfknE9kuJ", external: true },
-    { label: "Developers", href: "/dashboard/integration" },
+    { label: "Developers", href: "/docs" },
   ],
 };
 
