@@ -583,30 +583,50 @@ export async function getSystemFeesByRoute(routeType: 'white' | 'black'): Promis
 
 /**
  * Busca taxas do sistema para um usuário específico
- * Considera taxa de saque personalizada do usuário se configurada
+ * Considera taxas personalizadas do usuário se configuradas (deposito e saque)
  */
 export async function getSystemFeesForUser(userId: string): Promise<FeeConfig> {
   try {
-    // Buscar rota e taxa personalizada do usuário
+    // Buscar rota e taxas personalizadas do usuário
     const userResult = await sql`
-      SELECT route_type, withdrawal_fee FROM profiles WHERE id = ${userId}
+      SELECT route_type, fee_percentage, fixed_fee, withdrawal_fee FROM profiles WHERE id = ${userId}
     `;
     
-    const routeType = (userResult[0]?.route_type || 'black') as 'white' | 'black';
-    const userWithdrawalFee = userResult[0]?.withdrawal_fee;
+    const user = userResult[0];
+    const routeType = (user?.route_type || 'black') as 'white' | 'black';
     
-    // Buscar taxas da rota
+    // Buscar taxas padrão da rota
     const routeFees = await getSystemFeesByRoute(routeType);
     
-    // Se o usuário tem taxa de saque personalizada, usar ela
-    if (userWithdrawalFee !== null && userWithdrawalFee !== undefined) {
-      return {
-        ...routeFees,
-        withdrawalFee: Number(userWithdrawalFee),
-      };
+    // Criar objeto de taxas com valores personalizados se existirem
+    const fees: FeeConfig = {
+      pixFixedFee: routeFees.pixFixedFee,
+      pixPercentageFee: routeFees.pixPercentageFee,
+      withdrawalFee: routeFees.withdrawalFee,
+    };
+    
+    // Taxa percentual de deposito personalizada (PIX In)
+    const userFeePercentage = user?.fee_percentage;
+    if (userFeePercentage !== null && userFeePercentage !== undefined && String(userFeePercentage).trim() !== '') {
+      fees.pixPercentageFee = Number(userFeePercentage);
     }
     
-    return routeFees;
+    // Taxa fixa de deposito personalizada (PIX In)
+    const userFixedFee = user?.fixed_fee;
+    if (userFixedFee !== null && userFixedFee !== undefined && String(userFixedFee).trim() !== '') {
+      fees.pixFixedFee = Number(userFixedFee);
+    }
+    
+    // Taxa de saque personalizada (PIX Out)
+    const userWithdrawalFee = user?.withdrawal_fee;
+    if (userWithdrawalFee !== null && userWithdrawalFee !== undefined && String(userWithdrawalFee).trim() !== '') {
+      fees.withdrawalFee = Number(userWithdrawalFee);
+    }
+    
+    console.log(`[Acquirer] Usuario ${userId} - DB: fee_percentage=${userFeePercentage}, fixed_fee=${userFixedFee}, withdrawal_fee=${userWithdrawalFee}`);
+    console.log(`[Acquirer] Usuario ${userId} - FINAL: PIX In=${fees.pixPercentageFee}%+R$${fees.pixFixedFee}, PIX Out=R$${fees.withdrawalFee}`);
+    
+    return fees;
   } catch (error) {
     console.error("[Acquirer] Erro ao buscar taxas do usuário:", error);
     const routeType = await getUserRouteType(userId);

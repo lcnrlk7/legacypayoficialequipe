@@ -89,7 +89,6 @@ export function useNotifications() {
         icon: "/logo-icon.png",
         badge: "/logo-icon.png",
         tag: "legacypay-notification",
-        renotify: true,
       });
     } catch (error) {
       console.error("Erro ao mostrar notificacao:", error);

@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db"
 import { NextRequest, NextResponse } from "next/server"
+import { getSystemFeesForUser } from "@/lib/acquirers"
 
 // Criar transferência PIX
 export async function POST(request: NextRequest) {
@@ -50,9 +51,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Calcular taxa (1.5%)
-    const fee = amount * 0.015
+    // Buscar taxas do usuario (usar taxa de saque para transferencias PIX Out)
+    const userFees = await getSystemFeesForUser(profile.id)
+    const fee = userFees.withdrawalFee
     const totalAmount = amount + fee
+    
+    console.log(`[PIX Transfer] Usuario ${profile.email}: Taxa R$${fee} para transferencia de R$${amount}`)
 
     if (Number(profile.balance) < totalAmount) {
       return NextResponse.json(

@@ -491,12 +491,7 @@ export async function POST(request: NextRequest) {
         )
       `;
 
-      // Enviar push notification
-      try {
-        await notifyTransactionApproved(transaction.user_id, netAmount, transaction.id);
-      } catch (pushError) {
-        console.error("[Medusa Webhook] Erro ao enviar push notification:", pushError);
-      }
+      // Enviar push notification (ja enviado pelo notifyPixPaid acima)
 
       // Processar comissao de afiliado
       try {
