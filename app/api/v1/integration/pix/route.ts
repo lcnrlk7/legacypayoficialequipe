@@ -117,15 +117,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar taxas baseadas na rota do usuário
+    // Buscar taxas baseadas na rota do usuário (considera taxas personalizadas)
     const systemFees = await getSystemFeesForUser(profile.id);
+    
+    console.log(`[Integration PIX] Usuario ${profile.id} - Taxas: ${systemFees.pixPercentageFee}% + R$${systemFees.pixFixedFee} (rota: ${profile.route_type})`);
 
-    // Calcular taxa
+    // Calcular taxa (usar taxa personalizada do usuario ou padrao da rota)
     const feePercentage = systemFees.pixPercentageFee;
     const fixedFee = systemFees.pixFixedFee;
     const percentageFee = (amount * feePercentage) / 100;
     const fee = percentageFee + fixedFee;
     const netAmount = amount - fee;
+    
+    console.log(`[Integration PIX] Valor: R$${amount}, Taxa: R$${fee.toFixed(2)} (${feePercentage}% + R$${fixedFee}), Liquido: R$${netAmount.toFixed(2)}`);
 
     const transactionId = external_id || `int_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
