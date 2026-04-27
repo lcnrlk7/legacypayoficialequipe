@@ -1,6 +1,10 @@
 import { Header } from "@/components/landing/header";
 import { HeroClean } from "@/components/landing/hero-clean";
 import { Features } from "@/components/landing/features";
+import { RewardsProgram } from "@/components/landing/rewards-program";
+import { AwardPlates } from "@/components/landing/award-plates";
+import { Integrations } from "@/components/landing/integrations";
+import { WhyChoose } from "@/components/landing/why-choose";
 import { FAQ } from "@/components/landing/faq";
 import { Footer } from "@/components/landing/footer";
 
@@ -24,6 +28,10 @@ export default function Home() {
         <Header />
         <HeroClean />
         <Features />
+        <RewardsProgram />
+        <AwardPlates />
+        <Integrations />
+        <WhyChoose />
         <FAQ />
         <Footer />
       </div>

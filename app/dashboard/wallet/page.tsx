@@ -59,14 +59,12 @@ export default function WalletPage() {
   const [systemSettings, setSystemSettings] = useState({
     minDeposit: 5,
     maxDeposit: 100000,
-    minWithdrawal: 5,
+    minWithdrawal: 25, // Minimo R$ 25 para rota black
     maxWithdrawal: 50000,
     autoWithdrawalLimit: 500,
-    withdrawalFeePercentage: 1.5,
-    withdrawalFeeFixed: 0,
-    acquirerFee: 1.00,
+    withdrawalFee: 5, // Taxa de saque (Medusa R$ 5)
   });
-  const [withdrawalFee, setWithdrawalFee] = useState<number>(5); // Taxa de saque do usuário
+  const [userRoute, setUserRoute] = useState<string>('black');
 
   useEffect(() => {
     loadBalance();
@@ -79,8 +77,19 @@ export default function WalletPage() {
     try {
       const response = await fetch("/api/user/fees");
       const data = await response.json();
-      if (data.fees?.withdrawal_fee !== undefined) {
-        setWithdrawalFee(Number(data.fees.withdrawal_fee));
+      if (data.fees) {
+        const route = data.route_type || 'black';
+        // Taxa de saque: Medusa R$ 5, MisticPay R$ 2
+        const withdrawFee = route === 'black' ? 5 : 2;
+        // Minimo de saque: R$ 25 para black, R$ 15 para white
+        const minWithdraw = route === 'black' ? 25 : 15;
+        
+        setUserRoute(route);
+        setSystemSettings(prev => ({
+          ...prev,
+          withdrawalFee: withdrawFee,
+          minWithdrawal: minWithdraw,
+        }));
       }
     } catch (err) {
       console.error("Error loading user fees:", err);
@@ -92,7 +101,14 @@ export default function WalletPage() {
       const response = await fetch("/api/settings");
       const data = await response.json();
       if (data.settings) {
-        setSystemSettings(data.settings);
+        // Manter valores locais e apenas atualizar os que vem da API
+        setSystemSettings(prev => ({
+          ...prev,
+          minDeposit: data.settings.minDeposit || prev.minDeposit,
+          maxDeposit: data.settings.maxDeposit || prev.maxDeposit,
+          maxWithdrawal: data.settings.maxWithdrawal || prev.maxWithdrawal,
+          autoWithdrawalLimit: data.settings.autoWithdrawalLimit || prev.autoWithdrawalLimit,
+        }));
       }
     } catch (err) {
       console.error("Error loading settings:", err);
@@ -201,13 +217,17 @@ const handleDeposit = async () => {
       return;
     }
 
-    // Calculate total with fee
-    const feePercentage = systemSettings.withdrawalFeePercentage || 1.5;
-    const fee = (amount * feePercentage) / 100;
-    const totalDebit = amount + fee;
+    // Taxa fixa de saque
+    const withdrawalFee = systemSettings.withdrawalFee || 5;
+    const netAmount = amount - withdrawalFee;
 
-    if (totalDebit > balance) {
-      setError("Saldo insuficiente (incluindo taxa)");
+    if (netAmount <= 0) {
+      setError(`Valor muito baixo. Apos taxa de R$ ${withdrawalFee.toFixed(2).replace('.', ',')}, nao sobraria valor para transferir.`);
+      return;
+    }
+
+    if (amount > balance) {
+      setError("Saldo insuficiente");
       return;
     }
 
@@ -216,7 +236,7 @@ const handleDeposit = async () => {
 
     try {
       const token = localStorage.getItem("auth-token");
-      const response = await fetch("/api/user/withdrawals", {
+      const response = await fetch("/api/withdrawals/create", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
@@ -551,15 +571,15 @@ const handleDeposit = async () => {
           <ul className="space-y-3 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
-              Taxa fixa de R$ {withdrawalFee.toFixed(2).replace('.', ',')} por saque
+              Taxa de saque: R$ {(systemSettings.withdrawalFee || 5).toFixed(2).replace('.', ',')}
             </li>
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
-              Valor mínimo: R$ {systemSettings.minWithdrawal.toFixed(2).replace('.', ',')}
+              Valor minimo: R$ {(systemSettings.minWithdrawal || 25).toFixed(2).replace('.', ',')}
             </li>
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
-              Processamento em até 5 minutos
+              Processamento em ate 5 minutos
             </li>
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />

@@ -8,13 +8,23 @@ import { useNotifications, NotificationData } from "@/hooks/use-notifications";
 
 const getNotificationIcon = (type: NotificationData["type"]) => {
   switch (type) {
+    case "deposit":
     case "transaction":
       return <ArrowDownLeft className="w-5 h-5 text-green-500" />;
+    case "withdrawal":
+      return <ArrowUpRight className="w-5 h-5 text-orange-500" />;
     case "pix":
       return <ArrowLeftRight className="w-5 h-5 text-primary" />;
     case "kyc":
       return <UserCheck className="w-5 h-5 text-blue-500" />;
+    case "success":
+      return <Check className="w-5 h-5 text-green-500" />;
+    case "error":
+      return <X className="w-5 h-5 text-red-500" />;
+    case "warning":
+      return <Bell className="w-5 h-5 text-yellow-500" />;
     case "system":
+    case "info":
     default:
       return <Settings className="w-5 h-5 text-primary" />;
   }

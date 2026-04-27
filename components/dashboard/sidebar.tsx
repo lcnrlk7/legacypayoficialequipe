@@ -30,7 +30,6 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { NotificationCenter } from "./notification-center"
-import { AppSettings } from "./app-settings"
 
 interface Profile {
   id: string
@@ -98,7 +97,7 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
             height={40}
           />
           <div className="flex items-baseline">
-            <span className="text-xl font-bold text-white">Legacy</span>
+            <span className="text-xl font-bold text-foreground">Legacy</span>
             <span className="text-xl font-bold text-primary">Pay</span>
           </div>
         </Link>
@@ -306,8 +305,6 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
         )}
       </AnimatePresence>
 
-      {/* App Settings Floating Button */}
-      <AppSettings />
-    </>
+          </>
   )
 }

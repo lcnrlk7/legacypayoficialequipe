@@ -60,8 +60,9 @@ export function WithdrawModal({
 
   // Calculate fee when amount changes
   const amount = parseFloat(withdrawAmount) || 0;
-  const feePercentage = systemSettings.withdrawalFeePercentage || 1.5;
-  const feeCalculation = calculateWithdrawalFee(amount, feePercentage);
+  // Taxa fixa de saque (Medusa R$ 5)
+  const withdrawalFee = systemSettings.withdrawalFee || 5;
+  const feeCalculation = calculateWithdrawalFee(amount, 0, withdrawalFee);
 
   // Handle saved key selection - go directly to confirm
   const handleSavedKeySelect = (key: PixKey) => {
@@ -116,8 +117,13 @@ export function WithdrawModal({
       return;
     }
 
-    if (feeCalculation.total > balance) {
-      setLocalError('Saldo insuficiente para esta transferencia (incluindo taxa)');
+    if (amount > balance) {
+      setLocalError('Saldo insuficiente para esta transferencia');
+      return;
+    }
+
+    if (feeCalculation.netAmount <= 0) {
+      setLocalError(`Valor muito baixo. Apos taxas de R$ ${feeCalculation.totalFee.toFixed(2)}, nao sobraria valor para transferir.`);
       return;
     }
 
@@ -129,7 +135,7 @@ export function WithdrawModal({
   };
 
   const displayError = localError || error;
-  const minWithdrawal = systemSettings.minWithdrawal || 3;
+  const minWithdrawal = systemSettings.minWithdrawal || 25;
   const maxWithdrawal = systemSettings.maxWithdrawal || 50000;
 
   // Success state
@@ -396,13 +402,13 @@ export function WithdrawModal({
                 <span className="font-medium text-foreground">{formatCurrency(feeCalculation.amount)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Taxa ({feePercentage}%):</span>
-                <span className="font-medium text-red-400">- {formatCurrency(feeCalculation.fee)}</span>
+                <span className="text-muted-foreground">Taxa de saque:</span>
+                <span className="font-medium text-red-400">- {formatCurrency(feeCalculation.totalFee)}</span>
               </div>
               <div className="border-t border-border pt-3 flex justify-between">
                 <span className="font-semibold text-foreground">Destinatario recebe:</span>
-                <span className="font-bold text-xl text-primary">
-                  {formatCurrency(feeCalculation.amount - feeCalculation.fee)}
+                <span className={`font-bold text-xl ${feeCalculation.netAmount > 0 ? 'text-primary' : 'text-red-400'}`}>
+                  {formatCurrency(feeCalculation.netAmount)}
                 </span>
               </div>
               <div className="flex justify-between text-xs text-muted-foreground">

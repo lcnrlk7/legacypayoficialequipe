@@ -170,7 +170,7 @@ export function DashboardContent({
   transactions,
   pixKeys,
 }: DashboardContentProps) {
-  const { profile: contextProfile, updateBalance } = useProfile();
+  const { profile: contextProfile, updateBalance, updateTotalRevenue } = useProfile();
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("month");
   const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
 
@@ -192,6 +192,19 @@ export function DashboardContent({
   const currentBalance = contextProfile?.balance ?? serverProfile?.balance ?? 0;
   const profile = serverProfile ? { ...serverProfile, balance: Number(currentBalance) } : null;
 
+  // Calcular faturamento TOTAL acumulado (para metas) - independente do filtro de periodo
+  const lifetimeTotalRevenue = useMemo(() => {
+    const allDeposits = transactions.filter(
+      (t) => ["deposit", "transfer_in", "pix_in"].includes(t.type) && t.status === "completed"
+    );
+    return allDeposits.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+  }, [transactions]);
+
+  // Sincronizar o faturamento total com o contexto global (para o header usar)
+  useEffect(() => {
+    updateTotalRevenue(lifetimeTotalRevenue);
+  }, [lifetimeTotalRevenue, updateTotalRevenue]);
+
   const { totalReceivedGross, totalReceivedNet, totalSent, filteredTransactions } = useMemo(() => {
     const { start, end } = getDateRange(periodFilter);
     
@@ -200,7 +213,7 @@ export function DashboardContent({
       return txDate >= start && txDate <= end;
     });
 
-    // Calcular valor bruto (amount) e líquido (net_amount ou amount - fee)
+    // Calcular valor bruto (amount) e liquido (net_amount ou amount - fee)
     const completedDeposits = filtered.filter(
       (t) => ["deposit", "transfer_in", "pix_in"].includes(t.type) && t.status === "completed"
     );
@@ -208,18 +221,18 @@ export function DashboardContent({
     const receivedGross = completedDeposits.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
     
     const receivedNet = completedDeposits.reduce((sum, t) => {
-      // Se tem net_amount, usa ele; senão calcula: amount - fee
+      // Se tem net_amount, usa ele; senao calcula: amount - fee
       const netValue = t.net_amount !== undefined 
         ? Number(t.net_amount) 
         : (Number(t.amount) || 0) - (Number(t.fee) || 0);
       return sum + (netValue || 0);
     }, 0);
 
-    // Calcular valor líquido dos saques (net_amount = valor que o usuário recebeu, sem taxas)
+    // Calcular valor liquido dos saques (net_amount = valor que o usuario recebeu, sem taxas)
     const sent = filtered
       .filter((t) => ["withdrawal", "transfer_out", "pix_out"].includes(t.type) && t.status === "completed")
       .reduce((sum, t) => {
-        // Se tem net_amount, usa ele; senão calcula: amount - fee
+        // Se tem net_amount, usa ele; senao calcula: amount - fee
         const netValue = t.net_amount !== undefined 
           ? Number(t.net_amount) 
           : (Number(t.amount) || 0) - (Number(t.fee) || 0);
@@ -297,7 +310,7 @@ export function DashboardContent({
       {/* Goals Roadmap */}
       {profile && (
         <GoalsRoadmap
-          totalRevenue={profile.total_revenue || totalReceivedGross}
+          totalRevenue={lifetimeTotalRevenue}
           userId={profile.id}
         />
       )}

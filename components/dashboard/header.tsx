@@ -3,6 +3,7 @@
 import { Bell, Search, Trophy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useProfile } from "@/components/profile-provider"
 
 interface Profile {
   id: string
@@ -66,6 +67,8 @@ function formatCompact(value: number) {
 }
 
 export function DashboardHeader({ profile }: HeaderProps) {
+  const { totalRevenue: contextTotalRevenue, profile: contextProfile } = useProfile();
+  
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -73,7 +76,11 @@ export function DashboardHeader({ profile }: HeaderProps) {
     }).format(value)
   }
 
-  const totalRevenue = profile?.total_revenue || 0;
+  // Usar o totalRevenue do contexto (calculado das transacoes) - single source of truth
+  const totalRevenue = contextTotalRevenue || profile?.total_revenue || 0;
+  
+  // Usar o saldo do contexto se disponivel
+  const currentBalance = contextProfile?.balance ?? profile?.balance ?? 0;
   const previousMilestone = getPreviousMilestone(totalRevenue);
   const nextMilestone = getNextMilestone(totalRevenue);
   
@@ -123,9 +130,9 @@ export function DashboardHeader({ profile }: HeaderProps) {
 
         {/* Balance */}
         <div className="text-right">
-          <p className="text-[10px] sm:text-xs text-muted-foreground">Saldo Líquido</p>
+          <p className="text-[10px] sm:text-xs text-muted-foreground">Saldo Liquido</p>
           <p className="text-sm sm:text-lg font-bold text-primary">
-            {formatCurrency(Number(profile?.balance) || 0)}
+            {formatCurrency(Number(currentBalance))}
           </p>
         </div>
 

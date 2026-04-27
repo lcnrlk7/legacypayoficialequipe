@@ -2,8 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, X, MapPin, Loader2, Gift, Play, ChevronLeft, ChevronRight, RotateCcw, Award, Star, Users } from "lucide-react";
+import { Trophy, X, MapPin, Loader2, Gift, Play, ChevronLeft, ChevronRight, RotateCcw, Award, Star, Users, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Image from "next/image";
+
+// Mapeamento de imagens das premiacoes
+const rewardImages: Record<string, string> = {
+  bracelet: "/images/rewards/pulseira-20k.png",
+  plaque_100k: "/images/rewards/placa-100k.png",
+  plaque_500k: "/images/rewards/placa-500k.png",
+  plaque_1m: "/images/rewards/placa-1m.png",
+};
 
 interface Reward {
   id: string;
@@ -105,6 +114,8 @@ const achievementLevels = [
 export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
   const [userRewards, setUserRewards] = useState<Reward[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewMilestone, setPreviewMilestone] = useState<typeof milestones[0] | null>(null);
   const [selectedMilestone, setSelectedMilestone] = useState<typeof milestones[0] | null>(null);
   const [address, setAddress] = useState("");
   const [isClaiming, setIsClaiming] = useState(false);
@@ -186,6 +197,17 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
     return `R$ ${value}`;
   };
 
+  // Encontrar recompensas disponiveis para resgate (atingidas mas nao solicitadas)
+  const availableRewards = milestones.filter(m => {
+    if (!m.hasBadge || !m.badgeType) return false;
+    if (totalRevenue < m.value) return false;
+    const reward = userRewards.find(r => r.type === m.badgeType);
+    return !reward; // Disponivel se ainda nao foi solicitada
+  });
+
+  const hasAvailableReward = availableRewards.length > 0;
+  const nextAvailableReward = availableRewards[0];
+
   if (isLoading) {
     return (
       <div className="bg-card border border-border rounded-2xl p-6 flex items-center justify-center min-h-[400px]">
@@ -210,178 +232,227 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
           Acompanhe as metas de faturamento e obtenha recompensas.
         </p>
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Roadmap Grid */}
-          <div className="flex-1 overflow-x-auto">
-            <div className="min-w-[600px] space-y-4">
-              {/* Row 1 */}
-              <div className="flex items-center gap-2">
-                {milestones.filter(m => m.row === 1).sort((a, b) => a.col - b.col).map((milestone, idx, arr) => {
-                  const status = getMilestoneStatus(milestone);
-                  const isCompleted = status === "completed" || status === "pending" || status === "credited";
-                  const isAvailable = milestone.hasBadge && status === "completed";
-                  
-                  return (
-                    <div key={milestone.value} className="flex items-center">
-                      <motion.button
-                        onClick={() => {
-                          if (isAvailable) {
-                            setSelectedMilestone(milestone);
-                            setShowModal(true);
-                          }
-                        }}
-                        disabled={!isAvailable}
-                        className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center transition-all ${
-                          isCompleted
-                            ? "border-primary bg-primary/20"
-                            : "border-gray-600 bg-gray-800/50"
-                        } ${isAvailable ? "cursor-pointer hover:scale-105" : "cursor-default"}`}
-                        whileHover={isAvailable ? { scale: 1.05 } : {}}
-                      >
-                        {milestone.hasBadge && isCompleted ? (
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center">
-                            <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                          </div>
-                        ) : (
-                          <span className={`text-xs sm:text-sm font-bold ${isCompleted ? "text-primary" : "text-gray-500"}`}>
-                            {milestone.label}
-                          </span>
-                        )}
-                      </motion.button>
-                      {idx < arr.length - 1 && (
-                        <div className={`w-8 sm:w-12 h-1 ${
-                          getMilestoneStatus(arr[idx + 1]) !== "locked" || isCompleted
-                            ? "bg-primary"
-                            : "bg-gray-700"
-                        }`} />
-                      )}
-                    </div>
-                  );
-                })}
+        <div className="flex flex-col gap-4">
+          {/* Roadmap Grid - Snake/Labyrinth Layout */}
+          <div className="w-full">
+            <div className="w-full space-y-2">
+              {/* Row 1: R$ 1K -> R$ 10K -> R$ 20K -> [Pulseira] -> R$ 50K */}
+              <div className="flex items-center justify-between w-full">
+                {/* R$ 1K */}
+                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 1000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                  <span className={`text-sm font-bold ${totalRevenue >= 1000 ? "text-primary" : "text-gray-400"}`}>R$ 1K</span>
+                </div>
+                
+                <div className={`h-0.5 flex-1 mx-2 ${totalRevenue >= 10000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* R$ 10K */}
+                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 10000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                  <span className={`text-sm font-bold ${totalRevenue >= 10000 ? "text-primary" : "text-gray-400"}`}>R$ 10K</span>
+                </div>
+                
+                <div className={`h-0.5 flex-1 mx-2 ${totalRevenue >= 20000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* R$ 20K */}
+                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 20000 ? "border-primary bg-primary/20" : "border-primary/40 bg-gray-800/50"}`}>
+                  <span className={`text-sm font-bold ${totalRevenue >= 20000 ? "text-primary" : "text-gray-400"}`}>R$ 20K</span>
+                </div>
+                
+                <div className={`h-0.5 w-4 mx-1 flex-shrink-0 ${totalRevenue >= 20000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* Pulseira Image */}
+                <button
+                  onClick={() => { setPreviewMilestone(milestones.find(m => m.badgeType === "bracelet")!); setShowPreview(true); }}
+                  className={`w-[90px] h-[90px] rounded-full border-2 overflow-hidden relative flex-shrink-0 transition-transform hover:scale-105 ${totalRevenue >= 20000 ? "border-primary" : "border-primary/40"}`}
+                >
+                  <Image src="/images/rewards/pulseira-20k.png" alt="Pulseira 20K" fill className={`object-cover ${totalRevenue >= 20000 ? "" : "grayscale opacity-50"}`} />
+                </button>
+                
+                <div className={`h-0.5 flex-1 mx-2 ${totalRevenue >= 50000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* R$ 50K */}
+                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 50000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                  <span className={`text-sm font-bold ${totalRevenue >= 50000 ? "text-primary" : "text-gray-400"}`}>R$ 50K</span>
+                </div>
+              </div>
+              
+              {/* Vertical connector Row 1 -> Row 2 (right side) */}
+              <div className="flex justify-end pr-[42px]">
+                <div className={`w-0.5 h-6 ${totalRevenue >= 75000 ? "bg-primary" : "bg-gray-700"}`} />
               </div>
 
-              {/* Connecting line down */}
-              <div className="flex justify-end pr-10">
-                <div className="w-1 h-8 bg-gray-700" />
+              {/* Row 2: R$ 375K <- R$ 250K <- [100K Placa] <- R$ 100K <- R$ 75K */}
+              <div className="flex items-center justify-between w-full flex-row-reverse">
+                {/* R$ 75K (right) */}
+                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 75000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                  <span className={`text-sm font-bold ${totalRevenue >= 75000 ? "text-primary" : "text-gray-400"}`}>R$ 75K</span>
+                </div>
+                
+                <div className={`h-0.5 w-4 mx-1 flex-shrink-0 ${totalRevenue >= 100000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* R$ 100K */}
+                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 100000 ? "border-primary bg-primary/20" : "border-primary/40 bg-gray-800/50"}`}>
+                  <span className={`text-sm font-bold ${totalRevenue >= 100000 ? "text-primary" : "text-gray-400"}`}>R$ 100K</span>
+                </div>
+                
+                <div className={`h-0.5 w-4 mx-1 flex-shrink-0 ${totalRevenue >= 100000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* 100K Placa Image */}
+                <button
+                  onClick={() => { setPreviewMilestone(milestones.find(m => m.badgeType === "plaque_100k")!); setShowPreview(true); }}
+                  className={`w-[90px] h-[90px] rounded-full border-2 overflow-hidden relative flex-shrink-0 transition-transform hover:scale-105 ${totalRevenue >= 100000 ? "border-primary" : "border-primary/40"}`}
+                >
+                  <Image src="/images/rewards/placa-100k.png" alt="Placa 100K" fill className={`object-cover ${totalRevenue >= 100000 ? "" : "grayscale opacity-50"}`} />
+                </button>
+                
+                <div className={`h-0.5 flex-1 mx-2 ${totalRevenue >= 250000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* R$ 250K */}
+                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 250000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                  <span className={`text-sm font-bold ${totalRevenue >= 250000 ? "text-primary" : "text-gray-400"}`}>R$ 250K</span>
+                </div>
+                
+                <div className={`h-0.5 flex-1 mx-2 ${totalRevenue >= 375000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* R$ 375K (left) */}
+                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 375000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                  <span className={`text-sm font-bold ${totalRevenue >= 375000 ? "text-primary" : "text-gray-400"}`}>R$ 375K</span>
+                </div>
+              </div>
+              
+              {/* Vertical connector Row 2 -> Row 3 (left side) */}
+              <div className="flex justify-start pl-[42px]">
+                <div className={`w-0.5 h-6 ${totalRevenue >= 500000 ? "bg-primary" : "bg-gray-700"}`} />
               </div>
 
-              {/* Row 2 - Reverse order */}
-              <div className="flex items-center gap-2 flex-row-reverse">
-                {milestones.filter(m => m.row === 2).sort((a, b) => b.col - a.col).map((milestone, idx, arr) => {
-                  const status = getMilestoneStatus(milestone);
-                  const isCompleted = status === "completed" || status === "pending" || status === "credited";
-                  const isAvailable = milestone.hasBadge && status === "completed";
-                  
-                  return (
-                    <div key={milestone.value} className="flex items-center flex-row-reverse">
-                      <motion.button
-                        onClick={() => {
-                          if (isAvailable) {
-                            setSelectedMilestone(milestone);
-                            setShowModal(true);
-                          }
-                        }}
-                        disabled={!isAvailable}
-                        className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center transition-all ${
-                          isCompleted
-                            ? "border-primary bg-primary/20"
-                            : "border-gray-600 bg-gray-800/50"
-                        } ${isAvailable ? "cursor-pointer hover:scale-105" : "cursor-default"}`}
-                        whileHover={isAvailable ? { scale: 1.05 } : {}}
-                      >
-                        {milestone.hasBadge && isCompleted ? (
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center">
-                            <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                          </div>
-                        ) : (
-                          <span className={`text-xs sm:text-sm font-bold ${isCompleted ? "text-primary" : "text-gray-500"}`}>
-                            {milestone.label}
-                          </span>
-                        )}
-                      </motion.button>
-                      {idx < arr.length - 1 && (
-                        <div className={`w-8 sm:w-12 h-1 ${
-                          isCompleted ? "bg-primary" : "bg-gray-700"
-                        }`} />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Connecting line down */}
-              <div className="flex pl-10">
-                <div className="w-1 h-8 bg-gray-700" />
-              </div>
-
-              {/* Row 3 */}
-              <div className="flex items-center gap-2">
-                {milestones.filter(m => m.row === 3).sort((a, b) => a.col - b.col).map((milestone, idx, arr) => {
-                  const status = getMilestoneStatus(milestone);
-                  const isCompleted = status === "completed" || status === "pending" || status === "credited";
-                  const isAvailable = milestone.hasBadge && status === "completed";
-                  
-                  return (
-                    <div key={milestone.value} className="flex items-center">
-                      <motion.button
-                        onClick={() => {
-                          if (isAvailable) {
-                            setSelectedMilestone(milestone);
-                            setShowModal(true);
-                          }
-                        }}
-                        disabled={!isAvailable}
-                        className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center transition-all ${
-                          isCompleted
-                            ? "border-primary bg-primary/20"
-                            : "border-gray-600 bg-gray-800/50"
-                        } ${isAvailable ? "cursor-pointer hover:scale-105" : "cursor-default"}`}
-                        whileHover={isAvailable ? { scale: 1.05 } : {}}
-                      >
-                        {milestone.hasBadge && isCompleted ? (
-                          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center">
-                            <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-                          </div>
-                        ) : (
-                          <span className={`text-xs sm:text-sm font-bold ${isCompleted ? "text-primary" : "text-gray-500"}`}>
-                            {milestone.label}
-                          </span>
-                        )}
-                      </motion.button>
-                      {idx < arr.length - 1 && (
-                        <div className={`w-8 sm:w-12 h-1 ${
-                          isCompleted ? "bg-primary" : "bg-gray-700"
-                        }`} />
-                      )}
-                    </div>
-                  );
-                })}
+              {/* Row 3: R$ 500K -> [500K Placa] -> R$ 750K -> R$ 1M -> [1M Placa] */}
+              <div className="flex items-center justify-between w-full">
+                {/* R$ 500K */}
+                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 500000 ? "border-primary bg-primary/20" : "border-primary/40 bg-gray-800/50"}`}>
+                  <span className={`text-sm font-bold ${totalRevenue >= 500000 ? "text-primary" : "text-gray-400"}`}>R$ 500K</span>
+                </div>
+                
+                <div className={`h-0.5 w-4 mx-1 flex-shrink-0 ${totalRevenue >= 500000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* 500K Placa Image */}
+                <button
+                  onClick={() => { setPreviewMilestone(milestones.find(m => m.badgeType === "plaque_500k")!); setShowPreview(true); }}
+                  className={`w-[90px] h-[90px] rounded-full border-2 overflow-hidden relative flex-shrink-0 transition-transform hover:scale-105 ${totalRevenue >= 500000 ? "border-primary" : "border-primary/40"}`}
+                >
+                  <Image src="/images/rewards/placa-500k.png" alt="Placa 500K" fill className={`object-cover ${totalRevenue >= 500000 ? "" : "grayscale opacity-50"}`} />
+                </button>
+                
+                <div className={`h-0.5 flex-1 mx-2 ${totalRevenue >= 750000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* R$ 750K */}
+                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 750000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                  <span className={`text-sm font-bold ${totalRevenue >= 750000 ? "text-primary" : "text-gray-400"}`}>R$ 750K</span>
+                </div>
+                
+                <div className={`h-0.5 flex-1 mx-2 ${totalRevenue >= 1000000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* R$ 1M */}
+                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 1000000 ? "border-primary bg-primary/20" : "border-primary/40 bg-gray-800/50"}`}>
+                  <span className={`text-sm font-bold ${totalRevenue >= 1000000 ? "text-primary" : "text-gray-400"}`}>R$ 1M</span>
+                </div>
+                
+                <div className={`h-0.5 w-4 mx-1 flex-shrink-0 ${totalRevenue >= 1000000 ? "bg-primary" : "bg-gray-700"}`} />
+                
+                {/* 1M Placa Image */}
+                <button
+                  onClick={() => { setPreviewMilestone(milestones.find(m => m.badgeType === "plaque_1m")!); setShowPreview(true); }}
+                  className={`w-[90px] h-[90px] rounded-full border-2 overflow-hidden relative flex-shrink-0 transition-transform hover:scale-105 ${totalRevenue >= 1000000 ? "border-primary" : "border-primary/40"}`}
+                >
+                  <Image src="/images/rewards/placa-1m.png" alt="Placa 1M" fill className={`object-cover ${totalRevenue >= 1000000 ? "" : "grayscale opacity-50"}`} />
+                </button>
               </div>
             </div>
           </div>
 
-          {/* Progress Panel */}
-          <div className="w-full lg:w-72 space-y-4">
+          {/* Progress Panel - Grid layout below roadmap */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
             {/* Current Progress Card */}
-            <div className="bg-secondary rounded-xl p-4 border border-border">
+            <div className={`bg-secondary rounded-xl p-4 border ${hasAvailableReward ? "border-primary" : "border-border"}`}>
               <p className="text-sm text-muted-foreground mb-3">Progresso Atual</p>
               
-              {/* Achievement Badge */}
-              <div className={`w-full h-24 rounded-lg bg-gradient-to-br ${currentLevel.color} flex items-center justify-center mb-4`}>
-                <Trophy className="w-12 h-12 text-white/80" />
-              </div>
+              {/* Achievement Badge ou Proxima Premiacao */}
+              {(() => {
+                // Encontrar proxima premiacao nao conquistada
+                const rewardMilestones = milestones.filter(m => m.hasBadge && m.badgeType);
+                const nextRewardMilestone = rewardMilestones.find(m => totalRevenue < m.value);
+                const hasImage = nextRewardMilestone && rewardImages[nextRewardMilestone.badgeType!];
+                
+                if (hasImage && nextRewardMilestone) {
+                  return (
+                    <>
+                      <div className="w-full aspect-[16/9] rounded-lg mb-4 relative overflow-hidden border border-primary/30">
+                        <Image 
+                          src={rewardImages[nextRewardMilestone.badgeType!]} 
+                          alt={achievementNames[nextRewardMilestone.badgeType!]}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <h3 className="text-lg font-bold text-foreground text-center mb-1">
+                        Proxima Premiacao
+                      </h3>
+                      <p className="text-sm text-primary font-medium text-center mb-1">
+                        {achievementNames[nextRewardMilestone.badgeType!]}
+                      </p>
+                      <p className="text-xs text-muted-foreground text-center mb-4">
+                        Meta: {nextRewardMilestone.label} em faturamento
+                      </p>
+                    </>
+                  );
+                }
+                
+                // Se ja conquistou todas as premiacoes
+                return (
+                  <>
+                    <div className={`w-full h-24 rounded-lg bg-gradient-to-br ${currentLevel.color} flex items-center justify-center mb-4`}>
+                      <Trophy className="w-12 h-12 text-white/80" />
+                    </div>
+                    <h3 className="text-lg font-bold text-foreground text-center mb-1">
+                      {currentLevel.name}
+                    </h3>
+                    <p className="text-xs text-muted-foreground text-center mb-4">
+                      {totalRevenue >= 1000000 ? "Parabens! Voce conquistou todas as premiacoes!" : "Continue faturando para desbloquear premiacoes!"}
+                    </p>
+                  </>
+                );
+              })()}
               
-              <h3 className="text-lg font-bold text-foreground text-center mb-1">
-                {currentLevel.name}
-              </h3>
-              <p className="text-xs text-muted-foreground text-center mb-4">
-                Voce esta so comecando a sua jornada!
-              </p>
+              {/* Mensagem de recompensa disponivel */}
+              {hasAvailableReward && (
+                <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 mb-4">
+                  <p className="text-sm text-primary font-medium text-center mb-1">
+                    Voce atingiu uma meta!
+                  </p>
+                  <p className="text-xs text-muted-foreground text-center">
+                    {nextAvailableReward && achievementNames[nextAvailableReward.badgeType!]} disponivel para resgate
+                  </p>
+                </div>
+              )}
 
               <div className="flex items-center justify-between text-sm mb-2">
                 <span className="text-muted-foreground">Status:</span>
-                <span className="text-primary font-medium">Em Progresso</span>
+                <span className="text-primary font-medium">
+                  {hasAvailableReward ? "Recompensa Disponivel" : "Em Progresso"}
+                </span>
               </div>
+
+              {/* Botao Resgatar Premiacao */}
+              {hasAvailableReward && nextAvailableReward && (
+                <Button
+                  onClick={() => {
+                    setSelectedMilestone(nextAvailableReward);
+                    setShowModal(true);
+                  }}
+                  className="w-full bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 mb-4"
+                >
+                  <Gift className="w-4 h-4 mr-2" />
+                  Resgatar Premiacao
+                </Button>
+              )}
 
               {/* Progress bar */}
               {nextMilestone && (
@@ -626,6 +697,102 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
               >
                 Fechar Simulacao
               </Button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Preview Modal - Mostra imagem da premiacao */}
+      <AnimatePresence>
+        {showPreview && previewMilestone && previewMilestone.badgeType && rewardImages[previewMilestone.badgeType] && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+            onClick={() => setShowPreview(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg bg-card rounded-2xl border border-border overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-border">
+                <div>
+                  <h3 className="text-lg font-bold text-foreground">
+                    {achievementNames[previewMilestone.badgeType]}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Meta: {previewMilestone.label}
+                  </p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setShowPreview(false)}>
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              
+              {/* Imagem */}
+              <div className="relative w-full aspect-square max-h-[400px] bg-black">
+                <Image
+                  src={rewardImages[previewMilestone.badgeType]}
+                  alt={achievementNames[previewMilestone.badgeType]}
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              
+              {/* Footer com status */}
+              <div className="p-4 border-t border-border">
+                {totalRevenue >= previewMilestone.value ? (
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-green-500">
+                      <Check className="w-5 h-5" />
+                      <span className="font-medium">Meta Atingida!</span>
+                    </div>
+                    {(() => {
+                      const reward = userRewards.find(r => r.type === previewMilestone.badgeType);
+                      if (!reward) {
+                        return (
+                          <Button
+                            onClick={() => {
+                              setShowPreview(false);
+                              setSelectedMilestone(previewMilestone);
+                              setShowModal(true);
+                            }}
+                            className="bg-primary hover:bg-primary/90"
+                          >
+                            <Gift className="w-4 h-4 mr-2" />
+                            Resgatar
+                          </Button>
+                        );
+                      }
+                      return (
+                        <span className="text-sm text-muted-foreground">
+                          Status: {reward.status === "pending" ? "Solicitado" : "Entregue"}
+                        </span>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Faltam {formatCurrency(previewMilestone.value - totalRevenue)} para desbloquear
+                    </p>
+                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full bg-gradient-to-r from-primary to-orange-400 rounded-full transition-all"
+                        style={{ width: `${Math.min((totalRevenue / previewMilestone.value) * 100, 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {((totalRevenue / previewMilestone.value) * 100).toFixed(0)}% completo
+                    </p>
+                  </div>
+                )}
+              </div>
             </motion.div>
           </motion.div>
         )}

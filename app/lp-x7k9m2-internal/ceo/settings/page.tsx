@@ -2,41 +2,48 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Save, Percent, DollarSign, Shield, Bell } from "lucide-react";
+import { Save, Percent, DollarSign, Shield, Bell, Palette } from "lucide-react";
+import { ThemeToggleWithLabel } from "@/components/theme-toggle";
 
 interface SystemSettings {
-  pix_fee_percentage: string;
+  // Taxas de Deposito (PIX In)
+  pix_percentage_fee: string;
+  pix_fixed_fee: string;
+  white_pix_percentage_fee: string;
+  white_pix_fixed_fee: string;
+  // Taxas de Saque (PIX Out)
+  withdrawal_fee: string;
+  withdrawal_fee_white: string;
+  withdrawal_fee_black: string;
+  // Limites de Deposito
   min_deposit: string;
   max_deposit: string;
+  // Limites de Saque
   min_withdrawal: string;
   max_withdrawal: string;
   daily_withdrawal_limit: string;
-  auto_withdrawal_limit: string;
-  withdrawal_fee_percentage: string;
-  withdrawal_fee_fixed: string;
-  acquirer_withdrawal_fee: string;
-  white_route_percentage: string;
-  white_route_fixed: string;
-  black_route_percentage: string;
-  black_route_fixed: string;
+  auto_withdraw_limit: string;
 }
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<SystemSettings>({
-    pix_fee_percentage: "1.5",
-    min_deposit: "5.00",
+    // Taxas de Deposito (PIX In)
+    pix_percentage_fee: "5.00",
+    pix_fixed_fee: "0.75",
+    white_pix_percentage_fee: "2.00",
+    white_pix_fixed_fee: "0.75",
+    // Taxas de Saque (PIX Out)
+    withdrawal_fee: "7.00",
+    withdrawal_fee_white: "7.00",
+    withdrawal_fee_black: "7.00",
+    // Limites de Deposito
+    min_deposit: "3.00",
     max_deposit: "100000.00",
-    min_withdrawal: "5.00",
+    // Limites de Saque
+    min_withdrawal: "20.00",
     max_withdrawal: "50000.00",
     daily_withdrawal_limit: "100000.00",
-    auto_withdrawal_limit: "500.00",
-    withdrawal_fee_percentage: "1.5",
-    withdrawal_fee_fixed: "0.00",
-    acquirer_withdrawal_fee: "1.00",
-    white_route_percentage: "0.75",
-    white_route_fixed: "1.00",
-    black_route_percentage: "1.5",
-    black_route_fixed: "1.50",
+    auto_withdraw_limit: "150.00",
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -127,30 +134,30 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {/* Taxas por Rota */}
+      {/* Taxas de Deposito (PIX In) */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="glass rounded-2xl p-6"
       >
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 rounded-xl bg-primary/10">
-            <Percent className="w-6 h-6 text-primary" />
+          <div className="p-3 rounded-xl bg-green-500/10">
+            <DollarSign className="w-6 h-6 text-green-400" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold text-white">Taxas por Rota</h2>
+            <h2 className="text-lg font-semibold text-white">Taxas de Deposito (PIX In)</h2>
             <p className="text-sm text-muted-foreground">
-              Configure as taxas para cada tipo de rota
+              Taxas cobradas quando o cliente faz um pagamento PIX
             </p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Rota White */}
-          <div className="p-4 rounded-xl bg-secondary border border-border">
+          {/* Rota Black - PIX In */}
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
             <h3 className="font-medium text-white mb-4 flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-zinc-400" />
-              Rota White
+              <span className="w-3 h-3 rounded-full bg-primary" />
+              Rota Black (PIX In)
             </h3>
             <div className="space-y-4">
               <div>
@@ -160,11 +167,11 @@ export default function SettingsPage() {
                 <input
                   type="number"
                   step="0.01"
-                  value={settings.white_route_percentage}
+                  value={settings.pix_percentage_fee}
                   onChange={(e) =>
                     setSettings({
                       ...settings,
-                      white_route_percentage: e.target.value,
+                      pix_percentage_fee: e.target.value,
                     })
                   }
                   className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
@@ -177,11 +184,11 @@ export default function SettingsPage() {
                 <input
                   type="number"
                   step="0.01"
-                  value={settings.white_route_fixed}
+                  value={settings.pix_fixed_fee}
                   onChange={(e) =>
                     setSettings({
                       ...settings,
-                      white_route_fixed: e.target.value,
+                      pix_fixed_fee: e.target.value,
                     })
                   }
                   className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
@@ -190,11 +197,11 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Rota Black */}
-          <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+          {/* Rota White - PIX In */}
+          <div className="p-4 rounded-xl bg-secondary border border-border">
             <h3 className="font-medium text-white mb-4 flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-primary" />
-              Rota Black
+              <span className="w-3 h-3 rounded-full bg-zinc-400" />
+              Rota White (PIX In)
             </h3>
             <div className="space-y-4">
               <div>
@@ -204,11 +211,11 @@ export default function SettingsPage() {
                 <input
                   type="number"
                   step="0.01"
-                  value={settings.black_route_percentage}
+                  value={settings.white_pix_percentage_fee}
                   onChange={(e) =>
                     setSettings({
                       ...settings,
-                      black_route_percentage: e.target.value,
+                      white_pix_percentage_fee: e.target.value,
                     })
                   }
                   className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
@@ -221,17 +228,96 @@ export default function SettingsPage() {
                 <input
                   type="number"
                   step="0.01"
-                  value={settings.black_route_fixed}
+                  value={settings.white_pix_fixed_fee}
                   onChange={(e) =>
                     setSettings({
                       ...settings,
-                      black_route_fixed: e.target.value,
+                      white_pix_fixed_fee: e.target.value,
                     })
                   }
                   className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
                 />
               </div>
             </div>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Taxas de Saque (PIX Out) */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+        className="glass rounded-2xl p-6"
+      >
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 rounded-xl bg-orange-500/10">
+            <Percent className="w-6 h-6 text-orange-400" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-white">Taxas de Saque (PIX Out)</h2>
+            <p className="text-sm text-muted-foreground">
+              Taxas cobradas quando o usuario solicita saque
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 rounded-xl bg-secondary border border-border">
+            <label className="text-sm text-muted-foreground mb-2 block">
+              Taxa Padrao de Saque (R$)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={settings.withdrawal_fee}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  withdrawal_fee: e.target.value,
+                })
+              }
+              className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              Valor fixo cobrado por saque
+            </p>
+          </div>
+          
+          <div className="p-4 rounded-xl bg-secondary border border-border">
+            <label className="text-sm text-muted-foreground mb-2 block">
+              Taxa Saque Rota White (R$)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={settings.withdrawal_fee_white}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  withdrawal_fee_white: e.target.value,
+                })
+              }
+              className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
+            />
+          </div>
+          
+          <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
+            <label className="text-sm text-muted-foreground mb-2 block">
+              Taxa Saque Rota Black (R$)
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              value={settings.withdrawal_fee_black}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  withdrawal_fee_black: e.target.value,
+                })
+              }
+              className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
+            />
           </div>
         </div>
       </motion.div>
@@ -295,13 +381,13 @@ export default function SettingsPage() {
         className="glass rounded-2xl p-6"
       >
         <div className="flex items-center gap-3 mb-6">
-          <div className="p-3 rounded-xl bg-green-400/10">
-            <DollarSign className="w-6 h-6 text-green-400" />
+          <div className="p-3 rounded-xl bg-purple-400/10">
+            <DollarSign className="w-6 h-6 text-purple-400" />
           </div>
           <div>
             <h2 className="text-lg font-semibold text-white">Limites de Saque</h2>
             <p className="text-sm text-muted-foreground">
-              Configure os limites para solicitações de saque
+              Configure os limites para solicitacoes de saque
             </p>
           </div>
         </div>
@@ -309,7 +395,7 @@ export default function SettingsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
             <label className="text-sm text-muted-foreground mb-2 block">
-              Valor Mínimo (R$)
+              Valor Minimo (R$)
             </label>
             <input
               type="number"
@@ -323,7 +409,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="text-sm text-muted-foreground mb-2 block">
-              Valor Máximo (R$)
+              Valor Maximo (R$)
             </label>
             <input
               type="number"
@@ -337,7 +423,7 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="text-sm text-muted-foreground mb-2 block">
-              Limite Diário (R$)
+              Limite Diario (R$)
             </label>
             <input
               type="number"
@@ -354,101 +440,65 @@ export default function SettingsPage() {
           </div>
           <div>
             <label className="text-sm text-muted-foreground mb-2 block">
-              Automático até (R$)
+              Automatico ate (R$)
             </label>
             <input
               type="number"
               step="0.01"
-              value={settings.auto_withdrawal_limit}
+              value={settings.auto_withdraw_limit}
               onChange={(e) =>
                 setSettings({
                   ...settings,
-                  auto_withdrawal_limit: e.target.value,
+                  auto_withdraw_limit: e.target.value,
                 })
               }
               className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Acima deste valor requer aprovação
+              Acima deste valor requer aprovacao
+            </p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Appearance */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="glass rounded-2xl p-6"
+      >
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 rounded-xl bg-primary/10">
+            <Palette className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Aparencia</h2>
+            <p className="text-sm text-muted-foreground">
+              Personalize a interface do painel administrativo
             </p>
           </div>
         </div>
 
-        {/* Taxas de Saque */}
-        <div className="mt-6 pt-6 border-t border-border">
-          <h3 className="text-md font-medium text-white mb-4">Taxas de Saque</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="text-sm text-muted-foreground mb-2 block">
-                Taxa LegacyPay (%)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={settings.withdrawal_fee_percentage}
-                onChange={(e) =>
-                  setSettings({ ...settings, withdrawal_fee_percentage: e.target.value })
-                }
-                className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Lucro da LegacyPay sobre cada saque
-              </p>
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground mb-2 block">
-                Taxa Fixa LegacyPay (R$)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={settings.withdrawal_fee_fixed}
-                onChange={(e) =>
-                  setSettings({ ...settings, withdrawal_fee_fixed: e.target.value })
-                }
-                className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Valor fixo adicional por saque
-              </p>
-            </div>
-            <div>
-              <label className="text-sm text-muted-foreground mb-2 block">
-                Taxa MisticPay (R$)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={settings.acquirer_withdrawal_fee}
-                onChange={(e) =>
-                  setSettings({ ...settings, acquirer_withdrawal_fee: e.target.value })
-                }
-                className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Taxa fixa da adquirente (custo)
-              </p>
-            </div>
-          </div>
-        </div>
+        <ThemeToggleWithLabel />
       </motion.div>
 
       {/* Info */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
+        transition={{ delay: 0.3 }}
         className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20"
       >
         <div className="flex items-start gap-3">
           <Bell className="w-5 h-5 text-blue-400 mt-0.5" />
           <div>
             <p className="text-sm text-blue-400 font-medium">
-              Alterações em tempo real
+              Alteracoes em tempo real
             </p>
             <p className="text-sm text-blue-300/70">
-              As configurações são aplicadas imediatamente após salvar. Taxas
-              personalizadas de usuários têm prioridade sobre as taxas padrão.
+              As configuracoes sao aplicadas imediatamente apos salvar. Taxas
+              personalizadas de usuarios tem prioridade sobre as taxas padrao.
             </p>
           </div>
         </div>

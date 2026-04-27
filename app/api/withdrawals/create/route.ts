@@ -44,9 +44,9 @@ export async function POST(request: NextRequest) {
     `;
 
     const settings: Record<string, number> = {
-      min_withdrawal: 10,
+      min_withdrawal: 25, // Minimo R$ 25 para rota black
       max_withdrawal: 50000,
-      auto_withdraw_limit: 150,
+      auto_withdraw_limit: 500, // Ate R$ 500 automatico, acima vai para admin
     };
 
     settingsResult.forEach((s: { key: string; value: string }) => {
@@ -118,17 +118,22 @@ export async function POST(request: NextRequest) {
     `;
     const userRouteType = userRouteResult[0]?.route_type || 'black';
     
-    // Rota black: saques automáticos até R$ 500
-    // Rota white: usa limite configurado no sistema (padrão R$ 150)
-    const AUTO_WITHDRAWAL_LIMIT = userRouteType === 'black' ? 500 : settings.auto_withdraw_limit;
-    const requiresApproval = amount > AUTO_WITHDRAWAL_LIMIT;
+    // Saques automáticos até R$ 500, acima disso vai para aprovação manual no painel admin
+    const AUTO_WITHDRAWAL_LIMIT = 500;
+    const requiresApproval = amount >= AUTO_WITHDRAWAL_LIMIT;
 
     // Buscar adquirente baseado na rota do usuário
     const acquirer = await getAcquirerForUser(sessionUser.id);
-    const acquirerId = acquirer?.id || null;
 
     let acquirerWithdrawalId = null;
     let withdrawalStatus = requiresApproval ? "pending" : "processing";
+
+    // Descontar saldo do usuário ANTES de processar
+    await sql`
+      UPDATE profiles 
+      SET balance = balance - ${amount}
+      WHERE id = ${sessionUser.id}
+    `;
 
     // Se não requer aprovação, processar automaticamente
     if (!requiresApproval && acquirer) {
@@ -143,45 +148,47 @@ export async function POST(request: NextRequest) {
       );
 
       if (withdrawalResult.success && withdrawalResult.withdrawalId) {
-        acquirerWithdrawalId = withdrawalResult.withdrawalId;
+        acquirerWithdrawalId = String(withdrawalResult.withdrawalId);
         withdrawalStatus = "processing";
       } else {
-        // Se falhar no processamento automático, deixar como pendente para aprovação manual
+        // Se falhar no processamento automático
         console.error("[Withdrawal] Falha ao processar saque automático:", withdrawalResult.error);
+        
+        // Se o erro é de saldo insuficiente na adquirente, devolver saldo e retornar erro
+        if (withdrawalResult.error?.toLowerCase().includes("saldo insuficiente")) {
+          await sql`
+            UPDATE profiles 
+            SET balance = balance + ${amount}
+            WHERE id = ${sessionUser.id}
+          `;
+          
+          return NextResponse.json({
+            success: false,
+            error: "Sistema temporariamente indisponível para saques. Tente novamente em alguns minutos.",
+          }, { status: 503 });
+        }
+        
+        // Para outros erros, deixar pendente para aprovação manual
         withdrawalStatus = "pending";
       }
     }
 
-    // Descontar saldo do usuário
-    await sql`
-      UPDATE profiles 
-      SET balance = balance - ${amount}
-      WHERE id = ${sessionUser.id}
-    `;
-
-    // Salvar saque no banco
+    // Salvar saque no banco (incluindo acquirer_withdrawal_id diretamente)
     const withdrawalId = crypto.randomUUID();
     const savedResult = await sql`
       INSERT INTO withdrawals (
         id, user_id, amount, fee, net_amount,
-        pix_key, pix_key_type, status, created_at
+        pix_key, pix_key_type, status, acquirer_withdrawal_id, created_at
       )
       VALUES (
         ${withdrawalId}, ${sessionUser.id},
         ${amount}, ${totalFee}, ${netAmount}, ${pixKey}, ${pixKeyType || mapPixKeyType(pixKey)},
-        ${withdrawalStatus}, NOW()
+        ${withdrawalStatus}, ${acquirerWithdrawalId}, NOW()
       )
-      RETURNING id
+      RETURNING id, acquirer_withdrawal_id
     `;
-
-    // Atualizar com ID da adquirente se disponível
-    if (acquirerWithdrawalId) {
-      await sql`
-        UPDATE withdrawals 
-        SET acquirer_withdrawal_id = ${acquirerWithdrawalId}
-        WHERE id = ${withdrawalId}
-      `;
-    }
+    
+    console.log(`[Withdrawal] Saque salvo: id=${withdrawalId}, acquirer_id=${acquirerWithdrawalId}, status=${withdrawalStatus}`);
 
     if (savedResult.length === 0) {
       // Reverter saldo se falhar ao salvar

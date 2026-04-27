@@ -14,28 +14,58 @@ export async function GET(request: NextRequest) {
     }
 
     const base64Credentials = authHeader.slice(6);
-    const credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
+    let credentials: string;
+    try {
+      credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Credenciais mal formatadas", code: "INVALID_CREDENTIALS" },
+        { status: 401 }
+      );
+    }
     const [clientId, clientSecret] = credentials.split(":");
 
-    // Buscar usuário pelas credenciais de integração
-    const profileResult = await sql`
-      SELECT id, balance, kyc_status, api_enabled, is_active
-      FROM profiles
-      WHERE client_id = ${clientId} AND client_secret = ${clientSecret}
-    `;
-
-    if (profileResult.length === 0) {
+    if (!clientId || !clientSecret) {
       return NextResponse.json(
         { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
         { status: 401 }
       );
     }
 
-    const profile = profileResult[0];
+    // Buscar integração pelas credenciais na tabela user_integrations
+    const integrationResult = await sql`
+      SELECT ui.user_id, ui.is_active as integration_active,
+             p.id as profile_id, p.balance, p.kyc_status, p.is_active
+      FROM user_integrations ui
+      INNER JOIN profiles p ON p.id = ui.user_id
+      WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
+    `;
 
-    if (!profile.is_active || !profile.api_enabled) {
+    if (integrationResult.length === 0) {
       return NextResponse.json(
-        { success: false, error: "Integração desativada", code: "INTEGRATION_DISABLED" },
+        { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
+        { status: 401 }
+      );
+    }
+
+    const integration = integrationResult[0];
+    const profile = {
+      id: integration.user_id,
+      balance: integration.balance,
+      kyc_status: integration.kyc_status,
+      is_active: integration.is_active
+    };
+
+    if (!integration.integration_active) {
+      return NextResponse.json(
+        { success: false, error: "Esta integração está desativada", code: "INTEGRATION_DISABLED" },
+        { status: 403 }
+      );
+    }
+
+    if (!profile.is_active) {
+      return NextResponse.json(
+        { success: false, error: "Conta desativada", code: "ACCOUNT_DISABLED" },
         { status: 403 }
       );
     }

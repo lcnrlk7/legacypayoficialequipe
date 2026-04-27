@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
-import { notifyTransactionApproved } from "@/lib/push-notifications";
+import { 
+  notifyWithdrawalCompleted, 
+  notifyWithdrawalFailed, 
+  notifyPixPaid,
+  notifyDeposit 
+} from "@/lib/notifications";
 
 /**
  * Webhook para receber notificações da Medusa Payments
@@ -10,36 +15,40 @@ import { notifyTransactionApproved } from "@/lib/push-notifications";
 
 /**
  * MEDUSA STATUS (conforme documentação oficial)
+ * 
+ * Status de TRANSFERENCIA (TRANSFER_UPDATE):
+ * - LIQUIDATED: Transferência concluída com sucesso
+ * - PENDING: Aguardando processamento
+ * - FAILED: Falha na transferência
+ * - CANCELLED: Transferência cancelada
+ * 
+ * Status de PAGAMENTO:
  * - waiting_payment: Pagamento ainda não realizado
  * - pending: Em processamento
  * - approved: Confirmado com sucesso
  * - refused: Pagamento negado
- * - in_protest: Em disputa/contestação
- * - refunded: Valor devolvido ao pagador
  * - paid: Pagamento efetivado
  * - cancelled: Operação encerrada sem sucesso
- * - chargeback: Estorno iniciado pelo cliente ou instituição financeira
  */
 const MEDUSA_STATUS_MAP: Record<string, string> = {
-  // Status de aguardando/processando -> pending
+  // Status de transferência/saque
+  "LIQUIDATED": "completed",
+  "liquidated": "completed",
+  "PENDING": "pending",
+  "FAILED": "failed",
+  "CANCELLED": "failed",
+  
+  // Status de pagamento
   waiting_payment: "pending",
   pending: "pending",
   processing: "pending",
-  
-  // Status de sucesso -> completed
   approved: "completed",
   paid: "completed",
-  
-  // Status de falha -> failed
   refused: "failed",
-  cancelled: "failed", // Cancelamento também é tratado como falha para saques
-  
-  // Status de disputa/estorno
+  cancelled: "failed",
   in_protest: "disputed",
   refunded: "refunded",
   chargeback: "chargeback",
-  
-  // Fallbacks para compatibilidade
   completed: "completed",
   failed: "failed",
   expired: "expired",
@@ -86,7 +95,7 @@ interface MedusaTransactionPayload {
   };
 }
 
-// Payload de SAQUE (Withdrawal/Cash-out)
+// Payload de SAQUE (Withdrawal/Cash-out) - formato antigo
 interface MedusaWithdrawalPayload {
   id: number;
   status: string;
@@ -95,13 +104,201 @@ interface MedusaWithdrawalPayload {
   taxa?: string | number;
   pixKey?: string;
   created?: string;
-  // Campos alternativos que podem vir
   withdrawal_id?: number;
   transaction_id?: number;
 }
 
+// Payload de TRANSFERENCIA (TRANSFER_UPDATE) - formato novo/correto
+interface MedusaTransferUpdatePayload {
+  version: string; // "v1"
+  event: string; // "TRANSFER_UPDATE"
+  object: string; // "Transfer"
+  date: string;
+  transfer: {
+    id_transaction: number;
+    correlation_id: string; // Este é o nosso ID de referência
+    status: string; // "LIQUIDATED", "PENDING", "FAILED", "CANCELLED"
+    value: number; // Valor em centavos
+    end_to_end: string;
+  };
+  destination: {
+    name: string;
+    document: string;
+    pix_key: string;
+    bank: {
+      name: string;
+      ispb: string;
+    };
+  };
+}
+
 // União dos tipos possíveis
-type MedusaWebhookPayload = MedusaTransactionPayload | MedusaWithdrawalPayload;
+type MedusaWebhookPayload = MedusaTransactionPayload | MedusaWithdrawalPayload | MedusaTransferUpdatePayload;
+
+/**
+ * Handler para o formato TRANSFER_UPDATE (saques)
+ * Exemplo de payload:
+ * {
+ *   "version": "v1",
+ *   "event": "TRANSFER_UPDATE",
+ *   "object": "Transfer",
+ *   "date": "2026-04-27T15:51:03.132+00:00",
+ *   "transfer": {
+ *     "id_transaction": 11506,
+ *     "correlation_id": "610fb233-1071-4121-a152-0824c03dc29d",
+ *     "status": "LIQUIDATED",
+ *     "value": 999,
+ *     "end_to_end": "E3729393020260427155045350ce7da7"
+ *   },
+ *   "destination": { ... }
+ * }
+ */
+async function handleTransferUpdate(payload: MedusaTransferUpdatePayload) {
+  const { transfer, destination, date } = payload;
+  const { id_transaction, correlation_id, status, value, end_to_end } = transfer;
+
+  console.log(`[Medusa Webhook] TRANSFER_UPDATE: id=${id_transaction}, correlation=${correlation_id}, status=${status}, value=${value}`);
+
+  // Mapear status da Medusa para status interno
+  const internalStatus = MEDUSA_STATUS_MAP[status] || status.toLowerCase();
+  console.log(`[Medusa Webhook] Status mapeado: ${status} -> ${internalStatus}`);
+
+  // Buscar saque pelo correlation_id (nosso ID de referencia) ou pelo acquirer_withdrawal_id
+  const withdrawals = await sql`
+    SELECT w.id, w.user_id, w.amount, w.fee, w.net_amount, w.status, w.pix_key,
+           p.email as profile_email, p.name as profile_name, p.balance as profile_balance
+    FROM withdrawals w
+    LEFT JOIN profiles p ON w.user_id = p.id
+    WHERE w.acquirer_withdrawal_id = ${String(id_transaction)}
+       OR w.acquirer_withdrawal_id = ${correlation_id}
+       OR w.id = ${correlation_id}
+  `;
+
+  if (withdrawals.length === 0) {
+    console.log(`[Medusa Webhook] Saque não encontrado. id_transaction=${id_transaction}, correlation_id=${correlation_id}`);
+    
+    // Tentar buscar pelo valor e PIX key (fallback)
+    const pixKey = destination?.pix_key;
+    if (pixKey) {
+      const fallbackSearch = await sql`
+        SELECT w.id, w.user_id, w.amount, w.fee, w.net_amount, w.status, w.pix_key,
+               p.email as profile_email, p.name as profile_name, p.balance as profile_balance
+        FROM withdrawals w
+        LEFT JOIN profiles p ON w.user_id = p.id
+        WHERE w.pix_key = ${pixKey}
+          AND w.status = 'processing'
+        ORDER BY w.created_at DESC
+        LIMIT 1
+      `;
+      
+      if (fallbackSearch.length > 0) {
+        console.log(`[Medusa Webhook] Encontrado saque por fallback (pix_key): ${fallbackSearch[0].id}`);
+        return await updateWithdrawalStatus(fallbackSearch[0], internalStatus, {
+          id_transaction,
+          correlation_id,
+          end_to_end,
+          value,
+          date
+        });
+      }
+    }
+    
+    return NextResponse.json({ success: true, message: "Saque não encontrado no sistema" });
+  }
+
+  const withdrawal = withdrawals[0];
+  return await updateWithdrawalStatus(withdrawal, internalStatus, {
+    id_transaction,
+    correlation_id,
+    end_to_end,
+    value,
+    date
+  });
+}
+
+/**
+ * Atualiza o status de um saque
+ */
+async function updateWithdrawalStatus(
+  withdrawal: Record<string, unknown>,
+  internalStatus: string,
+  metadata: { id_transaction: number; correlation_id: string; end_to_end: string; value: number; date: string }
+) {
+  // Se o status já é final, não atualizar
+  if (withdrawal.status === "completed" || withdrawal.status === "failed" || withdrawal.status === "rejected") {
+    console.log(`[Medusa Webhook] Saque ${withdrawal.id} já está em status final: ${withdrawal.status}`);
+    return NextResponse.json({ success: true, message: "Saque já processado" });
+  }
+
+  // Determinar novo status
+  let newStatus = withdrawal.status as string;
+  const userId = withdrawal.user_id as string;
+  const netAmount = Number(withdrawal.net_amount) || 0;
+  const pixKey = withdrawal.pix_key as string;
+  
+  if (internalStatus === "completed") {
+    newStatus = "completed";
+    
+    // Atualizar status do saque
+    await sql`
+      UPDATE withdrawals 
+      SET 
+        status = 'completed', 
+        processed_at = NOW(),
+        acquirer_withdrawal_id = COALESCE(acquirer_withdrawal_id, ${String(metadata.id_transaction)})
+      WHERE id = ${withdrawal.id}
+    `;
+    
+    console.log(`[Medusa Webhook] Saque ${withdrawal.id} CONCLUIDO! Valor: R$ ${netAmount.toFixed(2)}`);
+    
+    // Notificar usuario usando a funcao de notificacao
+    await notifyWithdrawalCompleted(userId, netAmount, pixKey, metadata.end_to_end);
+    
+  } else if (internalStatus === "failed" || internalStatus === "cancelled") {
+    newStatus = "failed";
+    
+    // Se o saque falhou, devolver o saldo ao usuario
+    const refundAmount = Number(withdrawal.amount) || 0;
+    
+    await sql`
+      UPDATE profiles SET balance = balance + ${refundAmount}
+      WHERE id = ${userId}
+    `;
+    
+    // Atualizar status do saque
+    await sql`
+      UPDATE withdrawals 
+      SET 
+        status = 'failed', 
+        processed_at = NOW()
+      WHERE id = ${withdrawal.id}
+    `;
+    
+    console.log(`[Medusa Webhook] Saque ${withdrawal.id} FALHOU. Devolvido R$ ${refundAmount.toFixed(2)} para usuario ${userId}`);
+    
+    // Notificar usuario sobre a falha
+    await notifyWithdrawalFailed(userId, refundAmount, "Falha no processamento pela adquirente");
+  } else {
+    // Apenas atualizar status se mudou
+    await sql`
+      UPDATE withdrawals 
+      SET 
+        status = ${internalStatus}, 
+        acquirer_withdrawal_id = COALESCE(acquirer_withdrawal_id, ${String(metadata.id_transaction)})
+      WHERE id = ${withdrawal.id}
+    `;
+  }
+
+  console.log(`[Medusa Webhook] Saque ${withdrawal.id} atualizado para status: ${newStatus}`);
+
+  return NextResponse.json({ 
+    success: true, 
+    type: "withdrawal", 
+    withdrawal_id: withdrawal.id,
+    status: newStatus,
+    end_to_end: metadata.end_to_end
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -112,11 +309,16 @@ export async function POST(request: NextRequest) {
 
     console.log("[Medusa Webhook] Payload parseado:", JSON.stringify(payload, null, 2));
 
+    // Detectar formato TRANSFER_UPDATE (formato novo de saques)
+    if (payload.event === "TRANSFER_UPDATE" && payload.transfer) {
+      return await handleTransferUpdate(payload as MedusaTransferUpdatePayload);
+    }
+
     // Identificar o ID - pode vir em diferentes campos dependendo se é venda ou saque
     const transactionId = payload.id || payload.withdrawal_id || payload.transaction_id;
     const status = payload.status;
     
-    // Detectar se é um callback de SAQUE
+    // Detectar se é um callback de SAQUE (formato antigo)
     // Formato de saque: { id, status, message: "cash-out", amount, taxa, pixKey, created }
     const isWithdrawalCallback = payload.message === "cash-out" || payload.pixKey !== undefined || payload.taxa !== undefined;
 
@@ -145,70 +347,54 @@ export async function POST(request: NextRequest) {
     `;
 
     if (withdrawals.length > 0) {
-      // É um callback de saque
+      // E um callback de saque
       const withdrawal = withdrawals[0];
+      const userId = withdrawal.user_id as string;
+      const netAmount = Number(withdrawal.net_amount) || 0;
+      const pixKey = withdrawal.pix_key as string;
       
-      // Se o status já é final, não atualizar
+      // Se o status ja e final, nao atualizar
       if (withdrawal.status === "completed" || withdrawal.status === "failed" || withdrawal.status === "rejected") {
-        console.log(`[Medusa Webhook] Saque ${transactionId} já está em status final: ${withdrawal.status}`);
-        return NextResponse.json({ success: true, message: "Saque já processado" });
+        console.log(`[Medusa Webhook] Saque ${transactionId} ja esta em status final: ${withdrawal.status}`);
+        return NextResponse.json({ success: true, message: "Saque ja processado" });
       }
 
       // Mapear status para saque
       let withdrawalStatus = withdrawal.status;
       if (internalStatus === "completed") {
         withdrawalStatus = "completed";
+        
+        await sql`
+          UPDATE withdrawals 
+          SET status = 'completed', processed_at = NOW()
+          WHERE id = ${withdrawal.id}
+        `;
+        
+        console.log(`[Medusa Webhook] Saque ${transactionId} CONCLUIDO! R$ ${netAmount.toFixed(2)}`);
+        
+        // Notificar usuario
+        await notifyWithdrawalCompleted(userId, netAmount, pixKey);
+        
       } else if (internalStatus === "failed" || internalStatus === "cancelled") {
         withdrawalStatus = "failed";
         
-        // Se o saque falhou, devolver o saldo ao usuário
-        const currentBalance = Number(withdrawal.profile_balance) || 0;
         const refundAmount = Number(withdrawal.amount) || 0;
-        const newBalance = currentBalance + refundAmount;
         
         await sql`
-          UPDATE profiles SET balance = ${newBalance}
-          WHERE id = ${withdrawal.user_id}
+          UPDATE profiles SET balance = balance + ${refundAmount}
+          WHERE id = ${userId}
         `;
         
-        console.log(`[Medusa Webhook] Saque ${transactionId} falhou. Devolvido R$ ${refundAmount.toFixed(2)} para usuário ${withdrawal.user_id}`);
+        await sql`
+          UPDATE withdrawals 
+          SET status = 'failed', processed_at = NOW()
+          WHERE id = ${withdrawal.id}
+        `;
         
-        // Notificar usuário sobre a falha
-        await sql`
-          INSERT INTO user_notifications (id, user_id, title, message, type, created_at)
-          VALUES (
-            ${crypto.randomUUID()},
-            ${withdrawal.user_id},
-            'Saque Falhou',
-            ${`Seu saque de R$ ${refundAmount.toFixed(2)} falhou. O valor foi devolvido ao seu saldo.`},
-            'error',
-            NOW()
-          )
-        `;
-      }
-
-      // Atualizar status do saque
-      await sql`
-        UPDATE withdrawals 
-        SET status = ${withdrawalStatus}, processed_at = NOW()
-        WHERE id = ${withdrawal.id}
-      `;
-
-      console.log(`[Medusa Webhook] Saque ${transactionId} atualizado para status: ${withdrawalStatus}`);
-
-      // Se saque completado, notificar usuário
-      if (withdrawalStatus === "completed") {
-        await sql`
-          INSERT INTO user_notifications (id, user_id, title, message, type, created_at)
-          VALUES (
-            ${crypto.randomUUID()},
-            ${withdrawal.user_id},
-            'Saque Concluído!',
-            ${`Seu saque de R$ ${Number(withdrawal.net_amount).toFixed(2)} foi enviado para a chave PIX ${withdrawal.pix_key}.`},
-            'success',
-            NOW()
-          )
-        `;
+        console.log(`[Medusa Webhook] Saque ${transactionId} FALHOU. Devolvido R$ ${refundAmount.toFixed(2)}`);
+        
+        // Notificar usuario sobre a falha
+        await notifyWithdrawalFailed(userId, refundAmount, "Falha no processamento");
       }
 
       return NextResponse.json({ success: true, type: "withdrawal", status: withdrawalStatus });
@@ -268,7 +454,10 @@ export async function POST(request: NextRequest) {
         WHERE id = ${transaction.user_id}
       `;
 
-      console.log(`[Medusa Webhook] Creditado R$ ${netAmount.toFixed(2)} para usuário ${transaction.user_id}. Novo saldo: R$ ${newBalance.toFixed(2)}`);
+      console.log(`[Medusa Webhook] Creditado R$ ${netAmount.toFixed(2)} para usuario ${transaction.user_id}. Novo saldo: R$ ${newBalance.toFixed(2)}`);
+      
+      // Notificar usuario sobre o deposito/PIX recebido
+      await notifyPixPaid(transaction.user_id as string, netAmount, customer?.name);
 
       // Registrar audit log
       await sql`

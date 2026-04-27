@@ -19,6 +19,7 @@ import {
   FileText,
   Gift,
   Bell,
+  BellRing,
   ScrollText,
   Building2,
   Settings,
@@ -43,6 +44,7 @@ const menuItems: { href: string; icon: LucideIcon; label: string; showBadge?: bo
   { href: "/admin/rewards", icon: Gift, label: "Premiacoes" },
   { href: "/admin/affiliates", icon: Users, label: "Afiliados" },
   { href: "/admin/notifications", icon: Bell, label: "Notificacoes" },
+  { href: "/admin/lp-x7k9m2-internal/push", icon: BellRing, label: "Push Notifications" },
   { href: "/admin/webhooks", icon: Webhook, label: "Webhooks" },
   { href: "/admin/logs", icon: ScrollText, label: "Logs" },
   { href: "/admin/acquirers", icon: Building2, label: "Adquirentes" },
@@ -68,7 +70,7 @@ export function AdminSidebar() {
           <Image src="/logo-icon.png" alt="LegacyPay" width={40} height={40} />
           <div>
             <div className="flex items-baseline">
-              <span className="text-xl font-bold text-white">Legacy</span>
+              <span className="text-xl font-bold text-foreground">Legacy</span>
               <span className="text-xl font-bold text-primary">Pay</span>
             </div>
             <p className="text-xs text-muted-foreground">Painel Admin</p>

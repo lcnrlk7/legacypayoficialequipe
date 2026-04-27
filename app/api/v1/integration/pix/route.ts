@@ -39,26 +39,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar usuário pelas credenciais
-    const profileResult = await sql`
-      SELECT id, name, kyc_status, route_type, balance, api_enabled, is_active
-      FROM profiles
-      WHERE client_id = ${clientId} AND client_secret = ${clientSecret}
+    // Buscar integração pelas credenciais na tabela user_integrations
+    const integrationResult = await sql`
+      SELECT ui.id as integration_id, ui.user_id, ui.name as integration_name, ui.is_active as integration_active,
+             ui.webhook_url, ui.webhook_secret,
+             p.id as profile_id, p.name, p.kyc_status, p.route_type, p.balance, p.api_enabled, p.is_active
+      FROM user_integrations ui
+      INNER JOIN profiles p ON p.id = ui.user_id
+      WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
     `;
 
-    if (profileResult.length === 0) {
+    if (integrationResult.length === 0) {
       return NextResponse.json(
         { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
         { status: 401 }
       );
     }
 
-    const profile = profileResult[0];
+    const integration = integrationResult[0];
+    const profile = {
+      id: integration.user_id,
+      name: integration.name,
+      kyc_status: integration.kyc_status,
+      route_type: integration.route_type,
+      balance: integration.balance,
+      api_enabled: integration.api_enabled,
+      is_active: integration.is_active
+    };
 
-    // Verificar se a integração está ativa
-    if (!profile.is_active || !profile.api_enabled) {
+    // Verificar se a integração específica está ativa
+    if (!integration.integration_active) {
       return NextResponse.json(
-        { success: false, error: "Integração desativada", code: "INTEGRATION_DISABLED" },
+        { success: false, error: "Esta integração está desativada", code: "INTEGRATION_DISABLED" },
+        { status: 403 }
+      );
+    }
+
+    // Verificar se o usuário está ativo
+    if (!profile.is_active) {
+      return NextResponse.json(
+        { success: false, error: "Conta desativada", code: "ACCOUNT_DISABLED" },
         { status: 403 }
       );
     }
@@ -66,7 +86,7 @@ export async function POST(request: NextRequest) {
     // Verificar KYC do proprietário
     if (profile.kyc_status !== "approved") {
       return NextResponse.json(
-        { success: false, error: "KYC não aprovado. Complete a verificação de identidade.", code: "KYC_REQUIRED" },
+        { success: false, error: "KYC não aprovado. Complete a verificação de identidade no dashboard.", code: "KYC_REQUIRED" },
         { status: 403 }
       );
     }
@@ -209,24 +229,48 @@ export async function GET(request: NextRequest) {
     }
 
     const base64Credentials = authHeader.slice(6);
-    const credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
+    let credentials: string;
+    try {
+      credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Credenciais mal formatadas", code: "INVALID_CREDENTIALS" },
+        { status: 401 }
+      );
+    }
     const [clientId, clientSecret] = credentials.split(":");
 
-    // Buscar usuário pelas credenciais
-    const profileResult = await sql`
-      SELECT id, api_enabled, is_active
-      FROM profiles
-      WHERE client_id = ${clientId} AND client_secret = ${clientSecret}
-    `;
-
-    if (profileResult.length === 0) {
+    if (!clientId || !clientSecret) {
       return NextResponse.json(
         { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
         { status: 401 }
       );
     }
 
-    const profile = profileResult[0];
+    // Buscar integração pelas credenciais na tabela user_integrations
+    const integrationResult = await sql`
+      SELECT ui.user_id, ui.is_active as integration_active
+      FROM user_integrations ui
+      WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
+    `;
+
+    if (integrationResult.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
+        { status: 401 }
+      );
+    }
+
+    const integration = integrationResult[0];
+    
+    if (!integration.integration_active) {
+      return NextResponse.json(
+        { success: false, error: "Esta integração está desativada", code: "INTEGRATION_DISABLED" },
+        { status: 403 }
+      );
+    }
+
+    const userId = integration.user_id;
 
     // Buscar transação
     const { searchParams } = new URL(request.url);
@@ -246,7 +290,7 @@ export async function GET(request: NextRequest) {
         SELECT id, external_id, amount, fee, net_amount, status, description, 
                payer_name, payer_document, created_at, updated_at
         FROM transactions 
-        WHERE id = ${transactionId} AND user_id = ${profile.id}
+        WHERE id = ${transactionId} AND user_id = ${userId}
       `;
       transaction = result[0];
     } else {
@@ -254,7 +298,7 @@ export async function GET(request: NextRequest) {
         SELECT id, external_id, amount, fee, net_amount, status, description, 
                payer_name, payer_document, created_at, updated_at
         FROM transactions 
-        WHERE external_id = ${externalId} AND user_id = ${profile.id}
+        WHERE external_id = ${externalId} AND user_id = ${userId}
       `;
       transaction = result[0];
     }
