@@ -52,8 +52,8 @@ INSERT INTO acquirers (
   'Medusa Payments', 
   'medusa', 
   'https://api.medusapayments.com/v1',
-  '', -- A ser configurado manualmente: MEDUSA_SECRET_KEY
-  '', -- A ser configurado manualmente: MEDUSA_LICENSE_KEY (necessário para saques)
+  'sk_live_SEU_SECRET_KEY', -- Substituir pelo MEDUSA_SECRET_KEY real
+  'lic_6ed30e4bb4b87b4daa17bc9b6a19cdc5', -- MEDUSA_LICENSE_KEY para saques
   TRUE, 
   2, 
   5.00,  -- 5% de taxa
