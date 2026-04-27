@@ -914,28 +914,103 @@ export default function IntegrationPage() {
 
                 {/* Explicacao Credenciais */}
                 <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-xl p-4">
-                  <h4 className="text-sm font-semibold text-foreground mb-3">Suas Credenciais</h4>
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Tipos de Credenciais</h4>
                   <div className="space-y-3 text-xs">
+                    
+                    {/* API Key */}
                     <div className="bg-background/50 rounded-lg p-3 border border-border">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
-                        <span className="font-semibold text-foreground">Client ID</span>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                          <span className="font-semibold text-foreground">API Key (Chave API)</span>
+                        </div>
+                        <span className="text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded">Dashboard &gt; API</span>
                       </div>
-                      <p className="text-muted-foreground">Identificador da sua integracao. Comeca com <code className="text-primary">cli_</code></p>
+                      <p className="text-muted-foreground mb-2">
+                        Chave simples para testes rapidos. Comeca com <code className="text-primary">lp_</code>
+                      </p>
+                      <div className="bg-secondary/50 rounded p-2 text-[10px]">
+                        <p className="text-muted-foreground"><strong>Quando usar:</strong> Testes locais, scripts simples, primeiros testes da API</p>
+                        <p className="text-muted-foreground"><strong>Como usar:</strong> Envie no body da requisicao como <code className="text-primary">apiKey</code></p>
+                      </div>
                     </div>
+
+                    {/* Client ID */}
                     <div className="bg-background/50 rounded-lg p-3 border border-border">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-                        <span className="font-semibold text-foreground">Client Secret</span>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                          <span className="font-semibold text-foreground">Client ID</span>
+                        </div>
+                        <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded">Integracao API</span>
                       </div>
-                      <p className="text-muted-foreground">Senha secreta da integracao. Comeca com <code className="text-primary">sec_</code>. <strong>Nunca compartilhe!</strong></p>
+                      <p className="text-muted-foreground mb-2">
+                        Identificador da sua integracao. Comeca com <code className="text-primary">cli_</code>
+                      </p>
+                      <div className="bg-secondary/50 rounded p-2 text-[10px]">
+                        <p className="text-muted-foreground"><strong>Quando usar:</strong> Bots Discord, sites em producao, aplicacoes externas</p>
+                        <p className="text-muted-foreground"><strong>Como usar:</strong> Junto com Client Secret no header Authorization (Basic Auth)</p>
+                      </div>
                     </div>
+
+                    {/* Client Secret */}
                     <div className="bg-background/50 rounded-lg p-3 border border-border">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                        <span className="font-semibold text-foreground">Webhook Secret</span>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                          <span className="font-semibold text-foreground">Client Secret</span>
+                        </div>
+                        <span className="text-[10px] bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded">SECRETO</span>
                       </div>
-                      <p className="text-muted-foreground">Para validar notificacoes. Comeca com <code className="text-primary">whsec_</code></p>
+                      <p className="text-muted-foreground mb-2">
+                        Senha secreta da integracao. Comeca com <code className="text-primary">sec_</code>
+                      </p>
+                      <div className="bg-red-500/10 rounded p-2 text-[10px]">
+                        <p className="text-red-400"><strong>NUNCA compartilhe!</strong> Mantenha seguro no seu servidor/backend.</p>
+                      </div>
+                    </div>
+
+                    {/* Webhook Secret */}
+                    <div className="bg-background/50 rounded-lg p-3 border border-border">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                          <span className="font-semibold text-foreground">Webhook Secret</span>
+                        </div>
+                        <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded">Seguranca</span>
+                      </div>
+                      <p className="text-muted-foreground mb-2">
+                        Para validar notificacoes recebidas. Comeca com <code className="text-primary">whsec_</code>
+                      </p>
+                      <div className="bg-secondary/50 rounded p-2 text-[10px]">
+                        <p className="text-muted-foreground"><strong>Quando usar:</strong> Ao receber webhooks de pagamento confirmado</p>
+                        <p className="text-muted-foreground"><strong>Como usar:</strong> Valide o header <code className="text-primary">X-LegacyPay-Signature</code></p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Qual usar? */}
+                <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4">
+                  <h4 className="text-sm font-semibold text-blue-400 mb-2">Qual credencial devo usar?</h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-start gap-2">
+                      <span className="text-blue-400 mt-0.5">→</span>
+                      <p className="text-muted-foreground">
+                        <strong className="text-foreground">Testes rapidos:</strong> Use a <code className="text-primary">API Key</code> (lp_) no body da requisicao
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-blue-400 mt-0.5">→</span>
+                      <p className="text-muted-foreground">
+                        <strong className="text-foreground">Bot Discord / Producao:</strong> Use <code className="text-primary">Client ID + Client Secret</code> com Basic Auth
+                      </p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-blue-400 mt-0.5">→</span>
+                      <p className="text-muted-foreground">
+                        <strong className="text-foreground">Receber confirmacoes:</strong> Configure o <code className="text-primary">Webhook URL</code> e use o <code className="text-primary">Webhook Secret</code> para validar
+                      </p>
                     </div>
                   </div>
                 </div>
