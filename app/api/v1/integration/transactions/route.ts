@@ -13,28 +13,53 @@ export async function GET(request: NextRequest) {
     }
 
     const base64Credentials = authHeader.slice(6);
-    const credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
+    let credentials: string;
+    try {
+      credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Credenciais mal formatadas", code: "INVALID_CREDENTIALS" },
+        { status: 401 }
+      );
+    }
     const [clientId, clientSecret] = credentials.split(":");
 
-    // Buscar usuário pelas credenciais
-    const profileResult = await sql`
-      SELECT id, api_enabled, is_active
-      FROM profiles
-      WHERE client_id = ${clientId} AND client_secret = ${clientSecret}
-    `;
-
-    if (profileResult.length === 0) {
+    if (!clientId || !clientSecret) {
       return NextResponse.json(
         { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
         { status: 401 }
       );
     }
 
-    const profile = profileResult[0];
+    // Buscar integração pelas credenciais na tabela user_integrations
+    const integrationResult = await sql`
+      SELECT ui.user_id, ui.is_active as integration_active,
+             p.is_active
+      FROM user_integrations ui
+      INNER JOIN profiles p ON p.id = ui.user_id
+      WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
+    `;
 
-    if (!profile.is_active || !profile.api_enabled) {
+    if (integrationResult.length === 0) {
       return NextResponse.json(
-        { success: false, error: "Integração desativada", code: "INTEGRATION_DISABLED" },
+        { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
+        { status: 401 }
+      );
+    }
+
+    const integration = integrationResult[0];
+    const userId = integration.user_id;
+
+    if (!integration.integration_active) {
+      return NextResponse.json(
+        { success: false, error: "Esta integração está desativada", code: "INTEGRATION_DISABLED" },
+        { status: 403 }
+      );
+    }
+
+    if (!integration.is_active) {
+      return NextResponse.json(
+        { success: false, error: "Conta desativada", code: "ACCOUNT_DISABLED" },
         { status: 403 }
       );
     }
@@ -55,7 +80,7 @@ export async function GET(request: NextRequest) {
         SELECT id, external_id, amount, fee, net_amount, status, description, 
                payer_name, payer_document, created_at, updated_at
         FROM transactions 
-        WHERE user_id = ${profile.id} 
+        WHERE user_id = ${userId} 
           AND status = ${status}
           AND (${startDate}::timestamp IS NULL OR created_at >= ${startDate}::timestamp)
           AND (${endDate}::timestamp IS NULL OR created_at <= ${endDate}::timestamp)
@@ -67,7 +92,7 @@ export async function GET(request: NextRequest) {
         SELECT id, external_id, amount, fee, net_amount, status, description, 
                payer_name, payer_document, created_at, updated_at
         FROM transactions 
-        WHERE user_id = ${profile.id}
+        WHERE user_id = ${userId}
           AND (${startDate}::timestamp IS NULL OR created_at >= ${startDate}::timestamp)
           AND (${endDate}::timestamp IS NULL OR created_at <= ${endDate}::timestamp)
         ORDER BY created_at DESC
@@ -77,7 +102,7 @@ export async function GET(request: NextRequest) {
 
     // Contar total
     const countResult = await sql`
-      SELECT COUNT(*) as total FROM transactions WHERE user_id = ${profile.id}
+      SELECT COUNT(*) as total FROM transactions WHERE user_id = ${userId}
     `;
 
     return NextResponse.json({
