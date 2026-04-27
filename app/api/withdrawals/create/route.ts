@@ -173,29 +173,22 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Salvar saque no banco
+    // Salvar saque no banco (incluindo acquirer_withdrawal_id diretamente)
     const withdrawalId = crypto.randomUUID();
     const savedResult = await sql`
       INSERT INTO withdrawals (
         id, user_id, amount, fee, net_amount,
-        pix_key, pix_key_type, status, created_at
+        pix_key, pix_key_type, status, acquirer_withdrawal_id, created_at
       )
       VALUES (
         ${withdrawalId}, ${sessionUser.id},
         ${amount}, ${totalFee}, ${netAmount}, ${pixKey}, ${pixKeyType || mapPixKeyType(pixKey)},
-        ${withdrawalStatus}, NOW()
+        ${withdrawalStatus}, ${acquirerWithdrawalId}, NOW()
       )
-      RETURNING id
+      RETURNING id, acquirer_withdrawal_id
     `;
-
-    // Atualizar com ID da adquirente se disponível
-    if (acquirerWithdrawalId) {
-      await sql`
-        UPDATE withdrawals 
-        SET acquirer_withdrawal_id = ${acquirerWithdrawalId}
-        WHERE id = ${withdrawalId}
-      `;
-    }
+    
+    console.log(`[Withdrawal] Saque salvo: id=${withdrawalId}, acquirer_id=${acquirerWithdrawalId}, status=${withdrawalStatus}`);
 
     if (savedResult.length === 0) {
       // Reverter saldo se falhar ao salvar
