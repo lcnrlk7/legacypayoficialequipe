@@ -44,9 +44,9 @@ export async function POST(request: NextRequest) {
     `;
 
     const settings: Record<string, number> = {
-      min_withdrawal: 10,
+      min_withdrawal: 25, // Minimo R$ 25 para rota black
       max_withdrawal: 50000,
-      auto_withdraw_limit: 150,
+      auto_withdraw_limit: 500, // Ate R$ 500 automatico, acima vai para admin
     };
 
     settingsResult.forEach((s: { key: string; value: string }) => {
@@ -118,10 +118,9 @@ export async function POST(request: NextRequest) {
     `;
     const userRouteType = userRouteResult[0]?.route_type || 'black';
     
-    // Rota black: saques automáticos até R$ 500
-    // Rota white: usa limite configurado no sistema (padrão R$ 150)
-    const AUTO_WITHDRAWAL_LIMIT = userRouteType === 'black' ? 500 : settings.auto_withdraw_limit;
-    const requiresApproval = amount > AUTO_WITHDRAWAL_LIMIT;
+    // Saques automáticos até R$ 500, acima disso vai para aprovação manual no painel admin
+    const AUTO_WITHDRAWAL_LIMIT = 500;
+    const requiresApproval = amount >= AUTO_WITHDRAWAL_LIMIT;
 
     // Buscar adquirente baseado na rota do usuário
     const acquirer = await getAcquirerForUser(sessionUser.id);

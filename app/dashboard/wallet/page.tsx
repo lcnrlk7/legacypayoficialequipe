@@ -236,7 +236,7 @@ const handleDeposit = async () => {
 
     try {
       const token = localStorage.getItem("auth-token");
-      const response = await fetch("/api/user/withdrawals", {
+      const response = await fetch("/api/withdrawals/create", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
