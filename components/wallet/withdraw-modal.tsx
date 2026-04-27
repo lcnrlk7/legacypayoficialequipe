@@ -60,10 +60,9 @@ export function WithdrawModal({
 
   // Calculate fee when amount changes
   const amount = parseFloat(withdrawAmount) || 0;
-  // Taxa fixa da LegacyPay (R$ 5) + Taxa da adquirente (R$ 5 para Medusa, R$ 2 para MisticPay)
-  const legacyPayFee = systemSettings.withdrawalFixedFee || 5;
-  const acquirerFee = systemSettings.acquirerWithdrawalFee || 5;
-  const feeCalculation = calculateWithdrawalFee(amount, legacyPayFee, acquirerFee);
+  // Taxa fixa de saque (apenas taxa da adquirente - Medusa R$ 5)
+  const withdrawalFee = systemSettings.acquirerWithdrawalFee || 5;
+  const feeCalculation = calculateWithdrawalFee(amount, 0, withdrawalFee);
 
   // Handle saved key selection - go directly to confirm
   const handleSavedKeySelect = (key: PixKey) => {
@@ -403,12 +402,8 @@ export function WithdrawModal({
                 <span className="font-medium text-foreground">{formatCurrency(feeCalculation.amount)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Taxa LegacyPay:</span>
-                <span className="font-medium text-red-400">- {formatCurrency(feeCalculation.fee)}</span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Taxa de processamento:</span>
-                <span className="font-medium text-red-400">- {formatCurrency(feeCalculation.acquirerFee)}</span>
+                <span className="text-muted-foreground">Taxa de saque:</span>
+                <span className="font-medium text-red-400">- {formatCurrency(feeCalculation.totalFee)}</span>
               </div>
               <div className="border-t border-border pt-3 flex justify-between">
                 <span className="font-semibold text-foreground">Destinatario recebe:</span>

@@ -59,11 +59,11 @@ export default function WalletPage() {
   const [systemSettings, setSystemSettings] = useState({
     minDeposit: 5,
     maxDeposit: 100000,
-    minWithdrawal: 20, // Minimo R$ 20 para sobrar algo apos taxas
+    minWithdrawal: 10, // Minimo R$ 10 para sobrar algo apos taxa de R$ 5
     maxWithdrawal: 50000,
     autoWithdrawalLimit: 500,
-    withdrawalFixedFee: 5, // Taxa fixa LegacyPay
-    acquirerWithdrawalFee: 5, // Taxa da adquirente (Medusa R$ 5, MisticPay R$ 2)
+    withdrawalFixedFee: 0, // Sem taxa LegacyPay
+    acquirerWithdrawalFee: 5, // Taxa da adquirente (Medusa R$ 5)
   });
   const [userRoute, setUserRoute] = useState<string>('black');
 
@@ -79,16 +79,14 @@ export default function WalletPage() {
       const response = await fetch("/api/user/fees");
       const data = await response.json();
       if (data.fees) {
-        // Taxa fixa da LegacyPay (configuravel por usuario)
-        const legacyPayFee = Number(data.fees.withdrawal_fee) || 5;
-        // Taxa da adquirente baseada na rota
+        // Taxa da adquirente baseada na rota (somente taxa da adquirente, sem taxa LegacyPay)
         const route = data.route_type || 'black';
         const acquirerFee = route === 'black' ? 5 : 2; // Medusa R$ 5, MisticPay R$ 2
         
         setUserRoute(route);
         setSystemSettings(prev => ({
           ...prev,
-          withdrawalFixedFee: legacyPayFee,
+          withdrawalFixedFee: 0, // Sem taxa LegacyPay
           acquirerWithdrawalFee: acquirerFee,
         }));
       }
@@ -565,23 +563,19 @@ const handleDeposit = async () => {
           <ul className="space-y-3 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
-              Taxa LegacyPay: R$ {systemSettings.withdrawalFixedFee.toFixed(2).replace('.', ',')}
+              Taxa de saque: R$ {systemSettings.acquirerWithdrawalFee.toFixed(2).replace('.', ',')}
             </li>
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
-              Taxa de processamento: R$ {systemSettings.acquirerWithdrawalFee.toFixed(2).replace('.', ',')}
+              Valor minimo: R$ {systemSettings.minWithdrawal.toFixed(2).replace('.', ',')}
             </li>
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
-              <strong>Total de taxas: R$ {(systemSettings.withdrawalFixedFee + systemSettings.acquirerWithdrawalFee).toFixed(2).replace('.', ',')}</strong>
+              Processamento em ate 5 minutos
             </li>
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
-              Valor mínimo: R$ {systemSettings.minWithdrawal.toFixed(2).replace('.', ',')}
-            </li>
-            <li className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
-              Processamento em até 5 minutos
+              Saques 24h por dia, 7 dias por semana
             </li>
           </ul>
         </motion.div>
