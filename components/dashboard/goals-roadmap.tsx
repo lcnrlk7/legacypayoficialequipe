@@ -384,12 +384,12 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                 if (hasImage && nextRewardMilestone) {
                   return (
                     <>
-                      <div className="w-full h-28 rounded-lg bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center mb-4 relative overflow-hidden border border-primary/30">
+                      <div className="w-full aspect-[16/9] rounded-lg mb-4 relative overflow-hidden border border-primary/30">
                         <Image 
                           src={rewardImages[nextRewardMilestone.badgeType!]} 
                           alt={achievementNames[nextRewardMilestone.badgeType!]}
                           fill
-                          className="object-contain p-2"
+                          className="object-cover"
                         />
                       </div>
                       <h3 className="text-lg font-bold text-foreground text-center mb-1">
