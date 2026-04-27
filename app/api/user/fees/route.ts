@@ -13,7 +13,7 @@ export async function GET() {
 
     // Buscar perfil do usuário com taxas e rota
     const profileResult = await sql`
-      SELECT fee_percentage, daily_limit, route_type
+      SELECT fee_percentage, fixed_fee, withdrawal_fee, daily_limit, route_type
       FROM profiles
       WHERE id = ${user.id}
     `;
@@ -21,7 +21,7 @@ export async function GET() {
     const profile = profileResult[0];
     const routeType = profile?.route_type || 'black';
 
-    // Buscar taxas do sistema baseado na rota do usuário
+    // Buscar taxas do sistema baseado na rota do usuário (considera taxas personalizadas)
     const systemFees = await getSystemFeesForUser(user.id);
 
     // Buscar configurações globais do sistema
@@ -50,15 +50,17 @@ export async function GET() {
     const txStats = transactionsResult[0] || { total_fees: 0, total_volume: 0, total_transactions: 0 };
 
     const fees = {
-      // Taxas PIX (recebimento) - garantir que são números
-      pix_fixed_fee: Number(systemFees.pixFixedFee) || 1,
-      pix_percentage_fee: Number(systemFees.pixPercentageFee) || 5,
+      // Taxas PIX In (deposito) - ja considera taxas personalizadas do usuario
+      pix_fixed_fee: Number(systemFees.pixFixedFee),
+      pix_percentage_fee: Number(systemFees.pixPercentageFee),
       
-      // Taxa de saque (padrão: white=R$2, black=R$5)
-      withdrawal_fee: Number(systemFees.withdrawalFee) || (routeType === 'white' ? 2 : 5),
+      // Taxa PIX Out (saque) - ja considera taxa personalizada do usuario
+      withdrawal_fee: Number(systemFees.withdrawalFee),
       
-      // Taxas do usuário específico (se houver)
-      user_fee_percentage: Number(profile?.fee_percentage) || Number(systemFees.pixPercentageFee) || 5,
+      // Taxas do usuario especifico (para exibicao no painel)
+      user_fee_percentage: Number(systemFees.pixPercentageFee),
+      user_fixed_fee: Number(systemFees.pixFixedFee),
+      user_withdrawal_fee: Number(systemFees.withdrawalFee),
       
       // Informações da rota (nome amigável, não mostra nome real da adquirente)
       gateway_name: ROUTE_DISPLAY_NAMES[routeType as 'white' | 'black'] || 'Rota Black',
