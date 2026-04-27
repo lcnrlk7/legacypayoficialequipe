@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createMisticPayClient } from "@/lib/acquirers/misticpay";
 import { MedusaPayments } from "@/lib/acquirers/medusa";
 import { notifyPixGenerated } from "@/lib/push-notifications";
+import { getSystemFeesForUser } from "@/lib/acquirers";
 
 export async function POST(request: NextRequest) {
   try {
@@ -162,10 +163,14 @@ export async function POST(request: NextRequest) {
 
       // Se gerou PIX, salvar na transacao
       if (pixResult.success && pixResult.data) {
-        // Calcular taxa do vendedor
-        const feePercentage = Number(seller.fee_percentage) || 5;
-        const fee = total * (feePercentage / 100);
+        // Buscar taxas personalizadas do vendedor (ou padrao da rota)
+        const userFees = await getSystemFeesForUser(seller_id);
+        const feePercentage = userFees.pixPercentageFee;
+        const fixedFee = userFees.pixFixedFee;
+        const fee = (total * (feePercentage / 100)) + fixedFee;
         const netAmount = total - fee;
+        
+        console.log(`[Checkout] Vendedor ${seller.email}: Taxa ${feePercentage}% + R$${fixedFee} = R$${fee.toFixed(2)} para R$${total}`);
         
         const txId = crypto.randomUUID();
         

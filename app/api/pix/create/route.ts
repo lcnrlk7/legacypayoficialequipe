@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { createMisticPayClient } from "@/lib/acquirers/misticpay";
 import { MedusaPayments } from "@/lib/acquirers/medusa";
+import { getSystemFeesForUser } from "@/lib/acquirers";
 
 export async function POST(request: NextRequest) {
   try {
@@ -221,17 +222,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calcular taxa baseado na taxa do USUÁRIO (definida no perfil) ou da adquirente como fallback
-    const userFeePercentage = Number(profile.fee_percentage);
-    const acquirerFeePercentage = Number(acquirer.fee_percentage) || 0;
-    const acquirerFixedFee = Number(acquirer.fixed_fee) || 0;
+    // Buscar taxas personalizadas do usuario (ou padrao da rota se nao tiver)
+    const userFees = await getSystemFeesForUser(profile.id);
+    const feePercentage = userFees.pixPercentageFee;
+    const fixedFee = userFees.pixFixedFee;
     
-    // Usar taxa do usuário se definida, senão usar da adquirente
-    const feePercentage = userFeePercentage > 0 ? userFeePercentage : acquirerFeePercentage;
-    
-    // Taxa total = percentual + fixa da adquirente
-    const fee = (amount * (feePercentage / 100)) + acquirerFixedFee;
+    // Calcular taxa total
+    const fee = (amount * (feePercentage / 100)) + fixedFee;
     const netAmount = amount - fee;
+    
+    console.log(`[PIX Create] Usuario ${profile.email}: Taxa ${feePercentage}% + R$${fixedFee} = R$${fee.toFixed(2)} para R$${amount}`);
 
     const txId = crypto.randomUUID();
     const acquirerTxId = pixResult.data.transactionId || transactionId;
