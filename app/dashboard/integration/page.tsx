@@ -351,9 +351,12 @@ export default function IntegrationPage() {
         <p className="text-[10px] sm:text-xs text-muted-foreground mt-2 sm:mt-3">
           Mantenha sua chave em segredo! Nao a compartilhe publicamente.
         </p>
-        <a href="/docs" className="text-primary text-xs sm:text-sm hover:underline mt-2 inline-block">
+        <button 
+          onClick={() => setShowDocsModal(true)} 
+          className="text-primary text-xs sm:text-sm hover:underline mt-2 inline-block"
+        >
           Ver documentacao da API
-        </a>
+        </button>
       </motion.div>
 
       {/* Integrations List */}
@@ -791,7 +794,7 @@ export default function IntegrationPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-card border border-border rounded-2xl p-4 sm:p-6 w-full max-w-2xl relative max-h-[85vh] overflow-y-auto"
+              className="bg-card border border-border rounded-2xl p-4 sm:p-6 w-full max-w-3xl relative max-h-[90vh] overflow-y-auto"
             >
               <button
                 onClick={() => setShowDocsModal(false)}
@@ -800,54 +803,96 @@ export default function IntegrationPage() {
                 <X className="w-5 h-5" />
               </button>
 
-              <h3 className="text-xl font-bold text-foreground mb-6">Documentacao da API</h3>
+              <h3 className="text-xl font-bold text-foreground mb-2">Documentacao da API</h3>
+              <p className="text-sm text-muted-foreground mb-6">
+                Guia completo para integrar pagamentos PIX ao seu sistema
+              </p>
 
               <div className="space-y-6">
                 {/* Base URL */}
-                <div>
+                <div className="bg-secondary/30 rounded-xl p-4">
                   <h4 className="text-sm font-semibold text-foreground mb-2">Base URL</h4>
-                  <code className="block p-3 bg-secondary rounded-lg text-xs sm:text-sm font-mono overflow-x-auto">
+                  <code className="block p-3 bg-background rounded-lg text-sm font-mono text-primary">
                     https://legacypay.site/api/v1/integration
                   </code>
                 </div>
 
                 {/* Auth */}
-                <div>
+                <div className="bg-secondary/30 rounded-xl p-4">
                   <h4 className="text-sm font-semibold text-foreground mb-2">Autenticacao</h4>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Use Basic Auth com client_id:client_secret em Base64
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Use Basic Auth com suas credenciais (client_id:client_secret) codificadas em Base64:
                   </p>
-                  <code className="block p-3 bg-secondary rounded-lg text-xs sm:text-sm font-mono overflow-x-auto">
+                  <code className="block p-3 bg-background rounded-lg text-sm font-mono">
                     Authorization: Basic base64(client_id:client_secret)
                   </code>
+                </div>
+
+                {/* Tutorial Section */}
+                <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
+                  <h4 className="text-base font-semibold text-primary mb-3">Tutorial: Fluxo Completo de Pagamento</h4>
+                  
+                  <div className="space-y-4 text-sm">
+                    <div className="flex gap-3">
+                      <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">1</span>
+                      <div>
+                        <p className="font-medium text-foreground">Crie uma cobranca PIX</p>
+                        <p className="text-muted-foreground">Envie uma requisicao POST para /pix com o valor e seus dados</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-3">
+                      <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">2</span>
+                      <div>
+                        <p className="font-medium text-foreground">Exiba o QR Code ou Copy-Paste</p>
+                        <p className="text-muted-foreground">Use o qr_code_base64 para exibir a imagem ou copy_paste para o codigo PIX</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-3">
+                      <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">3</span>
+                      <div>
+                        <p className="font-medium text-foreground">Receba a confirmacao via Webhook</p>
+                        <p className="text-muted-foreground">Quando o pagamento for confirmado, enviaremos um POST para sua URL de webhook</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-3">
+                      <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold flex-shrink-0">4</span>
+                      <div>
+                        <p className="font-medium text-foreground">Ou consulte o status manualmente</p>
+                        <p className="text-muted-foreground">Use GET /pix?external_id=seu_id para verificar o status a qualquer momento</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Create PIX */}
                 <div>
                   <h4 className="text-sm font-semibold text-foreground mb-2">1. Criar Cobranca PIX</h4>
-                  <code className="block p-3 bg-secondary rounded-lg text-xs sm:text-sm font-mono whitespace-pre overflow-x-auto">
-{`POST /pix
-
-{
+                  <p className="text-xs text-muted-foreground mb-2">POST /pix</p>
+                  <code className="block p-3 bg-secondary rounded-lg text-xs font-mono whitespace-pre overflow-x-auto">
+{`{
   "amount": 100.00,
   "external_id": "pedido_123",
-  "description": "Pagamento do pedido",
-  "payer": {
-    "name": "Cliente",
-    "document": "12345678900"
-  }
+  "description": "Pagamento do pedido"
 }`}
                   </code>
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    <p><strong>amount</strong> - Valor em reais (obrigatorio)</p>
+                    <p><strong>external_id</strong> - Seu ID interno para rastrear o pedido (opcional mas recomendado)</p>
+                    <p><strong>description</strong> - Descricao do pagamento (opcional)</p>
+                  </div>
                 </div>
 
                 {/* Response */}
                 <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-2">Resposta</h4>
-                  <code className="block p-3 bg-secondary rounded-lg text-xs sm:text-sm font-mono whitespace-pre overflow-x-auto text-green-400">
+                  <h4 className="text-sm font-semibold text-foreground mb-2">Resposta da Criacao</h4>
+                  <code className="block p-3 bg-secondary rounded-lg text-xs font-mono whitespace-pre overflow-x-auto">
 {`{
   "success": true,
   "data": {
-    "transaction_id": "uuid",
+    "transaction_id": "abc123-uuid",
     "external_id": "pedido_123",
     "amount": 100.00,
     "fee": 2.75,
@@ -856,7 +901,7 @@ export default function IntegrationPage() {
     "pix": {
       "qr_code": "00020126...",
       "qr_code_base64": "data:image/png;base64,...",
-      "copy_paste": "00020126..."
+      "copy_paste": "00020126580014br.gov.bcb..."
     },
     "expires_at": "2024-01-01T00:30:00Z"
   }
@@ -864,108 +909,184 @@ export default function IntegrationPage() {
                   </code>
                 </div>
 
-                {/* Check Status */}
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-2">2. Consultar Status</h4>
-                  <code className="block p-3 bg-secondary rounded-lg text-xs sm:text-sm font-mono overflow-x-auto">
-                    GET /pix?transaction_id=uuid
+                {/* Check Status - DETAILED */}
+                <div className="bg-blue-500/5 border border-blue-500/20 rounded-xl p-4">
+                  <h4 className="text-sm font-semibold text-foreground mb-2">2. Consultar Status do Pagamento</h4>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Voce pode consultar o status a qualquer momento usando o transaction_id ou seu external_id:
+                  </p>
+                  <code className="block p-2 bg-background rounded-lg text-xs font-mono mb-2">
+                    GET /pix?transaction_id=abc123-uuid
                   </code>
-                  <p className="text-xs text-muted-foreground mt-1">ou</p>
-                  <code className="block p-3 bg-secondary rounded-lg text-xs sm:text-sm font-mono overflow-x-auto mt-1">
+                  <code className="block p-2 bg-background rounded-lg text-xs font-mono">
                     GET /pix?external_id=pedido_123
                   </code>
-                </div>
-
-                {/* Balance */}
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-2">3. Consultar Saldo</h4>
-                  <code className="block p-3 bg-secondary rounded-lg text-xs sm:text-sm font-mono overflow-x-auto">
-                    GET /balance
-                  </code>
-                </div>
-
-                {/* Transactions */}
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-2">4. Listar Transacoes</h4>
-                  <code className="block p-3 bg-secondary rounded-lg text-xs sm:text-sm font-mono overflow-x-auto">
-                    GET /transactions?status=completed&limit=50
-                  </code>
-                </div>
-
-                {/* Webhook */}
-                <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-2">Webhook</h4>
-                  <p className="text-sm text-muted-foreground mb-2">
-                    Configure uma URL de webhook para receber notificacoes:
-                  </p>
-                  <code className="block p-3 bg-secondary rounded-lg text-xs sm:text-sm font-mono whitespace-pre overflow-x-auto">
+                  
+                  <h5 className="text-xs font-semibold text-foreground mt-4 mb-2">Resposta:</h5>
+                  <code className="block p-3 bg-background rounded-lg text-xs font-mono whitespace-pre overflow-x-auto">
 {`{
-  "event": "payment.completed",
+  "success": true,
   "data": {
-    "transaction_id": "uuid",
+    "transaction_id": "abc123-uuid",
     "external_id": "pedido_123",
     "status": "completed",
     "amount": 100.00,
     "net_amount": 97.25,
-    "paid_at": "2024-01-01T00:05:00Z"
+    "paid_at": "2024-01-01T00:05:00Z",
+    "payer_name": "JOAO DA SILVA"
   }
 }`}
                   </code>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Valide usando o header X-Webhook-Signature com seu webhook_secret
-                  </p>
                 </div>
 
-                {/* Code Example */}
+                {/* Webhook - DETAILED */}
+                <div className="bg-green-500/5 border border-green-500/20 rounded-xl p-4">
+                  <h4 className="text-sm font-semibold text-foreground mb-2">3. Receber Notificacoes via Webhook</h4>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Configure sua URL de webhook nas configuracoes da integracao. Quando um pagamento for confirmado, 
+                    enviaremos um POST para sua URL com os seguintes dados:
+                  </p>
+                  <code className="block p-3 bg-background rounded-lg text-xs font-mono whitespace-pre overflow-x-auto">
+{`{
+  "event": "payment.completed",
+  "data": {
+    "transaction_id": "abc123-uuid",
+    "external_id": "pedido_123",
+    "status": "completed",
+    "amount": 100.00,
+    "fee": 2.75,
+    "net_amount": 97.25,
+    "paid_at": "2024-01-01T00:05:00Z",
+    "payer_name": "JOAO DA SILVA"
+  },
+  "timestamp": "2024-01-01T00:05:01Z"
+}`}
+                  </code>
+                  
+                  <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                    <p className="text-xs text-yellow-500 font-medium">Importante: Validacao de Seguranca</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Sempre valide o header <code className="text-primary">X-Webhook-Signature</code> usando seu webhook_secret 
+                      para garantir que a requisicao veio da LegacyPay.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Balance & Transactions */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground mb-2">4. Consultar Saldo</h4>
+                    <code className="block p-2 bg-secondary rounded-lg text-xs font-mono">
+                      GET /balance
+                    </code>
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground mb-2">5. Listar Transacoes</h4>
+                    <code className="block p-2 bg-secondary rounded-lg text-xs font-mono">
+                      GET /transactions?limit=50
+                    </code>
+                  </div>
+                </div>
+
+                {/* Code Example - Node.js */}
                 <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-2">Exemplo Node.js</h4>
-                  <code className="block p-3 bg-secondary rounded-lg text-xs sm:text-sm font-mono whitespace-pre overflow-x-auto">
-{`// Criar credenciais em Base64
+                  <h4 className="text-sm font-semibold text-foreground mb-2">Exemplo Completo - Node.js</h4>
+                  <code className="block p-3 bg-secondary rounded-lg text-xs font-mono whitespace-pre overflow-x-auto">
+{`const CLIENT_ID = "seu_client_id";
+const CLIENT_SECRET = "seu_client_secret";
+const BASE_URL = "https://legacypay.site/api/v1/integration";
+
+// Criar credenciais em Base64
 const credentials = Buffer.from(
   \`\${CLIENT_ID}:\${CLIENT_SECRET}\`
-).toString('base64');
+).toString("base64");
 
-// Criar cobranca PIX
-const response = await fetch(
-  'https://legacypay.site/api/v1/integration/pix',
-  {
-    method: 'POST',
+// Funcao para criar cobranca PIX
+async function criarPix(amount, externalId, description) {
+  const response = await fetch(\`\${BASE_URL}/pix\`, {
+    method: "POST",
     headers: {
-      'Authorization': \`Basic \${credentials}\`,
-      'Content-Type': 'application/json'
+      "Authorization": \`Basic \${credentials}\`,
+      "Content-Type": "application/json"
     },
-    body: JSON.stringify({
-      amount: 100.00,
-      external_id: 'pedido_123',
-      description: 'Pagamento do pedido #123'
-    })
-  }
-);
+    body: JSON.stringify({ amount, external_id: externalId, description })
+  });
+  return response.json();
+}
 
-const data = await response.json();
-console.log(data.data.pix.copy_paste);`}
+// Funcao para consultar status
+async function consultarStatus(externalId) {
+  const response = await fetch(
+    \`\${BASE_URL}/pix?external_id=\${externalId}\`,
+    { headers: { "Authorization": \`Basic \${credentials}\` } }
+  );
+  return response.json();
+}
+
+// Uso
+const pix = await criarPix(100.00, "pedido_123", "Compra na loja");
+console.log("QR Code:", pix.data.pix.copy_paste);
+
+// Verificar status depois
+const status = await consultarStatus("pedido_123");
+console.log("Status:", status.data.status);`}
                   </code>
                 </div>
 
                 {/* Status Codes */}
                 <div>
-                  <h4 className="text-sm font-semibold text-foreground mb-2">Status das Transacoes</h4>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
-                      <span className="text-muted-foreground">pending - Aguardando</span>
+                  <h4 className="text-sm font-semibold text-foreground mb-3">Status das Transacoes</h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-center gap-2 bg-secondary/50 p-2 rounded-lg">
+                      <span className="w-3 h-3 rounded-full bg-yellow-500"></span>
+                      <div>
+                        <span className="font-medium text-foreground">pending</span>
+                        <span className="text-muted-foreground ml-1">- Aguardando pagamento</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                      <span className="text-muted-foreground">completed - Pago</span>
+                    <div className="flex items-center gap-2 bg-secondary/50 p-2 rounded-lg">
+                      <span className="w-3 h-3 rounded-full bg-green-500"></span>
+                      <div>
+                        <span className="font-medium text-foreground">completed</span>
+                        <span className="text-muted-foreground ml-1">- Pago com sucesso</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                      <span className="text-muted-foreground">expired - Expirado</span>
+                    <div className="flex items-center gap-2 bg-secondary/50 p-2 rounded-lg">
+                      <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                      <div>
+                        <span className="font-medium text-foreground">expired</span>
+                        <span className="text-muted-foreground ml-1">- Expirado</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-gray-500"></span>
-                      <span className="text-muted-foreground">cancelled - Cancelado</span>
+                    <div className="flex items-center gap-2 bg-secondary/50 p-2 rounded-lg">
+                      <span className="w-3 h-3 rounded-full bg-gray-500"></span>
+                      <div>
+                        <span className="font-medium text-foreground">cancelled</span>
+                        <span className="text-muted-foreground ml-1">- Cancelado</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Errors */}
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-2">Codigos de Erro</h4>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between p-2 bg-secondary/50 rounded-lg">
+                      <code className="text-red-400">401</code>
+                      <span className="text-muted-foreground">Credenciais invalidas ou ausentes</span>
+                    </div>
+                    <div className="flex justify-between p-2 bg-secondary/50 rounded-lg">
+                      <code className="text-red-400">400</code>
+                      <span className="text-muted-foreground">Dados invalidos na requisicao</span>
+                    </div>
+                    <div className="flex justify-between p-2 bg-secondary/50 rounded-lg">
+                      <code className="text-red-400">404</code>
+                      <span className="text-muted-foreground">Transacao nao encontrada</span>
+                    </div>
+                    <div className="flex justify-between p-2 bg-secondary/50 rounded-lg">
+                      <code className="text-red-400">500</code>
+                      <span className="text-muted-foreground">Erro interno do servidor</span>
                     </div>
                   </div>
                 </div>

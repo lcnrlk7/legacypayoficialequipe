@@ -8,7 +8,7 @@ import Image from "next/image";
 
 const navLinks = [
   { href: "#features", label: "Recursos" },
-  { href: "/docs", label: "API Docs" },
+  { href: "/dashboard/integration", label: "API Docs" },
   { href: "#faq", label: "FAQ" },
   { href: "https://wa.me/5534999353187", label: "WhatsApp", external: true, icon: "whatsapp" },
   { href: "https://discord.gg/vFfknE9kuJ", label: "Suporte", external: true, icon: "discord" },
