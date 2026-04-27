@@ -22,6 +22,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   Link2,
+  Edit3,
 } from "lucide-react";
 
 interface Integration {
@@ -67,6 +68,11 @@ export default function IntegrationPage() {
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [testingWebhook, setTestingWebhook] = useState<string | null>(null);
   const [webhookTestResult, setWebhookTestResult] = useState<Record<string, { success: boolean; message: string } | null>>({});
+  
+  // Webhook inline edit states
+  const [editingWebhook, setEditingWebhook] = useState<string | null>(null);
+  const [webhookInputs, setWebhookInputs] = useState<Record<string, string>>({});
+  const [savingWebhook, setSavingWebhook] = useState<string | null>(null);
 
   useEffect(() => {
     loadIntegrations();
@@ -241,6 +247,35 @@ export default function IntegrationPage() {
     navigator.clipboard.writeText(text);
     setCopied(key);
     setTimeout(() => setCopied(null), 2000);
+  }
+
+  async function saveWebhookUrl(integrationId: string) {
+    const webhookUrl = webhookInputs[integrationId] || "";
+    setSavingWebhook(integrationId);
+    try {
+      const response = await fetch("/api/user/integrations", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: integrationId, webhook_url: webhookUrl }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setEditingWebhook(null);
+        setWebhookTestResult({ ...webhookTestResult, [integrationId]: null });
+        loadIntegrations();
+      } else {
+        alert(data.error || "Erro ao salvar webhook");
+      }
+    } catch {
+      alert("Erro ao salvar webhook");
+    } finally {
+      setSavingWebhook(null);
+    }
+  }
+
+  function startEditingWebhook(integration: Integration) {
+    setWebhookInputs({ ...webhookInputs, [integration.id]: integration.webhook_url || "" });
+    setEditingWebhook(integration.id);
   }
 
   function openEditModal(integration: Integration) {
@@ -522,28 +557,84 @@ export default function IntegrationPage() {
                 </div>
 
                 {/* Webhook URL */}
-                <div>
-                  <label className="text-xs text-muted-foreground mb-1 block">Webhook URL</label>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <code className="flex-1 bg-background px-3 py-2 rounded-lg text-xs sm:text-sm font-mono text-foreground truncate">
-                      {integration.webhook_url || "Nao configurado"}
-                    </code>
-                    {integration.webhook_url && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => testWebhook(integration)}
-                        disabled={testingWebhook === integration.id}
-                        className="text-xs"
-                      >
-                        {testingWebhook === integration.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          "Testar"
-                        )}
-                      </Button>
-                    )}
+                <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-medium text-foreground">Webhook URL</label>
+                    <span className="text-[10px] text-muted-foreground">Receba notificacoes de pagamento</span>
                   </div>
+                  
+                  {editingWebhook === integration.id ? (
+                    <div className="space-y-2">
+                      <Input
+                        type="url"
+                        placeholder="https://seusite.com/api/webhook"
+                        value={webhookInputs[integration.id] || ""}
+                        onChange={(e) => setWebhookInputs({ ...webhookInputs, [integration.id]: e.target.value })}
+                        className="text-sm"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => saveWebhookUrl(integration.id)}
+                          disabled={savingWebhook === integration.id}
+                          className="bg-primary hover:bg-primary/90 text-xs"
+                        >
+                          {savingWebhook === integration.id ? (
+                            <Loader2 className="w-3 h-3 animate-spin mr-1" />
+                          ) : (
+                            <Check className="w-3 h-3 mr-1" />
+                          )}
+                          Salvar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingWebhook(null)}
+                          className="text-xs"
+                        >
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      {integration.webhook_url ? (
+                        <code className="flex-1 bg-background px-3 py-2 rounded-lg text-xs sm:text-sm font-mono text-foreground truncate">
+                          {integration.webhook_url}
+                        </code>
+                      ) : (
+                        <span className="flex-1 bg-background px-3 py-2 rounded-lg text-xs sm:text-sm text-muted-foreground italic">
+                          Nao configurado - clique em Configurar
+                        </span>
+                      )}
+                      <div className="flex gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => startEditingWebhook(integration)}
+                          className="text-xs"
+                        >
+                          {integration.webhook_url ? "Editar" : "Configurar"}
+                        </Button>
+                        {integration.webhook_url && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => testWebhook(integration)}
+                            disabled={testingWebhook === integration.id}
+                            className="text-xs"
+                          >
+                            {testingWebhook === integration.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              "Testar"
+                            )}
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
                   {webhookTestResult[integration.id] && (
                     <div
                       className={`mt-2 p-2 rounded-lg text-xs flex items-center gap-2 ${
@@ -560,6 +651,10 @@ export default function IntegrationPage() {
                       {webhookTestResult[integration.id]?.message}
                     </div>
                   )}
+                  
+                  <p className="text-[10px] text-muted-foreground mt-2">
+                    Enviaremos um POST com os dados do pagamento para esta URL quando uma transacao for confirmada.
+                  </p>
                 </div>
 
                 {/* Webhook Secret */}
