@@ -153,8 +153,9 @@ export default function UsersPage() {
       return;
     }
 
-    // Taxa fixa: usar valor informado ou padrão baseado na rota
-    const defaultFixedFee = editForm.route_type === "white" ? 1.50 : 1.00;
+    // Taxa fixa: usar valor informado ou padrao baseado na rota
+    // WHITE: R$ 1.50 fixo | BLACK: R$ 0.00 (Medusa cobra 4% sem fixo)
+    const defaultFixedFee = editForm.route_type === "white" ? 1.50 : 0;
     const fixedFeeValue = editForm.fixed_fee ? parseFloat(editForm.fixed_fee) : defaultFixedFee;
     if (fixedFeeValue < 0) {
       alert("A taxa fixa não pode ser negativa");
@@ -769,9 +770,11 @@ export default function UsersPage() {
                   value={editForm.route_type}
                   onChange={(e) => {
                     const newRoute = e.target.value;
+                    // WHITE: 0% + R$ 1.50 fixo, R$ 2.00 saque
+                    // BLACK: 4% + R$ 0.00 fixo, R$ 5.00 saque
                     const newWithdrawalFee = newRoute === "white" ? "2" : "5";
-                    const newFixedFee = newRoute === "white" ? "1.50" : "1.00";
-                    const newFeePercentage = newRoute === "white" ? "0" : "5";
+                    const newFixedFee = newRoute === "white" ? "1.50" : "0";
+                    const newFeePercentage = newRoute === "white" ? "0" : "4";
                     setEditForm({ 
                       ...editForm, 
                       route_type: newRoute,
