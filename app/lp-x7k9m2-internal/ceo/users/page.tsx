@@ -693,7 +693,7 @@ export default function UsersPage() {
                       step="0.1"
                       min="0"
                       max="100"
-                      placeholder={editForm.route_type === "white" ? "0" : "5"}
+                      placeholder={editForm.route_type === "white" ? "0" : "4"}
                       value={editForm.fee_percentage}
                       onChange={(e) =>
                         setEditForm({
@@ -704,7 +704,7 @@ export default function UsersPage() {
                       className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      White: 0% | Black: 5%
+                      White: 0% | Black: 4%
                     </p>
                   </div>
                   <div>
@@ -715,7 +715,7 @@ export default function UsersPage() {
                       type="number"
                       step="0.1"
                       min="0"
-                      placeholder={editForm.route_type === "white" ? "1.50" : "1.00"}
+                      placeholder={editForm.route_type === "white" ? "1.50" : "0"}
                       value={editForm.fixed_fee}
                       onChange={(e) =>
                         setEditForm({
@@ -726,7 +726,7 @@ export default function UsersPage() {
                       className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      White: R$ 1,50 | Black: R$ 1,00
+                      White: R$ 1,50 | Black: R$ 0,00
                     </p>
                   </div>
                 </div>

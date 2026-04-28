@@ -563,21 +563,23 @@ export async function getSystemFeesByRoute(routeType: 'white' | 'black'): Promis
 
     if (acquirer) {
       return {
-        pixFixedFee: Number(acquirer.fixed_fee) || (routeType === 'white' ? 1.50 : 1.00),
-        pixPercentageFee: Number(acquirer.fee_percentage) || (routeType === 'white' ? 0 : 5.00),
+        pixFixedFee: Number(acquirer.fixed_fee) || (routeType === 'white' ? 1.50 : 0),
+        pixPercentageFee: Number(acquirer.fee_percentage) || (routeType === 'white' ? 0 : 4.00),
         withdrawalFee: Number(acquirer.withdrawal_fee) || defaultWithdrawalFee,
       };
     }
 
-    // Taxas padrão por rota se não encontrar adquirente
+    // Taxas padrao por rota se nao encontrar adquirente
+    // WHITE (MisticPay): 0% + R$ 1.50 fixo, R$ 2.00 saque
+    // BLACK (Medusa): 4% + R$ 0.00 fixo, R$ 5.00 saque
     return routeType === 'white'
       ? { pixFixedFee: 1.50, pixPercentageFee: 0, withdrawalFee: 2.00 }
-      : { pixFixedFee: 1.00, pixPercentageFee: 5.00, withdrawalFee: 5.00 };
+      : { pixFixedFee: 0, pixPercentageFee: 4.00, withdrawalFee: 5.00 };
   } catch (error) {
     console.error("[Acquirer] Erro ao buscar taxas:", error);
     return routeType === 'white'
       ? { pixFixedFee: 1.50, pixPercentageFee: 0, withdrawalFee: 2.00 }
-      : { pixFixedFee: 1.00, pixPercentageFee: 5.00, withdrawalFee: 5.00 };
+      : { pixFixedFee: 0, pixPercentageFee: 4.00, withdrawalFee: 5.00 };
   }
 }
 
