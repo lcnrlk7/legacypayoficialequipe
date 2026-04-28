@@ -64,7 +64,9 @@ export function BannerCarousel() {
               alt={banners[currentIndex].alt}
               fill
               className="object-cover object-center"
-              sizes="(max-width: 768px) 100vw, 1200px"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 1456px"
+              quality={100}
+              unoptimized
               priority
             />
           </motion.div>
