@@ -786,13 +786,13 @@ export default function UsersPage() {
                     Rota White (MisticPay) - Taxa: R$ 1,50 fixo | Saque: R$ 2,00
                   </option>
                   <option value="black" className="bg-card">
-                    Rota Black (Medusa) - Taxa: 5% + R$ 1,00 | Saque: R$ 5,00
+                    Rota Black (Medusa) - Taxa: 4% | Saque: R$ 5,00
                   </option>
                 </select>
                 <p className="text-xs text-muted-foreground mt-2">
                   {editForm.route_type === "white" 
-                    ? "Rota White (MisticPay): Taxa fixa de R$ 1,50 por transação + R$ 2,00 por saque" 
-                    : "Rota Black (Medusa): Taxa de 5% + R$ 1,00 por transação + R$ 5,00 por saque"}
+                    ? "Rota White (MisticPay): Taxa fixa de R$ 1,50 por transacao + R$ 2,00 por saque" 
+                    : "Rota Black (Medusa): Taxa de 4% por transacao + R$ 5,00 por saque"}
                 </p>
               </div>
               <div className="flex items-center gap-3">
