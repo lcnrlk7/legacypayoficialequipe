@@ -1,11 +1,16 @@
 import { sql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { notifyAdminDeposit } from "@/lib/notifications";
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    // Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+    
     const body = await request.json();
     const { userId, operation, amount, newBalance, reason } = body;
 
@@ -116,9 +121,13 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET para buscar histórico de alterações de saldo de um usuário
+// GET para buscar historico de alteracoes de saldo de um usuario
 export async function GET(request: NextRequest) {
   try {
+    // Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+    
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
 

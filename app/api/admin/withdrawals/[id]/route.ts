@@ -3,12 +3,17 @@ import { sql } from "@/lib/db";
 import { mapPixKeyType } from "@/lib/acquirers/misticpay";
 import { getAcquirerForUser, createWithdrawal } from "@/lib/acquirers";
 import { notifyWithdrawalCompleted, notifyWithdrawalFailed } from "@/lib/notifications";
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+    
     const { id } = await params;
     const body = await request.json();
     const { action, reason } = body;

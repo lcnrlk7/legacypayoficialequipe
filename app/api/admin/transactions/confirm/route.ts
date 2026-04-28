@@ -1,14 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { notifyPixPaid } from "@/lib/notifications";
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 
 export const dynamic = 'force-dynamic';
 
-// Nota: A autenticação é feita pelo middleware para rotas /api/admin/*
-// Não é necessário verificar novamente aqui
-
 export async function POST(request: NextRequest) {
   try {
+    // Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+    
     const { transactionId } = await request.json();
 
     if (!transactionId) {
