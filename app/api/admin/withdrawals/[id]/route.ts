@@ -64,7 +64,7 @@ export async function PATCH(
       try {
         await sql`
           INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, new_value, created_at)
-          VALUES (${crypto.randomUUID()}, ${withdrawal.user_id}, ${'WITHDRAWAL_COMPLETED'}, ${'withdrawal'}, ${id}, ${JSON.stringify({ amount: markPaidAmount })}, NOW())
+          VALUES (${crypto.randomUUID()}, ${withdrawal.user_id}, ${'WITHDRAWAL_COMPLETED'}, ${'withdrawal'}, ${id}, ${JSON.stringify({ amount: markPaidGross })}, NOW())
         `;
       } catch (auditError) {
         console.error("Error creating audit log:", auditError);
