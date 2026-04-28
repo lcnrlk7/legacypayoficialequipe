@@ -78,17 +78,18 @@ export default function WalletPage() {
       const response = await fetch("/api/user/fees");
       const data = await response.json();
       if (data.fees) {
-        const route = data.route_type || 'black';
-        // Taxa de saque: Medusa R$ 5, MisticPay R$ 2
-        const withdrawFee = route === 'black' ? 5 : 2;
-        // Minimo de saque: R$ 25 para black, R$ 15 para white
-        const minWithdraw = route === 'black' ? 25 : 15;
+        const route = data.fees.route_type || 'black';
+        // Usar taxa de saque da API (considera taxa individual do usuario ou padrao da rota)
+        const withdrawFee = data.fees.withdrawal_fee || (route === 'black' ? 5 : 2);
+        // Minimo de saque da API ou padrao
+        const minWithdraw = data.fees.min_withdrawal || (route === 'black' ? 25 : 15);
         
         setUserRoute(route);
         setSystemSettings(prev => ({
           ...prev,
           withdrawalFee: withdrawFee,
           minWithdrawal: minWithdraw,
+          maxWithdrawal: data.fees.max_withdrawal || prev.maxWithdrawal,
         }));
       }
     } catch (err) {

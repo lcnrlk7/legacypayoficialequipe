@@ -19,6 +19,7 @@ import { UserNotificationsBanner } from "./user-notifications-banner";
 import { SalesChart } from "./sales-chart";
 import { StatsCards } from "./stats-cards";
 import { GoalsRoadmap } from "./goals-roadmap";
+import { BannerCarousel } from "./banner-carousel";
 import { useProfile } from "@/components/profile-provider";
 
 export interface Profile {
@@ -261,6 +262,9 @@ export function DashboardContent({
           Bem-vindo ao seu painel de controle
         </p>
       </div>
+
+      {/* Banner Carousel */}
+      <BannerCarousel />
       
       {/* Sales Chart */}
       <SalesChart transactions={transactions} />

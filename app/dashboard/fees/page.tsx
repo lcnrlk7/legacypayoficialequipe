@@ -227,10 +227,10 @@ export default function FeesPage() {
 
           <div className="space-y-4">
             <div className="flex items-center justify-between p-4 bg-background/50 rounded-xl">
-              <span className="text-muted-foreground">Taxa por transação</span>
+              <span className="text-muted-foreground">Taxa por transacao</span>
               <span className="text-2xl font-bold text-primary">
                 {fees?.route_type === 'black' 
-                  ? `${formatPercent(fees?.pix_percentage_fee || 5)} + ${formatCurrency(fees?.pix_fixed_fee || 1)}`
+                  ? `${formatPercent(fees?.pix_percentage_fee || 4)} + ${formatCurrency(fees?.pix_fixed_fee || 0)}`
                   : formatCurrency(fees?.pix_fixed_fee || 1.50)
                 }
               </span>
@@ -387,16 +387,16 @@ export default function FeesPage() {
             </span>
             <span className="font-semibold text-red-400">
               {fees?.route_type === 'black' 
-                ? `- R$ ${(100 * (fees?.pix_percentage_fee || 5) / 100 + (fees?.pix_fixed_fee || 1)).toFixed(2).replace('.', ',')}`
+                ? `- R$ ${(100 * (fees?.pix_percentage_fee || 4) / 100 + (fees?.pix_fixed_fee || 0)).toFixed(2).replace('.', ',')}`
                 : `- ${formatCurrency(fees?.pix_fixed_fee || 1.50)}`
               }
             </span>
           </div>
           <div className="flex justify-between items-center pt-1">
-            <span className="font-semibold text-foreground">Valor líquido</span>
+            <span className="font-semibold text-foreground">Valor liquido</span>
             <span className="font-bold text-green-400 text-lg">
               {fees?.route_type === 'black'
-                ? formatCurrency(100 - (100 * (fees?.pix_percentage_fee || 5) / 100) - (fees?.pix_fixed_fee || 1))
+                ? formatCurrency(100 - (100 * (fees?.pix_percentage_fee || 4) / 100) - (fees?.pix_fixed_fee || 0))
                 : formatCurrency(100 - (fees?.pix_fixed_fee || 1.50))
               }
             </span>

@@ -849,7 +849,7 @@ if ($data["success"]) {
                   <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
                     <p className="text-sm text-yellow-400">
                       <strong>Nota sobre taxas:</strong> A taxa e calculada automaticamente com base na rota utilizada.
-                      Rota White: 0,75% + R$1,00 | Rota Black: 1,5% + R$1,50
+                      Rota White: 0% + R$1,50 fixo | Rota Black: 4% + R$0,00 fixo
                     </p>
                   </div>
                 </div>
@@ -1289,8 +1289,8 @@ const fullIntegrationPrompt = `Preciso integrar a API de pagamentos PIX da Legac
 Todas as respostas seguem: { success: boolean, data?: object, error?: { code, message } }
 
 ## Taxas
-- Rota White: 0,75% + R$1,00 fixo
-- Rota Black: 1,5% + R$1,50 fixo
+- Rota White (MisticPay): 0% + R$1,50 fixo | Saque: R$2,00
+- Rota Black (Medusa): 4% + R$0,00 fixo | Saque: R$5,00
 
 Por favor, crie uma integracao completa para meu projeto com:
 1. Funcao para criar cobrancas PIX com QR Code
@@ -1406,8 +1406,8 @@ const transferPrompt = `Preciso enviar transferencias PIX automaticamente usando
 }
 
 **Taxas:**
-- Rota White: 0,75% + R$1,00
-- Rota Black: 1,5% + R$1,50
+- Rota White (MisticPay): 0% + R$1,50 fixo | Saque: R$2,00
+- Rota Black (Medusa): 4% + R$0,00 fixo | Saque: R$5,00
 
 Crie uma funcao que:
 1. Receba valor, chave PIX e tipo da chave

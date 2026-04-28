@@ -153,8 +153,9 @@ export default function UsersPage() {
       return;
     }
 
-    // Taxa fixa: usar valor informado ou padrão baseado na rota
-    const defaultFixedFee = editForm.route_type === "white" ? 1.50 : 1.00;
+    // Taxa fixa: usar valor informado ou padrao baseado na rota
+    // WHITE: R$ 1.50 fixo | BLACK: R$ 0.00 (Medusa cobra 4% sem fixo)
+    const defaultFixedFee = editForm.route_type === "white" ? 1.50 : 0;
     const fixedFeeValue = editForm.fixed_fee ? parseFloat(editForm.fixed_fee) : defaultFixedFee;
     if (fixedFeeValue < 0) {
       alert("A taxa fixa não pode ser negativa");
@@ -693,7 +694,7 @@ export default function UsersPage() {
                       step="0.1"
                       min="0"
                       max="100"
-                      placeholder={editForm.route_type === "white" ? "0" : "5"}
+                      placeholder={editForm.route_type === "white" ? "0" : "4"}
                       value={editForm.fee_percentage}
                       onChange={(e) =>
                         setEditForm({
@@ -704,7 +705,7 @@ export default function UsersPage() {
                       className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      White: 0% | Black: 5%
+                      White: 0% | Black: 4%
                     </p>
                   </div>
                   <div>
@@ -715,7 +716,7 @@ export default function UsersPage() {
                       type="number"
                       step="0.1"
                       min="0"
-                      placeholder={editForm.route_type === "white" ? "1.50" : "1.00"}
+                      placeholder={editForm.route_type === "white" ? "1.50" : "0"}
                       value={editForm.fixed_fee}
                       onChange={(e) =>
                         setEditForm({
@@ -726,7 +727,7 @@ export default function UsersPage() {
                       className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      White: R$ 1,50 | Black: R$ 1,00
+                      White: R$ 1,50 | Black: R$ 0,00
                     </p>
                   </div>
                 </div>
@@ -769,9 +770,11 @@ export default function UsersPage() {
                   value={editForm.route_type}
                   onChange={(e) => {
                     const newRoute = e.target.value;
+                    // WHITE: 0% + R$ 1.50 fixo, R$ 2.00 saque
+                    // BLACK: 4% + R$ 0.00 fixo, R$ 5.00 saque
                     const newWithdrawalFee = newRoute === "white" ? "2" : "5";
-                    const newFixedFee = newRoute === "white" ? "1.50" : "1.00";
-                    const newFeePercentage = newRoute === "white" ? "0" : "5";
+                    const newFixedFee = newRoute === "white" ? "1.50" : "0";
+                    const newFeePercentage = newRoute === "white" ? "0" : "4";
                     setEditForm({ 
                       ...editForm, 
                       route_type: newRoute,
@@ -786,13 +789,13 @@ export default function UsersPage() {
                     Rota White (MisticPay) - Taxa: R$ 1,50 fixo | Saque: R$ 2,00
                   </option>
                   <option value="black" className="bg-card">
-                    Rota Black (Medusa) - Taxa: 5% + R$ 1,00 | Saque: R$ 5,00
+                    Rota Black (Medusa) - Taxa: 4% | Saque: R$ 5,00
                   </option>
                 </select>
                 <p className="text-xs text-muted-foreground mt-2">
                   {editForm.route_type === "white" 
-                    ? "Rota White (MisticPay): Taxa fixa de R$ 1,50 por transação + R$ 2,00 por saque" 
-                    : "Rota Black (Medusa): Taxa de 5% + R$ 1,00 por transação + R$ 5,00 por saque"}
+                    ? "Rota White (MisticPay): Taxa fixa de R$ 1,50 por transacao + R$ 2,00 por saque" 
+                    : "Rota Black (Medusa): Taxa de 4% por transacao + R$ 5,00 por saque"}
                 </p>
               </div>
               <div className="flex items-center gap-3">
