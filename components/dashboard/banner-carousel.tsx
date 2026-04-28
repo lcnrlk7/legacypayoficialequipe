@@ -43,13 +43,12 @@ export function BannerCarousel() {
 
   return (
     <div
-      className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl bg-black/20"
+      className="relative w-full overflow-hidden rounded-xl sm:rounded-2xl"
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      {/* Banner Container - aspect ratio ajustado para mostrar imagem completa */}
-      {/* Mobile: mais alto para mostrar conteudo | Desktop: proporcao original */}
-      <div className="relative w-full aspect-[2.5/1] sm:aspect-[3.5/1] lg:aspect-[1456/400]">
+      {/* Banner Container - usando proporcao original da imagem */}
+      <div className="relative w-full">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentIndex}
@@ -57,14 +56,14 @@ export function BannerCarousel() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -100 }}
             transition={{ duration: 0.5, ease: "easeInOut" }}
-            className="absolute inset-0"
+            className="relative w-full"
           >
             <Image
               src={banners[currentIndex].src}
               alt={banners[currentIndex].alt}
-              fill
-              className="object-cover object-center"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 100vw, 1456px"
+              width={1456}
+              height={400}
+              className="w-full h-auto"
               quality={100}
               unoptimized
               priority
