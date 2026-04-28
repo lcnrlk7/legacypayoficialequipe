@@ -16,33 +16,27 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
 }
 
 /**
- * Cron job para enviar mensagens motivacionais
- * Configurar no Vercel para rodar a cada 2-4 horas
+ * API para enviar mensagens motivacionais para todos os usuarios
  * 
- * Exemplo de configuração no vercel.json:
- * {
- *   "crons": [
- *     {
- *       "path": "/api/cron/motivational",
- *       "schedule": "0 8,12,16,20 * * *"
- *     }
- *   ]
- * }
+ * USO COM SERVICO DE CRON EXTERNO (cron-job.org, EasyCron, etc):
+ * 
+ * URL: https://seudominio.com/api/cron/motivational?key=SUA_CHAVE_AQUI
+ * 
+ * Configure a variavel de ambiente CRON_SECRET no Vercel com uma chave segura
+ * Depois adicione essa URL no seu servico de cron nos horarios desejados
+ * 
+ * Horarios sugeridos: 08:00, 11:00, 14:00, 17:00, 20:00
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verificar token de autenticação do cron (Vercel envia automaticamente)
-    const authHeader = request.headers.get("authorization");
+    // Verificar chave de autenticacao via query param
     const cronSecret = process.env.CRON_SECRET;
+    const providedKey = request.nextUrl.searchParams.get("key");
     
-    // Permitir execução manual para testes ou com CRON_SECRET
-    const isAuthorized = 
-      !cronSecret || 
-      authHeader === `Bearer ${cronSecret}` ||
-      request.nextUrl.searchParams.get("secret") === cronSecret;
-    
-    if (!isAuthorized) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // Se CRON_SECRET esta configurado, exigir a chave
+    if (cronSecret && providedKey !== cronSecret) {
+      console.log("[Motivational Cron] Acesso negado - chave invalida");
+      return NextResponse.json({ error: "Chave invalida" }, { status: 401 });
     }
 
     if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
