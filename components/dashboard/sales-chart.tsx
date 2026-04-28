@@ -124,49 +124,49 @@ export function SalesChart({ transactions }: SalesChartProps) {
       className="bg-card border border-border rounded-2xl p-4 sm:p-6"
     >
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingUp className="w-5 h-5 text-primary" />
-            <h3 className="text-lg font-semibold text-foreground">Analise de Vendas</h3>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <TrendingUp className="w-5 h-5 text-primary shrink-0" />
+          <div>
+            <h3 className="text-base sm:text-lg font-semibold text-foreground">Analise de Vendas</h3>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Visualize o desempenho das suas vendas
+            </p>
           </div>
-          <p className="text-sm text-muted-foreground">
-            Visualize o desempenho das suas vendas
-          </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
           {/* Period Selector */}
           <div className="relative">
             <button
               onClick={() => setShowPeriodDropdown(!showPeriodDropdown)}
-              className="flex items-center gap-2 px-3 py-2 bg-secondary border border-border rounded-xl text-sm text-foreground hover:bg-secondary/80 transition-colors"
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 bg-secondary border border-border rounded-lg sm:rounded-xl text-xs sm:text-sm text-foreground hover:bg-secondary/80 transition-colors"
             >
-              <Calendar className="w-4 h-4 text-muted-foreground" />
-              {period === "year" ? "Este ano" : "Este mes"}
-              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showPeriodDropdown ? "rotate-180" : ""}`} />
+              <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+              <span className="whitespace-nowrap">{period === "year" ? "Este ano" : "Este mes"}</span>
+              <ChevronDown className={`w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground transition-transform ${showPeriodDropdown ? "rotate-180" : ""}`} />
             </button>
             {showPeriodDropdown && (
-              <div className="absolute right-0 top-full mt-2 w-36 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden">
+              <div className="absolute right-0 top-full mt-2 w-32 sm:w-36 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden">
                 <button
                   onClick={() => { setPeriod("month"); setShowPeriodDropdown(false); }}
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-secondary transition-colors ${period === "month" ? "bg-primary/10 text-primary" : "text-foreground"}`}
+                  className={`w-full px-3 py-2 text-left text-xs sm:text-sm hover:bg-secondary transition-colors ${period === "month" ? "bg-primary/10 text-primary" : "text-foreground"}`}
                 >
                   Este mes
                 </button>
                 <button
                   onClick={() => { setPeriod("year"); setShowPeriodDropdown(false); }}
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-secondary transition-colors ${period === "year" ? "bg-primary/10 text-primary" : "text-foreground"}`}
+                  className={`w-full px-3 py-2 text-left text-xs sm:text-sm hover:bg-secondary transition-colors ${period === "year" ? "bg-primary/10 text-primary" : "text-foreground"}`}
                 >
                   Este ano
                 </button>
               </div>
             )}
           </div>
-          <div className="text-right">
-            <p className="text-2xl font-bold text-primary">
+          <div className="text-right min-w-0">
+            <p className="text-lg sm:text-2xl font-bold text-primary truncate">
               {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalVendas)}
             </p>
-            <p className="text-xs text-muted-foreground">Total {period === "year" ? "no ano" : "no mes"}</p>
+            <p className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">Total {period === "year" ? "no ano" : "no mes"}</p>
           </div>
         </div>
       </div>
