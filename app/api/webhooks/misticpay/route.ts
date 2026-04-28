@@ -223,7 +223,7 @@ export async function POST(request: NextRequest) {
 
       // Notificar usuario com valor bruto e liquido
       const grossAmount = Number(transaction.amount) || 0;
-      await notifyPixPaid(transaction.user_id as string, grossAmount, netAmount, payer?.name);
+      await notifyPixPaid(transaction.user_id as string, grossAmount, netAmount);
 
       // Enviar webhook para o cliente se configurado
       const userProfile = await sql`

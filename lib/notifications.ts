@@ -96,17 +96,49 @@ export async function notifyPixCreated(userId: string, amount: number, externalI
 /**
  * Notifica sobre um PIX pago com valor bruto e liquido
  */
-export async function notifyPixPaid(userId: string, grossAmount: number, netAmount: number, payerName?: string): Promise<void> {
+export async function notifyPixPaid(userId: string, grossAmount: number, netAmount: number): Promise<void> {
   const formattedGross = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(grossAmount);
   const formattedNet = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(netAmount);
   await createNotification({
     userId,
     title: "Venda Aprovada!",
-    message: `Bruto: ${formattedGross} | Liquido: ${formattedNet}${payerName ? ` - ${payerName}` : ''}`,
+    message: `Bruto: ${formattedGross} | Liquido: ${formattedNet}`,
     type: "success",
     pushData: {
       grossAmount,
       netAmount
+    }
+  });
+}
+
+/**
+ * Notifica sobre deposito feito por admin
+ */
+export async function notifyAdminDeposit(userId: string, amount: number, adminName?: string): Promise<void> {
+  const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
+  await createNotification({
+    userId,
+    title: "Deposito Recebido!",
+    message: `Voce recebeu um deposito de ${formattedAmount}`,
+    type: "success",
+    pushData: {
+      amount,
+      type: "admin_deposit"
+    }
+  });
+}
+
+/**
+ * Notifica mensagem motivacional
+ */
+export async function notifyMotivational(userId: string, title: string, message: string): Promise<void> {
+  await createNotification({
+    userId,
+    title,
+    message,
+    type: "info",
+    pushData: {
+      type: "motivational"
     }
   });
 }

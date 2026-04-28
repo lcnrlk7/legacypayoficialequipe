@@ -464,7 +464,7 @@ export async function POST(request: NextRequest) {
       
       // Notificar usuario sobre o deposito/PIX recebido com valor bruto e liquido
       const grossAmount = Number(transaction.amount) || 0;
-      await notifyPixPaid(transaction.user_id as string, grossAmount, netAmount, customer?.name);
+      await notifyPixPaid(transaction.user_id as string, grossAmount, netAmount);
 
       // Registrar audit log
       await sql`
