@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { mapMisticPayStatus } from "@/lib/acquirers/misticpay";
-import { notifyTransactionApproved } from "@/lib/push-notifications";
+import { notifyPixPaid, notifyWithdrawalCompleted, notifyWithdrawalFailed } from "@/lib/notifications";
 
 /**
  * Webhook para receber notificações da MisticPay
@@ -94,8 +94,28 @@ export async function POST(request: NextRequest) {
 
       // Mapear status para saque
       let withdrawalStatus = withdrawal.status;
+      const grossAmount = Number(withdrawal.amount) || 0;
+      const fee = Number(withdrawal.fee) || 0;
+      const netAmount = Number(withdrawal.net_amount) || 0;
+      const pixKey = withdrawal.pix_key as string;
+      
       if (internalStatus === "completed") {
         withdrawalStatus = "completed";
+        
+        // Atualizar status do saque
+        await sql`
+          UPDATE withdrawals 
+          SET status = ${withdrawalStatus}, processed_at = NOW()
+          WHERE id = ${withdrawal.id}
+        `;
+        
+        console.log(`[MisticPay Webhook] Saque ${transactionId} CONCLUIDO! Bruto: R$ ${grossAmount.toFixed(2)}, Taxa: R$ ${fee.toFixed(2)}, Liquido: R$ ${netAmount.toFixed(2)}`);
+        
+        // Notificar usuario com valor bruto, liquido e taxa
+        await notifyWithdrawalCompleted(withdrawal.user_id as string, grossAmount, netAmount, fee, pixKey);
+        
+        return NextResponse.json({ success: true, type: "withdrawal", status: withdrawalStatus });
+        
       } else if (internalStatus === "failed" || internalStatus === "cancelled") {
         withdrawalStatus = "failed";
         
@@ -109,20 +129,10 @@ export async function POST(request: NextRequest) {
           WHERE id = ${withdrawal.user_id}
         `;
         
-        console.log(`[MisticPay Webhook] Saque ${transactionId} falhou. Devolvido R$ ${refundAmount.toFixed(2)} para usuário ${withdrawal.user_id}`);
+        console.log(`[MisticPay Webhook] Saque ${transactionId} falhou. Devolvido R$ ${refundAmount.toFixed(2)} para usuario ${withdrawal.user_id}`);
         
-        // Notificar usuário sobre a falha
-        await sql`
-          INSERT INTO user_notifications (id, user_id, title, message, type, created_at)
-          VALUES (
-            ${crypto.randomUUID()},
-            ${withdrawal.user_id},
-            'Saque Falhou',
-            ${`Seu saque de R$ ${refundAmount.toFixed(2)} falhou. O valor foi devolvido ao seu saldo.`},
-            'error',
-            NOW()
-          )
-        `;
+        // Notificar usuario sobre a falha
+        await notifyWithdrawalFailed(withdrawal.user_id as string, refundAmount, "Falha no processamento");
       }
 
       // Atualizar status do saque
@@ -133,21 +143,6 @@ export async function POST(request: NextRequest) {
       `;
 
       console.log(`[MisticPay Webhook] Saque ${transactionId} atualizado para status: ${withdrawalStatus}`);
-
-      // Se saque completado, notificar usuário
-      if (withdrawalStatus === "completed") {
-        await sql`
-          INSERT INTO user_notifications (id, user_id, title, message, type, created_at)
-          VALUES (
-            ${crypto.randomUUID()},
-            ${withdrawal.user_id},
-            'Saque Concluído!',
-            ${`Seu saque de R$ ${Number(withdrawal.net_amount).toFixed(2)} foi enviado para a chave PIX ${withdrawal.pix_key}.`},
-            'success',
-            NOW()
-          )
-        `;
-      }
 
       return NextResponse.json({ success: true, type: "withdrawal", status: withdrawalStatus });
     }
@@ -226,25 +221,9 @@ export async function POST(request: NextRequest) {
         )
       `;
 
-      // Criar notificação para o usuário
-      await sql`
-        INSERT INTO user_notifications (id, user_id, title, message, type, created_at)
-        VALUES (
-          ${crypto.randomUUID()},
-          ${transaction.user_id},
-          'Pagamento Recebido!',
-          ${`Você recebeu R$ ${netAmount.toFixed(2)} via PIX.`},
-          'success',
-          NOW()
-        )
-      `;
-
-      // Enviar push notification
-      try {
-        await notifyTransactionApproved(transaction.user_id, netAmount, transaction.id);
-      } catch (pushError) {
-        console.error("[MisticPay Webhook] Erro ao enviar push notification:", pushError);
-      }
+      // Notificar usuario com valor bruto e liquido
+      const grossAmount = Number(transaction.amount) || 0;
+      await notifyPixPaid(transaction.user_id as string, grossAmount, netAmount, payer?.name);
 
       // Enviar webhook para o cliente se configurado
       const userProfile = await sql`

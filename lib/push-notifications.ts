@@ -123,26 +123,33 @@ export async function notifyNewTransaction(
 }
 
 /**
- * Enviar notificação de transação aprovada/paga
+ * Enviar notificacao de transacao aprovada/paga com valor bruto e liquido
  */
 export async function notifyTransactionApproved(
   userId: string,
-  amount: number,
+  grossAmount: number,
+  netAmount: number,
   transactionId: string
 ): Promise<void> {
-  const formattedAmount = new Intl.NumberFormat("pt-BR", {
+  const formattedGross = new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
-  }).format(amount);
+  }).format(grossAmount);
+  
+  const formattedNet = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(netAmount);
 
   await sendPushNotification(userId, {
-    title: "Pagamento recebido!",
-    body: `Voce recebeu ${formattedAmount} via PIX`,
+    title: "Venda Aprovada!",
+    body: `Bruto: ${formattedGross} | Liquido: ${formattedNet}`,
     tag: `transaction-approved-${transactionId}`,
     data: {
       type: "transaction_approved",
       transactionId,
-      amount,
+      grossAmount,
+      netAmount,
       url: "/dashboard",
     },
     actions: [
@@ -155,26 +162,40 @@ export async function notifyTransactionApproved(
 }
 
 /**
- * Enviar notificação de saque aprovado
+ * Enviar notificacao de saque aprovado com valor bruto, liquido e taxa
  */
 export async function notifyWithdrawalApproved(
   userId: string,
-  amount: number,
+  grossAmount: number,
+  netAmount: number,
+  fee: number,
   withdrawalId: string
 ): Promise<void> {
-  const formattedAmount = new Intl.NumberFormat("pt-BR", {
+  const formattedGross = new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
-  }).format(amount);
+  }).format(grossAmount);
+  
+  const formattedNet = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(netAmount);
+  
+  const formattedFee = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(fee);
 
   await sendPushNotification(userId, {
-    title: "Saque aprovado!",
-    body: `Seu saque de ${formattedAmount} foi aprovado e esta sendo processado`,
+    title: "Saque Aprovado!",
+    body: `Valor: ${formattedGross} | Taxa: ${formattedFee} | Recebido: ${formattedNet}`,
     tag: `withdrawal-${withdrawalId}`,
     data: {
       type: "withdrawal_approved",
       withdrawalId,
-      amount,
+      grossAmount,
+      netAmount,
+      fee,
       url: "/dashboard/wallet",
     },
   });

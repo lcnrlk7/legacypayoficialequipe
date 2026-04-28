@@ -94,15 +94,20 @@ export async function notifyPixCreated(userId: string, amount: number, externalI
 }
 
 /**
- * Notifica sobre um PIX pago
+ * Notifica sobre um PIX pago com valor bruto e liquido
  */
-export async function notifyPixPaid(userId: string, amount: number, payerName?: string): Promise<void> {
-  const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
+export async function notifyPixPaid(userId: string, grossAmount: number, netAmount: number, payerName?: string): Promise<void> {
+  const formattedGross = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(grossAmount);
+  const formattedNet = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(netAmount);
   await createNotification({
     userId,
-    title: "PIX Recebido!",
-    message: `Pagamento de ${formattedAmount} confirmado${payerName ? ` de ${payerName}` : ''}`,
-    type: "deposit"
+    title: "Venda Aprovada!",
+    message: `Bruto: ${formattedGross} | Liquido: ${formattedNet}${payerName ? ` - ${payerName}` : ''}`,
+    type: "deposit",
+    pushData: {
+      grossAmount,
+      netAmount
+    }
   });
 }
 
@@ -123,14 +128,22 @@ export async function notifyWithdrawalRequested(userId: string, amount: number, 
 /**
  * Notifica sobre um saque aprovado/concluido
  */
-export async function notifyWithdrawalCompleted(userId: string, amount: number, pixKey: string, endToEnd?: string): Promise<void> {
-  const formattedAmount = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
+export async function notifyWithdrawalCompleted(userId: string, grossAmount: number, netAmount: number, fee: number, pixKey: string, endToEnd?: string): Promise<void> {
+  const formattedGross = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(grossAmount);
+  const formattedNet = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(netAmount);
+  const formattedFee = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(fee);
   const maskedKey = pixKey.length > 8 ? `${pixKey.substring(0, 4)}***${pixKey.substring(pixKey.length - 4)}` : pixKey;
   await createNotification({
     userId,
-    title: "Saque Concluido!",
-    message: `Saque de ${formattedAmount} enviado para ${maskedKey}${endToEnd ? `. ID: ${endToEnd.substring(0, 12)}...` : ''}`,
-    type: "success"
+    title: "Saque Aprovado!",
+    message: `Valor: ${formattedGross} | Taxa: ${formattedFee} | Recebido: ${formattedNet} - Enviado para ${maskedKey}`,
+    type: "success",
+    pushData: {
+      grossAmount,
+      netAmount,
+      fee,
+      endToEnd
+    }
   });
 }
 
