@@ -82,7 +82,7 @@ export function NotificationCenter() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsOpen(false)}
-              className="fixed inset-0 bg-black/40 z-50"
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
             />
 
             {/* Panel */}
@@ -90,7 +90,7 @@ export function NotificationCenter() {
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
-              className="fixed top-0 right-0 h-full w-full max-w-md bg-card border-l border-border z-50 flex flex-col"
+              className="fixed top-0 right-0 h-full w-full sm:max-w-md bg-card border-l border-border z-[70] flex flex-col overflow-hidden"
             >
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-border">
@@ -132,7 +132,7 @@ export function NotificationCenter() {
               </div>
 
               {/* Notifications List */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="flex-1 overflow-y-auto overscroll-contain">
                 {notifications.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full p-6">
                     <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
