@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
              ui.webhook_url, ui.webhook_secret,
              p.id as profile_id, p.name, p.kyc_status, p.route_type, p.balance, p.api_enabled, p.is_active
       FROM user_integrations ui
-      INNER JOIN profiles p ON p.id = ui.user_id
+      INNER JOIN profiles p ON p.id::text = ui.user_id
       WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
     `;
 
@@ -255,6 +255,7 @@ export async function GET(request: NextRequest) {
     const integrationResult = await sql`
       SELECT ui.user_id, ui.is_active as integration_active
       FROM user_integrations ui
+      INNER JOIN profiles p ON p.id::text = ui.user_id
       WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
     `;
 
