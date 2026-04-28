@@ -76,7 +76,7 @@ export async function notifyDeposit(userId: string, amount: number, description?
     userId,
     title: "Deposito Recebido!",
     message: `Voce recebeu um deposito de ${formattedAmount}${description ? ` - ${description}` : ''}`,
-    type: "deposit"
+    type: "success"
   });
 }
 
@@ -89,7 +89,7 @@ export async function notifyPixCreated(userId: string, amount: number, externalI
     userId,
     title: "Cobranca PIX Criada",
     message: `Cobranca de ${formattedAmount} criada. ID: ${externalId.substring(0, 8)}...`,
-    type: "pix"
+    type: "info"
   });
 }
 
@@ -103,7 +103,7 @@ export async function notifyPixPaid(userId: string, grossAmount: number, netAmou
     userId,
     title: "Venda Aprovada!",
     message: `Bruto: ${formattedGross} | Liquido: ${formattedNet}${payerName ? ` - ${payerName}` : ''}`,
-    type: "deposit",
+    type: "success",
     pushData: {
       grossAmount,
       netAmount
@@ -121,7 +121,7 @@ export async function notifyWithdrawalRequested(userId: string, amount: number, 
     userId,
     title: "Saque Solicitado",
     message: `Saque de ${formattedAmount} para ${maskedKey} esta sendo processado`,
-    type: "withdrawal"
+    type: "info"
   });
 }
 
