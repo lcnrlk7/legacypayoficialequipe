@@ -22,6 +22,7 @@ interface MedusaCustomer {
 
 interface MedusaItem {
   title: string;
+  description?: string;
   quantity: number;
   tangible: boolean;
   unitPrice: number;
@@ -225,7 +226,8 @@ export class MedusaPayments {
 
     const items: MedusaItem[] = [
       {
-        title: description || "Pagamento PIX",
+        title: description && description.trim() ? description.trim() : "Deposito via PIX - LegacyPay",
+        description: description && description.trim() ? description.trim() : "Deposito via PIX - LegacyPay",
         quantity: 1,
         tangible: false,
         unitPrice: amount,
