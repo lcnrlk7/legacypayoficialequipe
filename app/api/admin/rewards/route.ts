@@ -1,3 +1,4 @@
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
@@ -5,6 +6,10 @@ import { getSession } from "@/lib/auth";
 // GET - Lista todas as premiações e premiações de usuários
 export async function GET() {
   try {
+    // SEGURANCA: Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+
     const session = await getSession();
 
     if (!session) {
@@ -46,6 +51,10 @@ export async function GET() {
 // POST - Cria uma nova premiação para um usuário específico
 export async function POST(request: NextRequest) {
   try {
+    // SEGURANCA: Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+
     const session = await getSession();
 
     if (!session) {
@@ -105,6 +114,10 @@ export async function POST(request: NextRequest) {
 // PUT - Atualiza status de uma premiação
 export async function PUT(request: NextRequest) {
   try {
+    // SEGURANCA: Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+
     const session = await getSession();
 
     if (!session) {
@@ -178,6 +191,10 @@ export async function PUT(request: NextRequest) {
 // DELETE - Remove uma premiação
 export async function DELETE(request: NextRequest) {
   try {
+    // SEGURANCA: Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+
     const session = await getSession();
 
     if (!session) {

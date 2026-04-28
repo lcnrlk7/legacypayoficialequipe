@@ -1,8 +1,13 @@
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 import { sql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
+    // SEGURANCA: Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+
     const body = await request.json();
     const { user_id, goal_value, reward_type, notes } = body;
 
@@ -65,6 +70,10 @@ export async function GET(request: NextRequest) {
   const userId = searchParams.get("user_id");
 
   try {
+    // SEGURANCA: Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+
     if (userId) {
       const rewards = await sql`
         SELECT * FROM user_rewards WHERE user_id = ${userId}
