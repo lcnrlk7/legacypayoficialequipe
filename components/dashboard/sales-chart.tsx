@@ -172,11 +172,11 @@ export function SalesChart({ transactions }: SalesChartProps) {
       </div>
 
       {/* Chart */}
-      <div className="w-full" style={{ minHeight: "300px", height: "300px" }}>
-        <ResponsiveContainer width="100%" height={300} minWidth={0}>
+      <div className="w-full overflow-x-auto" style={{ minHeight: "300px", height: "300px" }}>
+        <ResponsiveContainer width="100%" height={300} minWidth={280}>
           <AreaChart
             data={chartData}
-            margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+            margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
           >
             <defs>
               <linearGradient id="colorVendas" x1="0" y1="0" x2="0" y2="1">
@@ -199,9 +199,9 @@ export function SalesChart({ transactions }: SalesChartProps) {
             <YAxis 
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#888', fontSize: 12 }}
+              tick={{ fill: '#888', fontSize: 10 }}
               tickFormatter={(value) => formatCurrency(value)}
-              width={60}
+              width={50}
               domain={[0, maxValue * 1.1]}
             />
             <Tooltip
