@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
+import { notifyPixPaid } from "@/lib/notifications";
 
 export const dynamic = 'force-dynamic';
 
@@ -48,21 +49,13 @@ export async function POST(request: NextRequest) {
 
     await sql`UPDATE profiles SET balance = ${newBalance}, updated_at = NOW() WHERE id = ${transaction.user_id}`;
 
-    // Criar notificação para o usuário
+    // Enviar notificacao com push para o usuario
     try {
-      await sql`
-        INSERT INTO user_notifications (id, user_id, title, message, type, created_at)
-        VALUES (
-          ${crypto.randomUUID()},
-          ${transaction.user_id},
-          'Pagamento Confirmado!',
-          ${`Seu pagamento de R$ ${netAmount.toFixed(2)} foi confirmado manualmente.`},
-          'success',
-          NOW()
-        )
-      `;
+      const grossAmount = Number(transaction.amount) || netAmount;
+      await notifyPixPaid(transaction.user_id, grossAmount, netAmount);
+      console.log(`[Admin Confirm] Push notification enviado para usuario ${transaction.user_id}`);
     } catch (notifError) {
-      console.error("Error creating notification:", notifError);
+      console.error("[Admin Confirm] Error sending notification:", notifError);
     }
 
     // Log de auditoria
