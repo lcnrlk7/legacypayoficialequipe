@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
+import bcrypt from 'bcryptjs'
 
 // API temporária para criar CEO - REMOVER APÓS USO
 export async function POST(request: NextRequest) {
@@ -17,15 +18,24 @@ export async function POST(request: NextRequest) {
     }
 
     // Verificar se o usuário existe em profiles
-    const profileResult = await sql`
+    let profileResult = await sql`
       SELECT id, email, name FROM profiles WHERE email = ${email}
     `
 
+    // Se não existe, criar o usuário em profiles
     if (profileResult.length === 0) {
-      return NextResponse.json({ 
-        error: 'Usuário não encontrado em profiles. Crie uma conta primeiro.',
-        suggestion: 'Registre-se em /auth/register primeiro'
-      }, { status: 404 })
+      const password = 'LegacyPay@2024#Admin'
+      const passwordHash = await bcrypt.hash(password, 12)
+      const userId = crypto.randomUUID()
+      
+      await sql`
+        INSERT INTO profiles (id, email, name, password_hash, role, kyc_status, is_active, route_type, balance)
+        VALUES (${userId}, ${email}, 'CEO LegacyPay', ${passwordHash}, 'admin', 'approved', true, 'white', 0)
+      `
+      
+      profileResult = await sql`
+        SELECT id, email, name FROM profiles WHERE id = ${userId}
+      `
     }
 
     const profile = profileResult[0]
