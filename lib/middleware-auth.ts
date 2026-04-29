@@ -82,12 +82,14 @@ export async function handleAuth(request: NextRequest) {
     '/api/auth/send-code',
     '/api/auth/verify-code',
     '/api/auth/password-reset',
-    '/api/v1', // Public API with API key auth (matches /api/v1 and /api/v1/*)
+    '/api/v1/', // Public API with API key auth
+    '/api/v1/integration', // API de integração externa (usa Basic Auth próprio)
+    '/api/v1/pix', // API de PIX pública
     '/api/webhooks',
   ]
 
   const isPublicPath = publicPaths.some(path => 
-    pathname === path || pathname.startsWith(path)
+    pathname === path || pathname.startsWith(path + '/') || pathname.startsWith(path)
   )
 
   // Static files and assets
