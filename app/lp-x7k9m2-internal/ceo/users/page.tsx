@@ -121,6 +121,13 @@ export default function UsersPage() {
   async function loadUsers() {
     try {
       const response = await fetch("/api/admin/users");
+      
+      // Se acesso negado, redirecionar para login
+      if (response.status === 403 || response.status === 401) {
+        window.location.href = "/lp-x7k9m2-internal";
+        return;
+      }
+      
       const data = await response.json();
       
       if (data.users) {

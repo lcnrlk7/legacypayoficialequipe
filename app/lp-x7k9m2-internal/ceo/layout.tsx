@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -26,6 +26,7 @@ import {
   FileBarChart,
   UsersRound,
   Webhook,
+  Clock,
 } from "lucide-react";
 
 const menuItems = [
@@ -116,8 +117,35 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [adminUser, setAdminUser] = useState("");
+  const [sessionTimeLeft, setSessionTimeLeft] = useState<string>("");
+  const [sessionExpired, setSessionExpired] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+
+  // Funcao para calcular tempo restante da sessao
+  const calculateTimeLeft = useCallback(() => {
+    const loginTime = localStorage.getItem("lp_admin_login_time");
+    if (!loginTime) return "Sessao ativa";
+    
+    const loginTimestamp = parseInt(loginTime);
+    const now = Date.now();
+    const sessionDuration = 24 * 60 * 60 * 1000; // 24 horas em ms
+    const timeLeft = loginTimestamp + sessionDuration - now;
+    
+    if (timeLeft <= 0) {
+      setSessionExpired(true);
+      return "Sessao expirada";
+    }
+    
+    const hours = Math.floor(timeLeft / (1000 * 60 * 60));
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m ${seconds}s`;
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem("lp_admin_session");
@@ -129,14 +157,40 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
     } else {
       setIsAuthenticated(true);
       setAdminUser(user);
+      
+      // Salvar tempo de login se nao existir
+      if (!localStorage.getItem("lp_admin_login_time")) {
+        localStorage.setItem("lp_admin_login_time", Date.now().toString());
+      }
     }
     setIsLoading(false);
   }, [router]);
+
+  // Atualizar timer a cada segundo
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    const interval = setInterval(() => {
+      const timeLeft = calculateTimeLeft();
+      setSessionTimeLeft(timeLeft);
+      
+      // Se sessao expirou, redirecionar
+      if (sessionExpired) {
+        handleLogout();
+      }
+    }, 1000);
+    
+    // Calcular imediatamente
+    setSessionTimeLeft(calculateTimeLeft());
+    
+    return () => clearInterval(interval);
+  }, [isAuthenticated, calculateTimeLeft, sessionExpired]);
 
   const handleLogout = () => {
     localStorage.removeItem("lp_admin_session");
     localStorage.removeItem("lp_admin_user");
     localStorage.removeItem("lp_admin_role");
+    localStorage.removeItem("lp_admin_login_time");
     router.push("/lp-x7k9m2-internal");
   };
 
@@ -214,6 +268,15 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="p-4 border-t border-border">
+            {/* Timer de Sessao */}
+            <div className="flex items-center gap-2 px-4 py-2 mb-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+              <Clock className="w-4 h-4 text-yellow-500" />
+              <div className="flex-1">
+                <p className="text-xs text-yellow-500">Sessao expira em</p>
+                <p className="text-sm font-medium text-yellow-400">{sessionTimeLeft}</p>
+              </div>
+            </div>
+            
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary mb-3">
               <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
                 <Shield className="w-5 h-5 text-primary" />
