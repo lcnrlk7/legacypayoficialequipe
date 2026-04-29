@@ -19,9 +19,9 @@ export async function POST(request: NextRequest) {
     let webhookSecret: string
 
     if (integration_id) {
-      // Buscar da integracao especifica
+      // Buscar da integracao especifica (tabela user_integrations)
       const integrations = await sql`
-        SELECT webhook_url, webhook_secret FROM integrations 
+        SELECT webhook_url, webhook_secret FROM user_integrations 
         WHERE id = ${integration_id} AND user_id = ${session.userId}
       `
       const integration = integrations[0]
