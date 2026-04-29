@@ -25,8 +25,8 @@ const footerLinks = {
   ],
   Suporte: [
     { label: "FAQ", href: "#faq" },
-    { label: "Discord", href: "https://discord.gg/vFfknE9kuJ", external: true },
-    { label: "Central de Ajuda", href: "https://discord.gg/vFfknE9kuJ", external: true },
+    { label: "Discord", href: "https://discord.gg/legacypay", external: true },
+    { label: "Central de Ajuda", href: "https://discord.gg/legacypay", external: true },
     { label: "Developers", href: "/docs" },
   ],
 };
@@ -102,7 +102,7 @@ export function Footer() {
                 </svg>
               </Link>
               <Link
-                href="https://discord.gg/vFfknE9kuJ"
+                href="https://discord.gg/legacypay"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-11 h-11 rounded-xl bg-[#5865F2] flex items-center justify-center text-white hover:scale-110 hover:shadow-lg hover:shadow-[#5865F2]/30 transition-all duration-300"

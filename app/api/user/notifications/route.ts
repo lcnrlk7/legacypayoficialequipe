@@ -10,11 +10,12 @@ export async function GET() {
       return NextResponse.json({ notifications: [] });
     }
 
+    // Buscar todas as notificacoes recentes (lidas e nao lidas)
     const notifications = await sql`
       SELECT * FROM user_notifications 
-      WHERE user_id = ${session.userId} AND read = false
+      WHERE user_id = ${session.userId}
       ORDER BY created_at DESC
-      LIMIT 10
+      LIMIT 20
     `;
 
     return NextResponse.json({ notifications });

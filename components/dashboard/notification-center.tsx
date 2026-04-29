@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, X, Check, Trash2, ArrowDownLeft, ArrowUpRight, UserCheck, Settings, ArrowLeftRight } from "lucide-react";
+import { Bell, X, Check, Trash2, ArrowDownLeft, ArrowUpRight, UserCheck, Settings, ArrowLeftRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNotifications, NotificationData } from "@/hooks/use-notifications";
 
@@ -45,13 +46,20 @@ const formatTimeAgo = (date: Date) => {
 
 export function NotificationCenter() {
   const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const {
     notifications,
     unreadCount,
+    isLoading,
     markAsRead,
     markAllAsRead,
     clearNotifications,
   } = useNotifications();
+
+  // Necessario para createPortal funcionar no SSR
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <>
@@ -72,26 +80,29 @@ export function NotificationCenter() {
         )}
       </button>
 
-      {/* Notification Panel */}
-      <AnimatePresence>
-        {isOpen && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsOpen(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[60]"
-            />
+      {/* Notification Panel - Renderizado via Portal para ficar acima de tudo */}
+      {mounted && createPortal(
+        <AnimatePresence>
+          {isOpen && (
+            <>
+              {/* Backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setIsOpen(false)}
+                className="fixed inset-0 bg-black/80 backdrop-blur-sm"
+                style={{ zIndex: 9999 }}
+              />
 
-            {/* Panel */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="fixed top-0 right-0 h-full w-full sm:max-w-md bg-card border-l border-border z-[70] flex flex-col overflow-hidden"
-            >
+              {/* Panel */}
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                className="fixed top-0 right-0 h-full w-full sm:max-w-md bg-card border-l border-border flex flex-col overflow-hidden shadow-2xl"
+                style={{ zIndex: 10000 }}
+              >
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-border">
                 <div>
@@ -133,7 +144,14 @@ export function NotificationCenter() {
 
               {/* Notifications List */}
               <div className="flex-1 overflow-y-auto overscroll-contain">
-                {notifications.length === 0 ? (
+                {isLoading ? (
+                  <div className="flex flex-col items-center justify-center h-full p-6">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin mb-4" />
+                    <p className="text-muted-foreground text-center">
+                      Carregando notificações...
+                    </p>
+                  </div>
+                ) : notifications.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full p-6">
                     <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mb-4">
                       <Bell className="w-8 h-8 text-muted-foreground" />
@@ -185,10 +203,12 @@ export function NotificationCenter() {
                   </div>
                 )}
               </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   );
 }
