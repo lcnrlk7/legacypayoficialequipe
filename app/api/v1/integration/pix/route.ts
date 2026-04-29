@@ -43,8 +43,6 @@ export async function POST(request: NextRequest) {
     let profile: { id: string; name: string; kyc_status: string; route_type: string; balance: number; api_enabled: boolean; is_active: boolean } | null = null;
 
     // Primeiro, tentar buscar na tabela user_integrations (cli_/sec_)
-    console.log(`[Integration PIX] Buscando credenciais: clientId=${clientId.substring(0, 10)}...`);
-    
     const integrationResult = await sql`
       SELECT ui.id as integration_id, ui.user_id, ui.name as integration_name, ui.is_active as integration_active,
              ui.webhook_url, ui.webhook_secret,
@@ -53,8 +51,6 @@ export async function POST(request: NextRequest) {
       INNER JOIN profiles p ON p.id = ui.user_id
       WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
     `;
-    
-    console.log(`[Integration PIX] Resultado user_integrations: ${integrationResult.length} registros`);
 
     if (integrationResult.length > 0) {
       integration = integrationResult[0];
@@ -164,8 +160,6 @@ export async function POST(request: NextRequest) {
 
     // Buscar taxas baseadas na rota do usuário (considera taxas personalizadas)
     const systemFees = await getSystemFeesForUser(profile.id);
-    
-    console.log(`[Integration PIX] Usuario ${profile.id} - Taxas: ${systemFees.pixPercentageFee}% + R$${systemFees.pixFixedFee} (rota: ${profile.route_type})`);
 
     // Calcular taxa (usar taxa personalizada do usuario ou padrao da rota)
     const feePercentage = systemFees.pixPercentageFee;
@@ -173,17 +167,12 @@ export async function POST(request: NextRequest) {
     const percentageFee = (amount * feePercentage) / 100;
     const fee = percentageFee + fixedFee;
     const netAmount = amount - fee;
-    
-    console.log(`[Integration PIX] Valor: R$${amount}, Taxa: R$${fee.toFixed(2)} (${feePercentage}% + R$${fixedFee}), Liquido: R$${netAmount.toFixed(2)}`);
 
     const transactionId = external_id || `int_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-    // Criar cobrança PIX
-    // Garantir que os dados do pagador nunca sejam undefined
+    // Criar cobrança PIX - garantir que os dados do pagador nunca sejam undefined
     const safePayerName = (payer?.name && String(payer.name).trim()) ? String(payer.name).trim() : "Cliente";
     const safePayerDocument = (payer?.document && String(payer.document).trim()) ? String(payer.document).replace(/\D/g, "") : "00000000000";
-    
-    console.log(`[Integration PIX] Criando PIX - payerName: "${safePayerName}", payerDocument: "${safePayerDocument}"`);
     
     const pixResponse = await createPixPayment(
       amount,
@@ -195,14 +184,11 @@ export async function POST(request: NextRequest) {
     );
 
     if (!pixResponse.success) {
-      console.error("[Integration PIX] Erro ao criar PIX:", pixResponse.error);
-      console.error("[Integration PIX] Resposta completa:", JSON.stringify(pixResponse));
       return NextResponse.json(
         { 
           success: false, 
           error: pixResponse.error || "Erro ao criar cobrança", 
-          code: "ACQUIRER_ERROR",
-          details: process.env.NODE_ENV === 'development' ? pixResponse.error : undefined
+          code: "ACQUIRER_ERROR"
         },
         { status: 500 }
       );
@@ -213,8 +199,6 @@ export async function POST(request: NextRequest) {
     const qrCode = pixResponse.qrCode || pixResponse.data?.qrCode || pixResponse.copyPaste || '';
     const qrCodeBase64 = pixResponse.qrCodeBase64 || pixResponse.data?.qrCodeBase64 || '';
     const copyPaste = pixResponse.copyPaste || pixResponse.data?.copyPaste || pixResponse.data?.pixCode || qrCode;
-    
-    console.log(`[Integration PIX] PIX criado - acquirerTxId: ${acquirerTransactionId}, qrCode: ${qrCode ? 'OK' : 'VAZIO'}, copyPaste: ${copyPaste ? 'OK' : 'VAZIO'}`);
 
     // Salvar transação no banco (tabela transactions sem qr_code)
     const txId = crypto.randomUUID();
