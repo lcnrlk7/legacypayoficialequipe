@@ -361,4 +361,7 @@ curl -X POST https://legacypay.site/api/v1/integration/pix \
 
 ## Suporte
 
-Em caso de dúvidas ou problemas técnicos, entre em contato através do painel da LegacyPay ou pelo suporte dedicado.
+Em caso de dúvidas ou problemas técnicos, entre em contato:
+
+- **Discord**: https://discord.gg/legacypay
+- **WhatsApp**: (34) 99935-3187
