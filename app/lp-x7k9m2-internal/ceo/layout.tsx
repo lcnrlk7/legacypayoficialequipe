@@ -124,8 +124,16 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
 
   // Funcao para calcular tempo restante da sessao
   const calculateTimeLeft = useCallback(() => {
-    const loginTime = localStorage.getItem("lp_admin_login_time");
-    if (!loginTime) return "Sessao ativa";
+    if (typeof window === 'undefined') return "24h 00m";
+    
+    let loginTime = localStorage.getItem("lp_admin_login_time");
+    
+    // Se nao existe, criar agora
+    if (!loginTime) {
+      const now = Date.now().toString();
+      localStorage.setItem("lp_admin_login_time", now);
+      loginTime = now;
+    }
     
     const loginTimestamp = parseInt(loginTime);
     const now = Date.now();
@@ -134,7 +142,7 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
     
     if (timeLeft <= 0) {
       setSessionExpired(true);
-      return "Sessao expirada";
+      return "Expirada";
     }
     
     const hours = Math.floor(timeLeft / (1000 * 60 * 60));
@@ -142,9 +150,9 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
     const seconds = Math.floor((timeLeft % (1000 * 60)) / 1000);
     
     if (hours > 0) {
-      return `${hours}h ${minutes}m`;
+      return `${hours}h ${minutes.toString().padStart(2, '0')}m`;
     }
-    return `${minutes}m ${seconds}s`;
+    return `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
   }, []);
 
   useEffect(() => {
@@ -214,16 +222,23 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
           <Image src="/logo-icon.png" alt="LegacyPay" width={32} height={32} />
           <span className="font-semibold text-foreground">Admin CEO</span>
         </div>
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="p-2 rounded-lg hover:bg-secondary transition-colors"
-        >
-          {sidebarOpen ? (
-            <X className="w-6 h-6" />
-          ) : (
-            <Menu className="w-6 h-6" />
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Timer Mobile */}
+          <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+            <Clock className="w-3 h-3 text-yellow-500" />
+            <span className="text-xs font-medium text-yellow-400">{sessionTimeLeft || "24h 00m"}</span>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 rounded-lg hover:bg-secondary transition-colors"
+          >
+            {sidebarOpen ? (
+              <X className="w-6 h-6" />
+            ) : (
+              <Menu className="w-6 h-6" />
+            )}
+          </button>
+        </div>
       </header>
 
       <div className="flex">
@@ -273,7 +288,7 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
               <Clock className="w-4 h-4 text-yellow-500" />
               <div className="flex-1">
                 <p className="text-xs text-yellow-500">Sessao expira em</p>
-                <p className="text-sm font-medium text-yellow-400">{sessionTimeLeft}</p>
+                <p className="text-sm font-medium text-yellow-400">{sessionTimeLeft || "24h 00m"}</p>
               </div>
             </div>
             
@@ -358,6 +373,27 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
                 </nav>
 
                 <div className="p-4 border-t border-border">
+                  {/* Timer de Sessao Mobile */}
+                  <div className="flex items-center gap-2 px-4 py-2 mb-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                    <Clock className="w-4 h-4 text-yellow-500" />
+                    <div className="flex-1">
+                      <p className="text-xs text-yellow-500">Sessao expira em</p>
+                      <p className="text-sm font-medium text-yellow-400">{sessionTimeLeft || "24h 00m"}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary mb-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                      <Shield className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground capitalize">
+                        {adminUser}
+                      </p>
+                      <p className="text-xs text-muted-foreground">CEO / Admin</p>
+                    </div>
+                  </div>
+                  
                   <button
                     onClick={handleLogout}
                     className="flex items-center gap-3 px-4 py-3 w-full rounded-xl text-red-400 hover:bg-red-500/10 transition-all"
