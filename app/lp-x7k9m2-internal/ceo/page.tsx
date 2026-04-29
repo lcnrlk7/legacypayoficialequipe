@@ -60,6 +60,14 @@ export default function CEODashboard() {
       setIsLoading(true);
       
       const response = await fetch("/api/admin/stats");
+      
+      // Se acesso negado, redirecionar para login
+      if (response.status === 403 || response.status === 401) {
+        console.log("[v0] Acesso negado, redirecionando para login");
+        window.location.href = "/lp-x7k9m2-internal";
+        return;
+      }
+      
       const data = await response.json();
 
       if (data.stats) {
@@ -75,8 +83,16 @@ export default function CEODashboard() {
         });
       }
 
-      // Buscar transações separadamente
+      // Buscar transacoes separadamente
       const txResponse = await fetch("/api/admin/transactions");
+      
+      // Se acesso negado, redirecionar para login
+      if (txResponse.status === 403 || txResponse.status === 401) {
+        console.log("[v0] Acesso negado em transactions, redirecionando para login");
+        window.location.href = "/lp-x7k9m2-internal";
+        return;
+      }
+      
       const txData = await txResponse.json();
       if (txData.transactions && Array.isArray(txData.transactions)) {
         setRecentTransactions(txData.transactions);

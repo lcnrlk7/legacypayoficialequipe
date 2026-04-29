@@ -5,11 +5,14 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  // Verificar se e admin FORA do try/catch para garantir que retorna 403
+  const admin = await verifyAdmin();
+  if (!admin) {
+    console.log("[v0] admin/transactions - acesso negado");
+    return accessDeniedResponse();
+  }
+  
   try {
-    // Verificar se e admin
-    const admin = await verifyAdmin();
-    if (!admin) return accessDeniedResponse();
-    
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "100");
     const status = searchParams.get("status");

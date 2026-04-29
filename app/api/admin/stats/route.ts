@@ -29,10 +29,14 @@ const formatRelativeTime = (date: string) => {
 };
 
 export async function GET() {
+  // Verificar se e admin FORA do try/catch para garantir que retorna 403
+  const admin = await verifyAdmin();
+  if (!admin) {
+    console.log("[v0] admin/stats - acesso negado");
+    return accessDeniedResponse();
+  }
+  
   try {
-    // Verificar se e admin
-    const admin = await verifyAdmin();
-    if (!admin) return accessDeniedResponse();
     const [
       totalUsersResult,
       pendingKYCResult,
