@@ -177,13 +177,19 @@ export async function createPixPayment(
   payerName?: string,
   payerDocument?: string
 ): Promise<PaymentResult> {
+  console.log(`[createPixPayment] Iniciando - userId: ${userId}, amount: ${amount}, externalId: ${externalId}`);
+  
   const config = userId
     ? await getAcquirerForUser(userId)
     : await getActiveAcquirer();
 
   if (!config) {
+    console.error("[createPixPayment] ERRO: Nenhuma adquirente configurada");
     return { success: false, error: "Nenhuma adquirente ativa configurada" };
   }
+
+  console.log(`[createPixPayment] Adquirente encontrada: ${config.code} (${config.name}), rota: ${config.route_type}`);
+  console.log(`[createPixPayment] Config: api_key=${config.api_key ? 'PRESENTE' : 'VAZIO'}, api_secret=${config.api_secret ? 'PRESENTE' : 'VAZIO'}`);
 
   try {
     switch (config.code) {
@@ -216,6 +222,8 @@ export async function createPixPayment(
       }
 
       case "medusa": {
+        console.log("[Medusa] Iniciando criação de PIX...");
+        
         const client = new MedusaPayments({
           secretKey: config.api_key,
           licenseKey: config.api_secret
@@ -230,35 +238,51 @@ export async function createPixPayment(
         const safePayerDocument = (payerDocument && payerDocument.trim()) ? payerDocument.replace(/\D/g, "") : "00000000000";
         const safeDescription = (description && description.trim()) ? description.trim() : "Pagamento PIX";
 
-        const result = await client.createSimplePixPayment(
-          amount * 100, // Converter para centavos
-          safePayerName,
-          safePayerDocument,
-          undefined, // email
-          safeDescription,
-          webhookUrl
-        );
-        
-        console.log("[Medusa] PIX criado, ID:", result.id);
+        console.log(`[Medusa] Params: amount=${amount * 100}, payerName=${safePayerName}, payerDoc=${safePayerDocument}`);
 
-        return {
-          success: true,
-          transactionId: String(result.id),
-          qrCode: result.pix?.qrcode,
-          copyPaste: result.pix?.qrcode,
-          expiresAt: result.pix?.expirationDate,
-          amount: result.amount / 100,
-        };
+        try {
+          const result = await client.createSimplePixPayment(
+            amount * 100, // Converter para centavos
+            safePayerName,
+            safePayerDocument,
+            undefined, // email
+            safeDescription,
+            webhookUrl
+          );
+          
+          console.log("[Medusa] Resposta recebida:", JSON.stringify(result));
+          console.log("[Medusa] PIX criado, ID:", result.id);
+
+          return {
+            success: true,
+            transactionId: String(result.id),
+            qrCode: result.pix?.qrcode,
+            copyPaste: result.pix?.qrcode,
+            expiresAt: result.pix?.expirationDate,
+            amount: result.amount / 100,
+          };
+        } catch (medusaError) {
+          console.error("[Medusa] ERRO na API:", medusaError);
+          console.error("[Medusa] Erro stringificado:", JSON.stringify(medusaError, Object.getOwnPropertyNames(medusaError as object)));
+          throw medusaError;
+        }
       }
 
       default:
+        console.error(`[createPixPayment] Adquirente não suportada: ${config.code}`);
         return { success: false, error: `Adquirente ${config.code} não suportada` };
     }
   } catch (error) {
-    console.error(`[Acquirer] Erro ao criar pagamento:`, error);
+    console.error(`[createPixPayment] ERRO CATCH:`, error);
+    console.error(`[createPixPayment] Tipo do erro:`, typeof error);
+    console.error(`[createPixPayment] Erro stringificado:`, JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    
+    const errorMessage = error instanceof Error ? error.message : "Erro ao processar pagamento";
+    console.error(`[createPixPayment] Mensagem final:`, errorMessage);
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Erro ao processar pagamento"
+      error: errorMessage
     };
   }
 }

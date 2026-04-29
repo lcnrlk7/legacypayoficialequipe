@@ -135,6 +135,11 @@ export class MedusaPayments {
   ): Promise<T> {
     const url = `${MEDUSA_API_URL}${endpoint}`;
 
+    console.log(`[MedusaPayments] Request: ${options.method || 'GET'} ${url}`);
+    if (options.body) {
+      console.log(`[MedusaPayments] Body:`, options.body);
+    }
+
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -144,16 +149,27 @@ export class MedusaPayments {
       },
     });
 
-    const data = await response.json();
+    const responseText = await response.text();
+    console.log(`[MedusaPayments] Response status: ${response.status}`);
+    console.log(`[MedusaPayments] Response body: ${responseText}`);
+
+    let data: T;
+    try {
+      data = JSON.parse(responseText) as T;
+    } catch {
+      console.error("[MedusaPayments] Erro ao parsear JSON:", responseText);
+      throw new Error(`Erro ao processar resposta da API: ${responseText.substring(0, 200)}`);
+    }
 
     if (!response.ok) {
       console.error("[MedusaPayments] API Error:", data);
+      const errorData = data as { message?: string; error?: string };
       throw new Error(
-        data.message || data.error || "Erro na API Medusa Payments"
+        errorData.message || errorData.error || `Erro na API Medusa Payments (${response.status})`
       );
     }
 
-    return data as T;
+    return data;
   }
 
   /**

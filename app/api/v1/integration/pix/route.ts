@@ -43,14 +43,18 @@ export async function POST(request: NextRequest) {
     let profile: { id: string; name: string; kyc_status: string; route_type: string; balance: number; api_enabled: boolean; is_active: boolean } | null = null;
 
     // Primeiro, tentar buscar na tabela user_integrations (cli_/sec_)
+    console.log(`[Integration PIX] Buscando credenciais: clientId=${clientId.substring(0, 10)}...`);
+    
     const integrationResult = await sql`
       SELECT ui.id as integration_id, ui.user_id, ui.name as integration_name, ui.is_active as integration_active,
              ui.webhook_url, ui.webhook_secret,
              p.id as profile_id, p.name, p.kyc_status, p.route_type, p.balance, p.api_enabled, p.is_active
       FROM user_integrations ui
-      INNER JOIN profiles p ON p.id::text = ui.user_id
+      INNER JOIN profiles p ON p.id = ui.user_id
       WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
     `;
+    
+    console.log(`[Integration PIX] Resultado user_integrations: ${integrationResult.length} registros`);
 
     if (integrationResult.length > 0) {
       integration = integrationResult[0];
@@ -192,8 +196,14 @@ export async function POST(request: NextRequest) {
 
     if (!pixResponse.success) {
       console.error("[Integration PIX] Erro ao criar PIX:", pixResponse.error);
+      console.error("[Integration PIX] Resposta completa:", JSON.stringify(pixResponse));
       return NextResponse.json(
-        { success: false, error: pixResponse.error || "Erro ao criar cobrança", code: "ACQUIRER_ERROR" },
+        { 
+          success: false, 
+          error: pixResponse.error || "Erro ao criar cobrança", 
+          code: "ACQUIRER_ERROR",
+          details: process.env.NODE_ENV === 'development' ? pixResponse.error : undefined
+        },
         { status: 500 }
       );
     }
@@ -331,7 +341,7 @@ export async function GET(request: NextRequest) {
     const integrationResult = await sql`
       SELECT ui.user_id, ui.is_active as integration_active
       FROM user_integrations ui
-      INNER JOIN profiles p ON p.id::text = ui.user_id
+      INNER JOIN profiles p ON p.id = ui.user_id
       WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
     `;
 
