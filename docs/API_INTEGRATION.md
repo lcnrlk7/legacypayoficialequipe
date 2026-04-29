@@ -187,7 +187,7 @@ GET /api/v1/integration/pix?external_id={external_id}
 | `ACCOUNT_DISABLED` | 403 | Conta do usuário desativada |
 | `KYC_REQUIRED` | 403 | KYC não aprovado |
 | `INVALID_AMOUNT` | 400 | Valor inválido |
-| `MIN_AMOUNT` | 400 | Valor mínimo é R$ 1,00 |
+| `MIN_AMOUNT` | 400 | Valor mínimo (Gateway Express: R$ 5,00 / Gateway Premium: R$ 1,00) |
 | `MAX_AMOUNT` | 400 | Valor máximo é R$ 50.000,00 |
 | `NOT_FOUND` | 404 | Transação não encontrada |
 | `ACQUIRER_ERROR` | 500 | Erro no processador de pagamento |
@@ -340,7 +340,8 @@ curl -X POST https://legacypay.site/api/v1/integration/pix \
 
 | Item | Valor |
 |------|-------|
-| Valor mínimo | R$ 1,00 |
+| Valor mínimo (Gateway Express) | R$ 5,00 |
+| Valor mínimo (Gateway Premium) | R$ 1,00 |
 | Valor máximo | R$ 50.000,00 |
 | Validade do PIX | 30 minutos |
 | Rate limit | 60 requisições/minuto |
