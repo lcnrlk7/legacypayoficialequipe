@@ -1,25 +1,69 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { sql } from "@/lib/db";
+import { cookies } from "next/headers";
+import { jwtVerify } from "jose";
+
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+);
+
+const TEAM_COOKIE_NAME = 'team_session';
 
 export interface AdminSession {
   userId: string;
   email: string;
   name: string | null;
   isAdmin: boolean;
+  isTeamMember?: boolean;
 }
 
 /**
  * Verifica se o usuario atual e admin
- * Verifica em duas tabelas: profiles (is_admin) e team_members (CEO/admin)
+ * Verifica em duas formas:
+ * 1. Cookie team_session (login via /lp-x7k9m2-internal)
+ * 2. Cookie auth-token (login via /login) + is_admin em profiles
  * Retorna a sessao do admin ou null se nao for admin
  */
 export async function verifyAdmin(): Promise<AdminSession | null> {
   try {
-    const session = await getSession();
-    if (!session) return null;
+    // PRIMEIRO: Verificar cookie team_session (CEOs logados via painel interno)
+    const cookieStore = await cookies();
+    const teamToken = cookieStore.get(TEAM_COOKIE_NAME);
     
-    // Primeiro verifica na tabela profiles
+    if (teamToken?.value) {
+      try {
+        const { payload } = await jwtVerify(teamToken.value, JWT_SECRET);
+        
+        // Verificar se o membro ainda esta ativo no banco
+        const teamCheck = await sql`
+          SELECT id, email, name, role, is_active
+          FROM team_members
+          WHERE id = ${payload.id as string} AND is_active = true
+          AND LOWER(role) IN ('ceo', 'admin', 'superadmin')
+        `;
+        
+        if (teamCheck.length > 0) {
+          return {
+            userId: teamCheck[0].id,
+            email: teamCheck[0].email,
+            name: teamCheck[0].name,
+            isAdmin: true,
+            isTeamMember: true
+          };
+        }
+      } catch {
+        // Token invalido, continuar para verificar auth-token
+      }
+    }
+    
+    // SEGUNDO: Verificar sessao normal (auth-token)
+    const session = await getSession();
+    if (!session || !session.user) return null;
+    
+    const userEmail = session.user.email;
+    
+    // Verificar na tabela profiles se e admin
     const profileResult = await sql`
       SELECT id, email, name, is_admin 
       FROM profiles 
@@ -35,12 +79,12 @@ export async function verifyAdmin(): Promise<AdminSession | null> {
       };
     }
     
-    // Se nao for admin em profiles, verifica na tabela team_members
+    // Verificar na tabela team_members pelo email
     const teamResult = await sql`
       SELECT tm.id, tm.email, tm.name, tm.role, tm.is_active
       FROM team_members tm
-      WHERE tm.email = ${session.email} AND tm.is_active = true
-      AND tm.role IN ('ceo', 'admin', 'superadmin', 'CEO')
+      WHERE tm.email = ${userEmail} AND tm.is_active = true
+      AND LOWER(tm.role) IN ('ceo', 'admin', 'superadmin')
     `;
     
     if (teamResult.length > 0) {
@@ -48,7 +92,8 @@ export async function verifyAdmin(): Promise<AdminSession | null> {
         userId: session.userId,
         email: teamResult[0].email,
         name: teamResult[0].name,
-        isAdmin: true
+        isAdmin: true,
+        isTeamMember: true
       };
     }
     
