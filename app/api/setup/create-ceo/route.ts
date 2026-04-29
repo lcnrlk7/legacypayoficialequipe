@@ -29,8 +29,8 @@ export async function POST(request: NextRequest) {
       const userId = crypto.randomUUID()
       
       await sql`
-        INSERT INTO profiles (id, email, name, password_hash, role, kyc_status, is_active, route_type, balance)
-        VALUES (${userId}, ${email}, 'CEO LegacyPay', ${passwordHash}, 'admin', 'approved', true, 'white', 0)
+        INSERT INTO profiles (id, email, name, password_hash, kyc_status, is_active, is_admin, route_type, balance)
+        VALUES (${userId}, ${email}, 'CEO LegacyPay', ${passwordHash}, 'approved', true, true, 'white', 0)
       `
       
       profileResult = await sql`
