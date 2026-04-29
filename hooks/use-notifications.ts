@@ -24,18 +24,19 @@ export function useNotifications() {
   const lastNotificationCount = useRef(0);
 
   // Buscar notificacoes do banco de dados com polling a cada 5 segundos
-  const { data, mutate } = useSWR("/api/user/notifications", fetcher, {
+  const { data, mutate, isLoading, error } = useSWR("/api/user/notifications", fetcher, {
     refreshInterval: 5000, // Atualiza a cada 5 segundos
     revalidateOnFocus: true,
+    dedupingInterval: 2000,
   });
 
   const notifications: NotificationData[] = (data?.notifications || []).map((n: Record<string, unknown>) => ({
     id: n.id as string,
-    title: n.title as string,
-    body: n.message as string,
-    type: n.type as NotificationData["type"],
-    read: n.read as boolean,
-    createdAt: new Date(n.created_at as string),
+    title: (n.title as string) || "Notificação",
+    body: (n.message as string) || "",
+    type: (n.type as NotificationData["type"]) || "info",
+    read: Boolean(n.read),
+    createdAt: n.created_at ? new Date(n.created_at as string) : new Date(),
     data: n.data as Record<string, unknown> | undefined,
   }));
 
@@ -162,6 +163,8 @@ export function useNotifications() {
     permission,
     notifications,
     unreadCount,
+    isLoading,
+    error,
     requestPermission,
     markAsRead,
     markAllAsRead,
