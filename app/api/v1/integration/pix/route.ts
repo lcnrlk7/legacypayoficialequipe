@@ -158,36 +158,54 @@ export async function POST(request: NextRequest) {
     }
 
     // Extrair dados do PIX - pode estar em data.* ou diretamente no objeto
-    const acquirerTransactionId = pixResponse.transactionId || pixResponse.data?.transactionId || '';
+    const acquirerTransactionId = pixResponse.transactionId || pixResponse.data?.transactionId || transactionId;
     const qrCode = pixResponse.qrCode || pixResponse.data?.qrCode || pixResponse.copyPaste || '';
     const qrCodeBase64 = pixResponse.qrCodeBase64 || pixResponse.data?.qrCodeBase64 || '';
     const copyPaste = pixResponse.copyPaste || pixResponse.data?.copyPaste || pixResponse.data?.pixCode || qrCode;
     
     console.log(`[Integration PIX] PIX criado - acquirerTxId: ${acquirerTransactionId}, qrCode: ${qrCode ? 'OK' : 'VAZIO'}, copyPaste: ${copyPaste ? 'OK' : 'VAZIO'}`);
 
-    // Salvar transação no banco
+    // Salvar transação no banco (tabela transactions sem qr_code)
     const txId = crypto.randomUUID();
-    const result = await sql`
+    const txResult = await sql`
       INSERT INTO transactions (
-        id, user_id, external_id, acquirer_transaction_id, type,
-        amount, fee, net_amount, status, description, qr_code, qr_code_base64,
-        copy_paste, payer_name, payer_document, payer_email, metadata, created_at
+        id, user_id, external_id, type, amount, fee, net_amount, 
+        status, description, payer_name, payer_document, metadata, created_at
       )
       VALUES (
-        ${txId}, ${profile.id}, ${transactionId}, ${acquirerTransactionId},
-        ${'pix_in'}, ${amount}, ${fee}, ${netAmount}, ${'pending'}, ${description || `Pagamento via ${profile.name}`},
-        ${qrCode}, ${qrCodeBase64}, ${copyPaste},
-        ${safePayerName}, ${safePayerDocument}, ${payer?.email || null}, ${JSON.stringify({ 
-          integration_id: profile.id, 
-          integration_name: profile.name,
+        ${txId}, ${profile.id}, ${transactionId}, ${'pix_in'}, 
+        ${amount}, ${fee}, ${netAmount}, ${'pending'}, 
+        ${description || `Pagamento via ${profile.name}`},
+        ${safePayerName}, ${safePayerDocument}, 
+        ${JSON.stringify({ 
+          integration_id: integration.integration_id, 
+          integration_name: integration.integration_name,
+          acquirer_transaction_id: acquirerTransactionId,
           payer: { name: safePayerName, document: safePayerDocument, email: payer?.email },
           route: profile.route_type
-        })}, NOW()
+        })}, 
+        NOW()
       )
-      RETURNING id, external_id, amount, fee, net_amount, status, qr_code, qr_code_base64, copy_paste, created_at
+      RETURNING id, external_id, amount, fee, net_amount, status, description, created_at
     `;
 
-    const transaction = result[0];
+    // Salvar dados do QR Code na tabela pix_charges
+    const chargeId = crypto.randomUUID();
+    await sql`
+      INSERT INTO pix_charges (
+        id, user_id, transaction_id, amount, description, 
+        qr_code, qr_code_base64, copy_paste, external_id,
+        payer_name, payer_document, status, created_at
+      )
+      VALUES (
+        ${chargeId}, ${profile.id}, ${txId}, ${amount}, 
+        ${description || `Pagamento via ${profile.name}`},
+        ${qrCode}, ${qrCodeBase64}, ${copyPaste}, ${transactionId},
+        ${safePayerName}, ${safePayerDocument}, ${'active'}, NOW()
+      )
+    `;
+
+    const transaction = txResult[0];
 
     // Registrar log de auditoria
     await sql`
@@ -219,9 +237,9 @@ export async function POST(request: NextRequest) {
         net_amount: transaction.net_amount,
         status: transaction.status,
         pix: {
-          qr_code: transaction.qr_code,
-          qr_code_base64: transaction.qr_code_base64,
-          copy_paste: transaction.copy_paste,
+          qr_code: qrCode,
+          qr_code_base64: qrCodeBase64,
+          copy_paste: copyPaste,
         },
         expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 min
         created_at: transaction.created_at,
