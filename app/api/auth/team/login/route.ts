@@ -22,11 +22,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Buscar membro da equipe
+    // Buscar membro da equipe - busca na tabela admin_team vinculada a profiles
     const result = await sql`
-      SELECT id, name, email, password_hash, role, permissions, is_active
-      FROM team_members
-      WHERE email = ${email}
+      SELECT at.id, p.name, p.email, p.password_hash, at.role, at.permissions, at.is_active
+      FROM admin_team at
+      INNER JOIN profiles p ON p.id = at.user_id
+      WHERE p.email = ${email}
     `
 
     if (result.length === 0) {
@@ -57,8 +58,8 @@ export async function POST(request: NextRequest) {
 
     // Atualizar último login
     await sql`
-      UPDATE team_members 
-      SET last_login = NOW() 
+      UPDATE admin_team 
+      SET updated_at = NOW() 
       WHERE id = ${member.id}
     `
 
