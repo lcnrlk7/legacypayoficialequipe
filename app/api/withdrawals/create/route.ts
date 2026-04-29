@@ -183,24 +183,8 @@ export async function POST(request: NextRequest) {
         acquirerWithdrawalId = String(withdrawalResult.withdrawalId);
         withdrawalStatus = "processing";
       } else {
-        // Se falhar no processamento automático
+        // Se falhar no processamento automático, deixar pendente para aprovação manual
         console.error("[Withdrawal] Falha ao processar saque automático:", withdrawalResult.error);
-        
-        // Se o erro é de saldo insuficiente na adquirente, devolver saldo e retornar erro
-        if (withdrawalResult.error?.toLowerCase().includes("saldo insuficiente")) {
-          await sql`
-            UPDATE profiles 
-            SET balance = balance + ${amount}
-            WHERE id = ${sessionUser.id}
-          `;
-          
-          return NextResponse.json({
-            success: false,
-            error: "Sistema temporariamente indisponível para saques. Tente novamente em alguns minutos.",
-          }, { status: 503 });
-        }
-        
-        // Para outros erros, deixar pendente para aprovação manual
         withdrawalStatus = "pending";
       }
     }
