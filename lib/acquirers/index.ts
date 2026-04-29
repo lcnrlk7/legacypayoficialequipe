@@ -229,15 +229,16 @@ export async function createPixPayment(
         const webhookUrl = "https://legacypay.site/api/webhooks/medusa";
 
         // Garantir que todos os parâmetros tenham valores válidos
-        const safePayerName = (payerName && payerName.trim()) ? payerName.trim() : "Cliente";
-        const safePayerDocument = (payerDocument && payerDocument.trim()) ? payerDocument.replace(/\D/g, "") : "00000000000";
-        const safeDescription = (description && description.trim()) ? description.trim() : "Pagamento PIX";
+        const safePayerName = (payerName && payerName.trim()) ? payerName.trim() : "Cliente LegacyPay";
+        // CPF fixo para Medusa - igual usado no painel
+        const safePayerDocument = "36009722004";
+        const safeDescription = (description && description.trim()) ? description.trim() : "Pagamento PIX - LegacyPay";
 
         const result = await client.createSimplePixPayment(
           amount * 100, // Converter para centavos
           safePayerName,
           safePayerDocument,
-          undefined, // email
+          "cliente@legacypay.com", // email fixo
           safeDescription,
           webhookUrl
         );
