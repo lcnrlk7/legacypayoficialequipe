@@ -109,12 +109,20 @@ export async function handleAuth(request: NextRequest) {
   }
 
   // Protected paths
-  const protectedPaths = ['/dashboard', '/admin', '/lp-x7k9m2-internal']
+  const protectedPaths = ['/dashboard', '/admin']
   const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path))
+  
+  // Rotas internas protegidas (exceto a página de login)
+  const isInternalProtectedPath = pathname.startsWith('/lp-x7k9m2-internal/') && pathname !== '/lp-x7k9m2-internal'
 
-  if (isProtectedPath) {
+  // Página de login do admin é pública
+  if (pathname === '/lp-x7k9m2-internal') {
+    return response
+  }
+
+  if (isProtectedPath || isInternalProtectedPath) {
     // Para rotas do painel interno, verificar primeiro token de equipe
-    if (pathname.startsWith('/admin') || pathname.startsWith('/lp-x7k9m2-internal')) {
+    if (pathname.startsWith('/admin') || isInternalProtectedPath) {
       const teamUser = await verifyTeamToken(request)
       
       if (!teamUser) {
