@@ -260,9 +260,18 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
                 <span className="text-xs text-muted-foreground">Painel CEO</span>
               </div>
             </div>
+            
+            {/* Timer de Sessao - TOPO */}
+            <div className="flex items-center gap-2 px-3 py-2 mt-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+              <Clock className="w-4 h-4 text-yellow-500" />
+              <div className="flex-1">
+                <p className="text-[10px] text-yellow-500">Sessao expira em</p>
+                <p className="text-sm font-bold text-yellow-400">{sessionTimeLeft || "24h 00m"}</p>
+              </div>
+            </div>
           </div>
 
-          <nav className="flex-1 p-4 space-y-1">
+          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
             {menuItems.map((item) => {
               const isActive = pathname === item.href;
               return (
@@ -283,15 +292,6 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
           </nav>
 
           <div className="p-4 border-t border-border">
-            {/* Timer de Sessao */}
-            <div className="flex items-center gap-2 px-4 py-2 mb-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-              <Clock className="w-4 h-4 text-yellow-500" />
-              <div className="flex-1">
-                <p className="text-xs text-yellow-500">Sessao expira em</p>
-                <p className="text-sm font-medium text-yellow-400">{sessionTimeLeft || "24h 00m"}</p>
-              </div>
-            </div>
-            
             <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary mb-3">
               <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
                 <Shield className="w-5 h-5 text-primary" />
@@ -349,6 +349,15 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
                       </span>
                     </div>
                   </div>
+                  
+                  {/* Timer de Sessao Mobile - TOPO */}
+                  <div className="flex items-center gap-2 px-3 py-2 mt-4 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                    <Clock className="w-4 h-4 text-yellow-500" />
+                    <div className="flex-1">
+                      <p className="text-[10px] text-yellow-500">Sessao expira em</p>
+                      <p className="text-sm font-bold text-yellow-400">{sessionTimeLeft || "24h 00m"}</p>
+                    </div>
+                  </div>
                 </div>
 
                 <nav className="flex-1 p-4 space-y-1">
@@ -373,15 +382,6 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
                 </nav>
 
                 <div className="p-4 border-t border-border">
-                  {/* Timer de Sessao Mobile */}
-                  <div className="flex items-center gap-2 px-4 py-2 mb-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                    <Clock className="w-4 h-4 text-yellow-500" />
-                    <div className="flex-1">
-                      <p className="text-xs text-yellow-500">Sessao expira em</p>
-                      <p className="text-sm font-medium text-yellow-400">{sessionTimeLeft || "24h 00m"}</p>
-                    </div>
-                  </div>
-                  
                   <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary mb-3">
                     <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
                       <Shield className="w-5 h-5 text-primary" />
