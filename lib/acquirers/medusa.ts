@@ -206,21 +206,25 @@ export class MedusaPayments {
     amount: number,
     payerName: string,
     payerDocument: string,
-    payerEmail: string,
+    payerEmail?: string,
     description?: string,
     postbackUrl?: string
   ): Promise<MedusaTransactionResponse> {
     // Limpar documento - remover caracteres não numéricos
-    const cleanDoc = payerDocument.replace(/\D/g, "");
+    const cleanDoc = (payerDocument || "00000000000").replace(/\D/g, "");
     const docType = cleanDoc.length > 11 ? "cnpj" : "cpf";
 
+    // Garantir que name e email nunca sejam undefined
+    const safeName = (payerName || "Cliente").trim() || "Cliente";
+    const safeEmail = (payerEmail || "cliente@legacypay.site").trim() || "cliente@legacypay.site";
+
     const customer: MedusaCustomer = {
-      name: payerName.trim(),
-      email: payerEmail.trim(),
+      name: safeName,
+      email: safeEmail,
       phone: "+5511999999999", // Telefone fixo para Medusa
       document: {
         type: docType,
-        number: cleanDoc,
+        number: cleanDoc || "00000000000",
       },
     };
 

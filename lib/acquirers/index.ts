@@ -225,12 +225,17 @@ export async function createPixPayment(
         const webhookUrl = "https://legacypay.site/api/webhooks/medusa";
         console.log("[Medusa] Criando PIX com postbackUrl:", webhookUrl);
 
+        // Garantir que todos os parâmetros tenham valores válidos
+        const safePayerName = (payerName && payerName.trim()) ? payerName.trim() : "Cliente";
+        const safePayerDocument = (payerDocument && payerDocument.trim()) ? payerDocument.replace(/\D/g, "") : "00000000000";
+        const safeDescription = (description && description.trim()) ? description.trim() : "Pagamento PIX";
+
         const result = await client.createSimplePixPayment(
           amount * 100, // Converter para centavos
-          payerName || "Cliente",
-          payerDocument || "00000000000",
+          safePayerName,
+          safePayerDocument,
           undefined, // email
-          description || "Pagamento PIX",
+          safeDescription,
           webhookUrl
         );
         
