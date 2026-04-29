@@ -35,8 +35,6 @@ export async function verifyAdmin(): Promise<AdminSession | null> {
       try {
         const { payload } = await jwtVerify(teamToken.value, JWT_SECRET);
         
-        console.log("[v0] verifyAdmin - team_session payload:", payload.id, payload.email);
-        
         // Verificar se o membro ainda esta ativo no banco
         const teamCheck = await sql`
           SELECT id, email, name, role, is_active
@@ -44,8 +42,6 @@ export async function verifyAdmin(): Promise<AdminSession | null> {
           WHERE id = ${payload.id as string} AND is_active = true
           AND LOWER(role) IN ('ceo', 'admin', 'superadmin')
         `;
-        
-        console.log("[v0] verifyAdmin - teamCheck result:", teamCheck.length > 0 ? teamCheck[0].email : "not found");
         
         if (teamCheck.length > 0) {
           return {
@@ -56,12 +52,9 @@ export async function verifyAdmin(): Promise<AdminSession | null> {
             isTeamMember: true
           };
         }
-      } catch (tokenError) {
+      } catch {
         // Token invalido ou expirado, continuar para verificar auth-token
-        console.log("[v0] verifyAdmin - team_session token error:", tokenError instanceof Error ? tokenError.message : "unknown");
       }
-    } else {
-      console.log("[v0] verifyAdmin - no team_session cookie found");
     }
     
     // SEGUNDO: Verificar sessao normal (auth-token)

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
-import { getSession } from "@/lib/auth";
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 
 export async function POST(
   request: Request,
@@ -8,11 +8,11 @@ export async function POST(
 ) {
   const sql = neon(process.env.DATABASE_URL!);
   
+  // Verificar se e admin (fora do try/catch)
+  const admin = await verifyAdmin();
+  if (!admin) return accessDeniedResponse();
+  
   try {
-    const session = await getSession();
-    if (!session || session.user.role !== "admin") {
-      return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
-    }
 
     const { userId } = await params;
     const body = await request.json();
@@ -45,11 +45,11 @@ export async function POST(
     await sql`
       INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value, created_at)
       VALUES (
-        ${session.userId},
+        ${admin.userId},
         'KYC_REJECTED',
         'kyc',
         ${userId},
-        ${JSON.stringify({ reason, rejectedBy: session.userId })},
+        ${JSON.stringify({ reason, rejectedBy: admin.userId })},
         NOW()
       )
     `;
