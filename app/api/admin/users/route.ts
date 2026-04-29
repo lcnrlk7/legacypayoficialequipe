@@ -1,28 +1,14 @@
 import { sql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { getSession } from "@/lib/auth";
-
-// Funcao para verificar se o usuario e admin
-async function verifyAdmin() {
-  const session = await getSession();
-  if (!session) return null;
-  
-  const result = await sql`
-    SELECT is_admin FROM profiles WHERE id = ${session.userId}
-  `;
-  
-  if (result.length === 0 || !result[0].is_admin) return null;
-  return session;
-}
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 
 export async function GET(request: NextRequest) {
+  // Verificar se e admin (fora do try/catch para garantir 403)
+  const admin = await verifyAdmin();
+  if (!admin) return accessDeniedResponse();
+  
   try {
-    // Verificar se e admin
-    const admin = await verifyAdmin();
-    if (!admin) {
-      return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
-    }
     
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
@@ -60,12 +46,11 @@ export async function GET(request: NextRequest) {
 
 // Criar novo usuario
 export async function POST(request: NextRequest) {
+  // Verificar se e admin (fora do try/catch para garantir 403)
+  const admin = await verifyAdmin();
+  if (!admin) return accessDeniedResponse();
+  
   try {
-    // Verificar se e admin
-    const admin = await verifyAdmin();
-    if (!admin) {
-      return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
-    }
     
     const body = await request.json();
     const { email, password, name, phone, cpf_cnpj, is_admin, route_type, fee_percentage, daily_limit } = body;
@@ -119,12 +104,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: Request) {
+  // Verificar se e admin (fora do try/catch para garantir 403)
+  const admin = await verifyAdmin();
+  if (!admin) return accessDeniedResponse();
+  
   try {
-    // Verificar se e admin
-    const admin = await verifyAdmin();
-    if (!admin) {
-      return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
-    }
     
     const body = await request.json();
     const { userId, action, data } = body;

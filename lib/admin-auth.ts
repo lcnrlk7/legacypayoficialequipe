@@ -53,7 +53,7 @@ export async function verifyAdmin(): Promise<AdminSession | null> {
           };
         }
       } catch {
-        // Token invalido, continuar para verificar auth-token
+        // Token invalido ou expirado, continuar para verificar auth-token
       }
     }
     

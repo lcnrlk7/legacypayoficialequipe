@@ -96,6 +96,7 @@ export async function POST(request: NextRequest) {
         permissions: member.permissions,
       },
       redirectUrl: getRedirectUrl(member.role),
+      loginTime: Date.now(), // Para o timer de sessao
     })
   } catch (error) {
     console.error('Team login error:', error)
