@@ -114,8 +114,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("[v0] Auth OK - userId:", profile.id, "route:", profile.route_type);
-
     // Verificar se o usuário está ativo
     if (!profile.is_active) {
       return NextResponse.json(
@@ -160,12 +158,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log("[v0] Validações OK - buscando taxas...");
-    
     // Buscar taxas baseadas na rota do usuário (considera taxas personalizadas)
     const systemFees = await getSystemFeesForUser(profile.id);
-    
-    console.log("[v0] Taxas obtidas:", JSON.stringify(systemFees));
 
     // Calcular taxa (usar taxa personalizada do usuario ou padrao da rota)
     const feePercentage = systemFees.pixPercentageFee;
@@ -180,8 +174,6 @@ export async function POST(request: NextRequest) {
     const safePayerName = (payer?.name && String(payer.name).trim()) ? String(payer.name).trim() : "Cliente";
     const safePayerDocument = (payer?.document && String(payer.document).trim()) ? String(payer.document).replace(/\D/g, "") : "00000000000";
     
-    console.log("[v0] Chamando createPixPayment - amount:", amount, "userId:", profile.id);
-    
     const pixResponse = await createPixPayment(
       amount,
       transactionId,
@@ -191,10 +183,7 @@ export async function POST(request: NextRequest) {
       safePayerDocument
     );
 
-    console.log("[v0] pixResponse:", JSON.stringify(pixResponse));
-    
     if (!pixResponse.success) {
-      console.error("[v0] createPixPayment FALHOU:", pixResponse.error);
       return NextResponse.json(
         { 
           success: false, 
@@ -211,8 +200,6 @@ export async function POST(request: NextRequest) {
     const qrCodeBase64 = pixResponse.qrCodeBase64 || pixResponse.data?.qrCodeBase64 || '';
     const copyPaste = pixResponse.copyPaste || pixResponse.data?.copyPaste || pixResponse.data?.pixCode || qrCode;
 
-    console.log("[v0] PIX criado com sucesso, salvando no banco...");
-    
     // Salvar transação no banco (tabela transactions sem qr_code)
     const txId = crypto.randomUUID();
     const txResult = await sql`
@@ -294,14 +281,9 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[v0] [v1/integration/pix] ERRO COMPLETO:", error);
-    console.error("[v0] [v1/integration/pix] Stack:", error instanceof Error ? error.stack : 'N/A');
-    console.error("[v0] [v1/integration/pix] Message:", error instanceof Error ? error.message : String(error));
-    
-    // Retornar mensagem de erro mais detalhada
-    const errorMessage = error instanceof Error ? error.message : "Erro interno do servidor";
+    console.error("[v1/integration/pix] Error:", error);
     return NextResponse.json(
-      { success: false, error: errorMessage, code: "INTERNAL_ERROR" },
+      { success: false, error: "Erro interno do servidor", code: "INTERNAL_ERROR" },
       { status: 500 }
     );
   }

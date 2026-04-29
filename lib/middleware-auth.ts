@@ -82,15 +82,17 @@ export async function handleAuth(request: NextRequest) {
     '/api/auth/send-code',
     '/api/auth/verify-code',
     '/api/auth/password-reset',
-    '/api/v1/', // Public API with API key auth
-    '/api/v1/integration', // API de integração externa (usa Basic Auth próprio)
-    '/api/v1/pix', // API de PIX pública
     '/api/webhooks',
   ]
+  
+  // Public API prefixes - qualquer rota que comece com esses prefixos é pública
+  const publicApiPrefixes = [
+    '/api/v1/',
+    '/api/webhooks/',
+  ]
 
-  const isPublicPath = publicPaths.some(path => 
-    pathname === path || pathname.startsWith(path + '/') || pathname.startsWith(path)
-  )
+  const isPublicPath = publicPaths.some(path => pathname === path || pathname.startsWith(path + '/')) ||
+    publicApiPrefixes.some(prefix => pathname.startsWith(prefix))
 
   // Static files and assets
   if (
