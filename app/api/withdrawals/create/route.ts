@@ -112,13 +112,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar saldo atual
-    const balanceResult = await sql`
-      SELECT balance FROM profiles WHERE id = ${sessionUser.id}
+    // Buscar saldo e KYC atual diretamente do banco (não do token que pode estar desatualizado)
+    const profileResult = await sql`
+      SELECT balance, kyc_status FROM profiles WHERE id = ${sessionUser.id}
     `;
-    const currentBalance = Number(balanceResult[0]?.balance) || 0;
+    const currentBalance = Number(profileResult[0]?.balance) || 0;
+    const currentKycStatus = profileResult[0]?.kyc_status;
 
-    if (sessionUser.kyc_status !== "approved") {
+    if (currentKycStatus !== "approved") {
       return NextResponse.json(
         { error: "KYC não aprovado. Complete a verificação para sacar." },
         { status: 403 }
