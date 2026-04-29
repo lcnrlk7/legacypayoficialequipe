@@ -8,6 +8,7 @@ import {
   getAcquirerForUser
 } from "@/lib/acquirers";
 import { mapPixKeyType } from "@/lib/acquirers/misticpay";
+import { validateWithdrawal, getClientIP, logSuspiciousActivity, rateLimit, isValidPixKey } from "@/lib/security";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,13 +16,43 @@ export async function POST(request: NextRequest) {
 
     if (!sessionUser) {
       return NextResponse.json(
-        { error: "Não autorizado" },
+        { error: "Nao autorizado" },
         { status: 401 }
+      );
+    }
+
+    // SEGURANCA: Rate limiting de saques por usuario
+    const ip = await getClientIP();
+    const withdrawalRateLimit = rateLimit(`withdrawal_${sessionUser.id}`, 5, 3600000); // 5 saques por hora
+    
+    if (!withdrawalRateLimit.allowed) {
+      await logSuspiciousActivity(sessionUser.id, "WITHDRAWAL_RATE_LIMITED", `IP: ${ip}`, ip);
+      return NextResponse.json(
+        { error: "Limite de solicitacoes de saque atingido. Aguarde 1 hora." },
+        { status: 429 }
       );
     }
 
     const body = await request.json();
     const { amount, pixKey, pixKeyType } = body;
+    
+    // SEGURANCA: Validar chave PIX
+    if (!isValidPixKey(pixKey)) {
+      return NextResponse.json(
+        { error: "Chave PIX invalida" },
+        { status: 400 }
+      );
+    }
+
+    // SEGURANCA: Validacao anti-fraude
+    const validation = await validateWithdrawal(sessionUser.id, amount, pixKey);
+    if (!validation.valid) {
+      await logSuspiciousActivity(sessionUser.id, "WITHDRAWAL_BLOCKED", `Reason: ${validation.reason}, Amount: ${amount}, PixKey: ${pixKey}`, ip);
+      return NextResponse.json(
+        { error: validation.reason || "Saque nao autorizado" },
+        { status: 403 }
+      );
+    }
 
     if (!amount || amount <= 0) {
       return NextResponse.json(
