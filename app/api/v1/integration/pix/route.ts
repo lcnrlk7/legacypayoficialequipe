@@ -281,9 +281,10 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[v1/integration/pix] Error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("[v1/integration/pix] Error:", errorMessage);
     return NextResponse.json(
-      { success: false, error: "Erro interno do servidor", code: "INTERNAL_ERROR" },
+      { success: false, error: errorMessage, code: "INTERNAL_ERROR" },
       { status: 500 }
     );
   }
