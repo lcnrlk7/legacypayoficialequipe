@@ -90,6 +90,7 @@ export async function handleAuth(request: NextRequest) {
   const publicApiPrefixes = [
     '/api/v1/',
     '/api/webhooks/',
+    '/api/setup/',
   ]
 
   const isPublicPath = publicPaths.some(path => pathname === path || pathname.startsWith(path + '/')) ||
