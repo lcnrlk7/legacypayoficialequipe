@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { loginUser, createToken } from "@/lib/auth";
 import { sql } from "@/lib/db";
+import { checkLoginAttempts, getClientIP, logSuspiciousActivity } from "@/lib/security";
 
 const COOKIE_NAME = "auth-token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -12,8 +13,20 @@ export async function POST(request: NextRequest) {
 
     if (!email || !password) {
       return NextResponse.json(
-        { error: "Email e senha são obrigatórios" },
+        { error: "Email e senha sao obrigatorios" },
         { status: 400 }
+      );
+    }
+
+    // SEGURANCA: Rate limiting de login
+    const ip = await getClientIP();
+    const loginCheck = await checkLoginAttempts(email, ip);
+    
+    if (!loginCheck.allowed) {
+      await logSuspiciousActivity(null, "LOGIN_BLOCKED", `IP: ${ip}, Email: ${email}, Reason: ${loginCheck.reason}`, ip);
+      return NextResponse.json(
+        { error: loginCheck.reason || "Muitas tentativas. Aguarde alguns minutos." },
+        { status: 429 }
       );
     }
 

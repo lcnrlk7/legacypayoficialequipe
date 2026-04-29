@@ -2,18 +2,47 @@ import { NextRequest, NextResponse } from "next/server";
 import { registerUser, createToken } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { sendWelcomeEmail } from "@/lib/email";
+import { rateLimit, getClientIP, logSuspiciousActivity, isValidEmail, isValidCPF } from "@/lib/security";
 
 const COOKIE_NAME = "auth-token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 
 export async function POST(request: NextRequest) {
   try {
+    // SEGURANCA: Rate limiting de registro por IP
+    const ip = await getClientIP();
+    const registerRateLimit = rateLimit(`register_${ip}`, 3, 3600000); // 3 registros por hora por IP
+    
+    if (!registerRateLimit.allowed) {
+      await logSuspiciousActivity(null, "REGISTER_RATE_LIMITED", `IP: ${ip}`, ip);
+      return NextResponse.json(
+        { error: "Muitos registros deste IP. Aguarde 1 hora." },
+        { status: 429 }
+      );
+    }
+    
     const body = await request.json();
     const { name, email, password, cpf, phone, referralCode } = body;
 
-    if (!email || !password) {
+    // SEGURANCA: Validar formato do email
+    if (!email || !isValidEmail(email)) {
       return NextResponse.json(
-        { error: "Email e senha são obrigatórios" },
+        { error: "Email invalido" },
+        { status: 400 }
+      );
+    }
+    
+    // SEGURANCA: Validar CPF se fornecido
+    if (cpf && !isValidCPF(cpf)) {
+      return NextResponse.json(
+        { error: "CPF invalido" },
+        { status: 400 }
+      );
+    }
+
+    if (!password) {
+      return NextResponse.json(
+        { error: "Senha e obrigatoria" },
         { status: 400 }
       );
     }

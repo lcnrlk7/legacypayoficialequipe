@@ -1,3 +1,4 @@
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 import { sql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -5,6 +6,10 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    // Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+    
     const { searchParams } = new URL(request.url);
     const limit = parseInt(searchParams.get("limit") || "100");
     const status = searchParams.get("status");

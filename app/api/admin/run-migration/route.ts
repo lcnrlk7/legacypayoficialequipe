@@ -1,9 +1,14 @@
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 
-// POST /api/admin/run-migration - Executa migrações pendentes
+// POST /api/admin/run-migration - Executa migracoes pendentes
 export async function POST(request: NextRequest) {
   try {
+    // SEGURANCA: Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+    
     const { migration } = await request.json();
     
     if (migration === "withdrawal-fee") {

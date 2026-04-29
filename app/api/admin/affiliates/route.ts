@@ -1,3 +1,4 @@
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
 import { getSession } from "@/lib/auth";
@@ -6,6 +7,10 @@ export async function GET() {
   const sql = neon(process.env.DATABASE_URL!);
   
   try {
+    // SEGURANCA: Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
@@ -110,6 +115,10 @@ export async function POST(request: Request) {
   const sql = neon(process.env.DATABASE_URL!);
   
   try {
+    // SEGURANCA: Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+
     const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });

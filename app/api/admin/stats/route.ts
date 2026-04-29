@@ -1,3 +1,4 @@
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 import { NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 
@@ -29,6 +30,9 @@ const formatRelativeTime = (date: string) => {
 
 export async function GET() {
   try {
+    // Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
     const [
       totalUsersResult,
       pendingKYCResult,

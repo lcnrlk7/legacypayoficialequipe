@@ -239,6 +239,9 @@ async function updateWithdrawalStatus(
   if (internalStatus === "completed") {
     newStatus = "completed";
     
+    const grossAmount = Number(withdrawal.amount) || 0;
+    const fee = Number(withdrawal.fee) || 0;
+    
     // Atualizar status do saque
     await sql`
       UPDATE withdrawals 
@@ -249,10 +252,10 @@ async function updateWithdrawalStatus(
       WHERE id = ${withdrawal.id}
     `;
     
-    console.log(`[Medusa Webhook] Saque ${withdrawal.id} CONCLUIDO! Valor: R$ ${netAmount.toFixed(2)}`);
+    console.log(`[Medusa Webhook] Saque ${withdrawal.id} CONCLUIDO! Bruto: R$ ${grossAmount.toFixed(2)}, Taxa: R$ ${fee.toFixed(2)}, Liquido: R$ ${netAmount.toFixed(2)}`);
     
-    // Notificar usuario usando a funcao de notificacao
-    await notifyWithdrawalCompleted(userId, netAmount, pixKey, metadata.end_to_end);
+    // Notificar usuario usando a funcao de notificacao com valor bruto, liquido e taxa
+    await notifyWithdrawalCompleted(userId, grossAmount, netAmount, fee, pixKey, metadata.end_to_end);
     
   } else if (internalStatus === "failed" || internalStatus === "cancelled") {
     newStatus = "failed";
@@ -361,6 +364,9 @@ export async function POST(request: NextRequest) {
 
       // Mapear status para saque
       let withdrawalStatus = withdrawal.status;
+      const grossAmount = Number(withdrawal.amount) || 0;
+      const fee = Number(withdrawal.fee) || 0;
+      
       if (internalStatus === "completed") {
         withdrawalStatus = "completed";
         
@@ -370,10 +376,10 @@ export async function POST(request: NextRequest) {
           WHERE id = ${withdrawal.id}
         `;
         
-        console.log(`[Medusa Webhook] Saque ${transactionId} CONCLUIDO! R$ ${netAmount.toFixed(2)}`);
+        console.log(`[Medusa Webhook] Saque ${transactionId} CONCLUIDO! Bruto: R$ ${grossAmount.toFixed(2)}, Taxa: R$ ${fee.toFixed(2)}, Liquido: R$ ${netAmount.toFixed(2)}`);
         
-        // Notificar usuario
-        await notifyWithdrawalCompleted(userId, netAmount, pixKey);
+        // Notificar usuario com valor bruto, liquido e taxa
+        await notifyWithdrawalCompleted(userId, grossAmount, netAmount, fee, pixKey);
         
       } else if (internalStatus === "failed" || internalStatus === "cancelled") {
         withdrawalStatus = "failed";
@@ -456,8 +462,9 @@ export async function POST(request: NextRequest) {
 
       console.log(`[Medusa Webhook] Creditado R$ ${netAmount.toFixed(2)} para usuario ${transaction.user_id}. Novo saldo: R$ ${newBalance.toFixed(2)}`);
       
-      // Notificar usuario sobre o deposito/PIX recebido
-      await notifyPixPaid(transaction.user_id as string, netAmount, customer?.name);
+      // Notificar usuario sobre o deposito/PIX recebido com valor bruto e liquido
+      const grossAmount = Number(transaction.amount) || 0;
+      await notifyPixPaid(transaction.user_id as string, grossAmount, netAmount);
 
       // Registrar audit log
       await sql`
