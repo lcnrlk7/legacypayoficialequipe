@@ -82,6 +82,7 @@ export async function handleAuth(request: NextRequest) {
     '/api/auth/send-code',
     '/api/auth/verify-code',
     '/api/auth/password-reset',
+    '/api/auth/team/login',
     '/api/webhooks',
   ]
   
