@@ -39,7 +39,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar integração pelas credenciais na tabela user_integrations
+    let integration: Record<string, unknown> | null = null;
+    let profile: { id: string; name: string; kyc_status: string; route_type: string; balance: number; api_enabled: boolean; is_active: boolean } | null = null;
+
+    // Primeiro, tentar buscar na tabela user_integrations (cli_/sec_)
     const integrationResult = await sql`
       SELECT ui.id as integration_id, ui.user_id, ui.name as integration_name, ui.is_active as integration_active,
              ui.webhook_url, ui.webhook_secret,
@@ -49,29 +52,65 @@ export async function POST(request: NextRequest) {
       WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
     `;
 
-    if (integrationResult.length === 0) {
+    if (integrationResult.length > 0) {
+      integration = integrationResult[0];
+      profile = {
+        id: integration.user_id as string,
+        name: integration.name as string,
+        kyc_status: integration.kyc_status as string,
+        route_type: integration.route_type as string,
+        balance: integration.balance as number,
+        api_enabled: integration.api_enabled as boolean,
+        is_active: integration.is_active as boolean
+      };
+
+      // Verificar se a integração específica está ativa
+      if (!integration.integration_active) {
+        return NextResponse.json(
+          { success: false, error: "Esta integração está desativada", code: "INTEGRATION_DISABLED" },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Se não encontrou em user_integrations, tentar na tabela profiles (lp_/sk_)
+      const profileResult = await sql`
+        SELECT id, name, kyc_status, route_type, balance, api_enabled, is_active
+        FROM profiles
+        WHERE api_key = ${clientId} AND api_secret = ${clientSecret}
+      `;
+
+      if (profileResult.length > 0) {
+        const p = profileResult[0];
+        integration = { 
+          integration_id: p.id, 
+          user_id: p.id, 
+          integration_name: p.name,
+          integration_active: p.api_enabled 
+        };
+        profile = {
+          id: p.id as string,
+          name: p.name as string,
+          kyc_status: p.kyc_status as string,
+          route_type: p.route_type as string,
+          balance: p.balance as number,
+          api_enabled: p.api_enabled as boolean,
+          is_active: p.is_active as boolean
+        };
+
+        // Verificar se a API está habilitada
+        if (!p.api_enabled) {
+          return NextResponse.json(
+            { success: false, error: "API não está habilitada para esta conta", code: "API_DISABLED" },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
+    if (!integration || !profile) {
       return NextResponse.json(
         { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
         { status: 401 }
-      );
-    }
-
-    const integration = integrationResult[0];
-    const profile = {
-      id: integration.user_id,
-      name: integration.name,
-      kyc_status: integration.kyc_status,
-      route_type: integration.route_type,
-      balance: integration.balance,
-      api_enabled: integration.api_enabled,
-      is_active: integration.is_active
-    };
-
-    // Verificar se a integração específica está ativa
-    if (!integration.integration_active) {
-      return NextResponse.json(
-        { success: false, error: "Esta integração está desativada", code: "INTEGRATION_DISABLED" },
-        { status: 403 }
       );
     }
 
@@ -286,7 +325,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Buscar integração pelas credenciais na tabela user_integrations
+    // Tentar buscar na tabela user_integrations primeiro
+    let userId: string | null = null;
+    
     const integrationResult = await sql`
       SELECT ui.user_id, ui.is_active as integration_active
       FROM user_integrations ui
@@ -294,23 +335,40 @@ export async function GET(request: NextRequest) {
       WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
     `;
 
-    if (integrationResult.length === 0) {
+    if (integrationResult.length > 0) {
+      const integration = integrationResult[0];
+      if (!integration.integration_active) {
+        return NextResponse.json(
+          { success: false, error: "Esta integração está desativada", code: "INTEGRATION_DISABLED" },
+          { status: 403 }
+        );
+      }
+      userId = integration.user_id as string;
+    } else {
+      // Tentar na tabela profiles (lp_/sk_)
+      const profileResult = await sql`
+        SELECT id, api_enabled FROM profiles
+        WHERE api_key = ${clientId} AND api_secret = ${clientSecret}
+      `;
+      
+      if (profileResult.length > 0) {
+        const profile = profileResult[0];
+        if (!profile.api_enabled) {
+          return NextResponse.json(
+            { success: false, error: "API não está habilitada para esta conta", code: "API_DISABLED" },
+            { status: 403 }
+          );
+        }
+        userId = profile.id as string;
+      }
+    }
+
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
         { status: 401 }
       );
     }
-
-    const integration = integrationResult[0];
-    
-    if (!integration.integration_active) {
-      return NextResponse.json(
-        { success: false, error: "Esta integração está desativada", code: "INTEGRATION_DISABLED" },
-        { status: 403 }
-      );
-    }
-
-    const userId = integration.user_id;
 
     // Buscar transação
     const { searchParams } = new URL(request.url);
