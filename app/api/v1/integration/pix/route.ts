@@ -134,21 +134,36 @@ export async function POST(request: NextRequest) {
     const transactionId = external_id || `int_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
     // Criar cobrança PIX
+    // Garantir que os dados do pagador nunca sejam undefined
+    const safePayerName = (payer?.name && String(payer.name).trim()) ? String(payer.name).trim() : "Cliente";
+    const safePayerDocument = (payer?.document && String(payer.document).trim()) ? String(payer.document).replace(/\D/g, "") : "00000000000";
+    
+    console.log(`[Integration PIX] Criando PIX - payerName: "${safePayerName}", payerDocument: "${safePayerDocument}"`);
+    
     const pixResponse = await createPixPayment(
       amount,
       transactionId,
       profile.id,
       description || `Pagamento via ${profile.name}`,
-      payer?.name || "Cliente",
-      payer?.document || "00000000000"
+      safePayerName,
+      safePayerDocument
     );
 
     if (!pixResponse.success) {
+      console.error("[Integration PIX] Erro ao criar PIX:", pixResponse.error);
       return NextResponse.json(
         { success: false, error: pixResponse.error || "Erro ao criar cobrança", code: "ACQUIRER_ERROR" },
         { status: 500 }
       );
     }
+
+    // Extrair dados do PIX - pode estar em data.* ou diretamente no objeto
+    const acquirerTransactionId = pixResponse.transactionId || pixResponse.data?.transactionId || '';
+    const qrCode = pixResponse.qrCode || pixResponse.data?.qrCode || pixResponse.copyPaste || '';
+    const qrCodeBase64 = pixResponse.qrCodeBase64 || pixResponse.data?.qrCodeBase64 || '';
+    const copyPaste = pixResponse.copyPaste || pixResponse.data?.copyPaste || pixResponse.data?.pixCode || qrCode;
+    
+    console.log(`[Integration PIX] PIX criado - acquirerTxId: ${acquirerTransactionId}, qrCode: ${qrCode ? 'OK' : 'VAZIO'}, copyPaste: ${copyPaste ? 'OK' : 'VAZIO'}`);
 
     // Salvar transação no banco
     const txId = crypto.randomUUID();
@@ -159,13 +174,13 @@ export async function POST(request: NextRequest) {
         copy_paste, payer_name, payer_document, payer_email, metadata, created_at
       )
       VALUES (
-        ${txId}, ${profile.id}, ${transactionId}, ${pixResponse.data?.transactionId},
+        ${txId}, ${profile.id}, ${transactionId}, ${acquirerTransactionId},
         ${'pix_in'}, ${amount}, ${fee}, ${netAmount}, ${'pending'}, ${description || `Pagamento via ${profile.name}`},
-        ${pixResponse.data?.qrCode}, ${pixResponse.data?.qrCodeBase64}, ${pixResponse.data?.copyPaste},
-        ${payer?.name}, ${payer?.document}, ${payer?.email}, ${JSON.stringify({ 
+        ${qrCode}, ${qrCodeBase64}, ${copyPaste},
+        ${safePayerName}, ${safePayerDocument}, ${payer?.email || null}, ${JSON.stringify({ 
           integration_id: profile.id, 
           integration_name: profile.name,
-          payer,
+          payer: { name: safePayerName, document: safePayerDocument, email: payer?.email },
           route: profile.route_type
         })}, NOW()
       )
