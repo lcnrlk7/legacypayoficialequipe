@@ -243,13 +243,17 @@ export async function createPixPayment(
           webhookUrl
         );
 
+        // IMPORTANTE: insertId é o ID numerico usado nos webhooks da Medusa
+        const medusaId = result.insertId || result.id;
+        console.log("[Medusa createPixPayment] insertId:", result.insertId, "id:", result.id, "usando:", medusaId);
+
         return {
           success: true,
-          transactionId: String(result.id),
+          transactionId: String(medusaId),
           qrCode: result.pix?.qrcode,
           copyPaste: result.pix?.qrcode,
           expiresAt: result.pix?.expirationDate,
-          amount: result.amount / 100,
+          amount: (result.amount || amount * 100) / 100,
         };
       }
 

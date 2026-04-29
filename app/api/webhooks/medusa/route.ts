@@ -407,16 +407,40 @@ export async function POST(request: NextRequest) {
     }
 
     // Se não é saque, buscar transação de pagamento
+    // Buscar por acquirer_transaction_id, external_id exato, ou external_id que contenha o ID da Medusa
     const transactions = await sql`
       SELECT t.id, t.user_id, t.amount, t.fee, t.net_amount, t.status,
              p.email as profile_email, p.name as profile_name, p.balance as profile_balance
       FROM transactions t
       LEFT JOIN profiles p ON t.user_id = p.id
-      WHERE t.external_id = ${String(transactionId)} OR t.acquirer_transaction_id = ${String(transactionId)}
+      WHERE t.acquirer_transaction_id = ${String(transactionId)} 
+         OR t.external_id = ${String(transactionId)}
+         OR t.external_id LIKE ${'%' + String(transactionId) + '%'}
+         OR t.metadata::text LIKE ${'%' + String(transactionId) + '%'}
+      ORDER BY t.created_at DESC
+      LIMIT 1
     `;
 
     if (transactions.length === 0) {
       console.log(`[Medusa Webhook] Transação/Saque ${transactionId} não encontrado no sistema`);
+      
+      // Logar o webhook recebido para debug
+      try {
+        await sql`
+          INSERT INTO webhook_logs (id, url, payload, response_status, success, created_at)
+          VALUES (
+            ${crypto.randomUUID()},
+            'medusa-not-found',
+            ${JSON.stringify(payload)},
+            404,
+            false,
+            NOW()
+          )
+        `;
+      } catch (logErr) {
+        console.error("[Medusa Webhook] Erro ao logar webhook:", logErr);
+      }
+      
       return NextResponse.json({ success: true, message: "Transação não encontrada" });
     }
 
@@ -445,6 +469,24 @@ export async function POST(request: NextRequest) {
     `;
 
     console.log(`[Medusa Webhook] Transação ${transactionId} atualizada para status: ${internalStatus}`);
+
+    // Logar webhook recebido com sucesso
+    try {
+      await sql`
+        INSERT INTO webhook_logs (id, transaction_id, url, payload, response_status, success, created_at)
+        VALUES (
+          ${crypto.randomUUID()},
+          ${transaction.id},
+          'medusa-success',
+          ${JSON.stringify(payload)},
+          200,
+          true,
+          NOW()
+        )
+      `;
+    } catch (logErr) {
+      console.error("[Medusa Webhook] Erro ao logar webhook:", logErr);
+    }
 
     // Se pagamento confirmado, creditar saldo do usuário
     if (internalStatus === "completed" && transaction.user_id) {

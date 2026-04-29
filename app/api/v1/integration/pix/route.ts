@@ -212,11 +212,11 @@ export async function POST(request: NextRequest) {
     const txId = crypto.randomUUID();
     const txResult = await sql`
       INSERT INTO transactions (
-        id, user_id, external_id, type, amount, fee, net_amount, 
+        id, user_id, external_id, acquirer_transaction_id, type, amount, fee, net_amount, 
         status, description, payer_name, payer_document, metadata, created_at
       )
       VALUES (
-        ${txId}, ${profile.id}, ${transactionId}, ${'pix_in'}, 
+        ${txId}, ${profile.id}, ${transactionId}, ${acquirerTransactionId}, ${'pix_in'}, 
         ${amount}, ${fee}, ${netAmount}, ${'pending'}, 
         ${description || `Pagamento via ${profile.name}`},
         ${safePayerName}, ${safePayerDocument}, 
