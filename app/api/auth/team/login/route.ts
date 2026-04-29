@@ -2,10 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 import bcrypt from 'bcryptjs'
 import { SignJWT } from 'jose'
-import { cookies } from 'next/headers'
 
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+  process.env.JWT_SECRET || 'fallback-secret-change-in-production'
 )
 
 const TEAM_COOKIE_NAME = 'team_session'
@@ -76,18 +75,8 @@ export async function POST(request: NextRequest) {
       .setExpirationTime('24h')
       .sign(JWT_SECRET)
 
-    // Definir cookie
-    const cookieStore = await cookies()
-    cookieStore.set(TEAM_COOKIE_NAME, token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24, // 24 horas
-      path: '/',
-    })
-
-    // Retornar dados do membro (sem senha)
-    return NextResponse.json({
+    // Criar response com dados do membro
+    const response = NextResponse.json({
       success: true,
       member: {
         id: member.id,
@@ -97,8 +86,19 @@ export async function POST(request: NextRequest) {
         permissions: member.permissions,
       },
       redirectUrl: getRedirectUrl(member.role),
-      loginTime: Date.now(), // Para o timer de sessao
+      loginTime: Date.now(),
     })
+
+    // Definir cookie diretamente na response
+    response.cookies.set(TEAM_COOKIE_NAME, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24, // 24 horas
+      path: '/',
+    })
+
+    return response
   } catch (error) {
     console.error('Team login error:', error)
     return NextResponse.json(
