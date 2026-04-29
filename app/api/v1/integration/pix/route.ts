@@ -159,7 +159,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Buscar taxas baseadas na rota do usuário (considera taxas personalizadas)
-    const systemFees = await getSystemFeesForUser(profile.id);
+    let systemFees;
+    try {
+      systemFees = await getSystemFeesForUser(profile.id);
+    } catch {
+      // Usar taxas padrão se falhar
+      systemFees = profile.route_type === 'white' 
+        ? { pixFixedFee: 1.50, pixPercentageFee: 0, withdrawalFee: 2.00 }
+        : { pixFixedFee: 0, pixPercentageFee: 4.00, withdrawalFee: 5.00 };
+    }
 
     // Calcular taxa (usar taxa personalizada do usuario ou padrao da rota)
     const feePercentage = systemFees.pixPercentageFee;
