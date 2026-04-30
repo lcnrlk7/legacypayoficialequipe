@@ -284,12 +284,16 @@ function convertToMisticPayKeyType(keyType?: string): "CPF" | "CNPJ" | "EMAIL" |
       return "EMAIL";
     case "TELEFONE":
     case "PHONE":
+    case "CELULAR":
       return "TELEFONE";
     case "ALEATORIA":
     case "RANDOM":
     case "CHAVE_ALEATORIA":
+    case "EVP":
+    case "CHAVE":
       return "CHAVE_ALEATORIA";
     default:
+      console.log(`[MisticPay] Tipo de chave desconhecido: ${keyType}, usando detecção automática`);
       return null;
   }
 }
