@@ -300,10 +300,26 @@ export async function createWithdrawal(
         const MISTICPAY_WITHDRAWAL_FEE = 0.50;
         const amountToSend = amount + MISTICPAY_WITHDRAWAL_FEE;
 
+        // Verificar saldo disponível na MisticPay antes de tentar o saque
+        try {
+          const balanceResult = await client.getBalance();
+          console.log("[MisticPay] Saldo disponível:", balanceResult.data?.balance);
+          
+          if (balanceResult.success && balanceResult.data && balanceResult.data.balance < amountToSend) {
+            return { 
+              success: false, 
+              error: `Saldo insuficiente na MisticPay. Disponível: R$ ${balanceResult.data.balance.toFixed(2)}, Necessário: R$ ${amountToSend.toFixed(2)}` 
+            };
+          }
+        } catch (balanceError) {
+          console.error("[MisticPay] Erro ao verificar saldo:", balanceError);
+          // Continuar mesmo se não conseguir verificar o saldo
+        }
+
         console.log(`[MisticPay] Saque: valor líquido=${amount}, com taxa=${amountToSend}, pixKey=${pixKey}`);
 
         const result = await client.withdraw({
-          amount: amountToSend * 100, // Converter para centavos (inclui taxa MisticPay)
+          amount: amountToSend, // MisticPay recebe valor em REAIS, não centavos
           pixKey,
           pixKeyType: mapPixKeyType(pixKey),
           description: description || "Saque PIX",
