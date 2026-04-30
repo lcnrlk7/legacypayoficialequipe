@@ -259,7 +259,7 @@ export default function Home() {
               {/* Left content */}
               <div>
                 <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-                  Controle total da sua operacao em{" "}
+                  Controle total da sua operação em{" "}
                   <span className="text-orange-500">tempo real</span>
                 </h2>
                 <p className="text-gray-400 mb-8">
