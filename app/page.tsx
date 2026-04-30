@@ -36,10 +36,10 @@ export default function Home() {
           </nav>
           
           <div className="flex items-center gap-3">
-            <Link href="/login" className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors">
+            <Link href="/auth/login" className="px-4 py-2 text-sm text-gray-300 hover:text-white transition-colors">
               Entrar
             </Link>
-            <Link href="/register" className="px-5 py-2 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full text-sm font-medium text-black hover:shadow-lg hover:shadow-orange-500/25 transition-all">
+            <Link href="/auth/register" className="px-5 py-2 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full text-sm font-medium text-black hover:shadow-lg hover:shadow-orange-500/25 transition-all">
               Criar conta
             </Link>
           </div>
@@ -68,7 +68,7 @@ export default function Home() {
               </p>
               
               <div className="flex flex-wrap gap-4 mb-12">
-                <Link href="/register" className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full font-medium text-black hover:shadow-xl hover:shadow-orange-500/30 transition-all">
+                <Link href="/auth/register" className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full font-medium text-black hover:shadow-xl hover:shadow-orange-500/30 transition-all">
                   Comecar agora
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
@@ -516,7 +516,7 @@ export default function Home() {
                 <p className="text-gray-400 mb-6">
                   Transforme sua operacao, aumente suas conversoes e escale seu negocio com tecnologia de ponta.
                 </p>
-                <Link href="/register" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full font-medium text-black hover:shadow-xl hover:shadow-orange-500/30 transition-all">
+                <Link href="/auth/register" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full font-medium text-black hover:shadow-xl hover:shadow-orange-500/30 transition-all">
                   Criar minha conta agora
                   <ArrowRight className="w-4 h-4" />
                 </Link>
