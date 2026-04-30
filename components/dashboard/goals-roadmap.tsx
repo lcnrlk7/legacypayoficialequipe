@@ -233,134 +233,203 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
         </p>
 
         <div className="flex flex-col gap-4">
-          {/* Roadmap Grid - Snake/Labyrinth Layout */}
-          <div className="w-full">
-            <div className="w-full space-y-2">
+          {/* Roadmap Grid - Mobile: vertical list, Desktop: snake layout */}
+          <div className="w-full overflow-hidden">
+            {/* Mobile Layout - Grid 3x4 */}
+            <div className="grid grid-cols-3 gap-3 sm:hidden">
+              {/* Row 1 */}
+              <div className={`aspect-square rounded-full border-2 flex items-center justify-center ${totalRevenue >= 1000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                <span className={`text-xs font-bold ${totalRevenue >= 1000 ? "text-primary" : "text-gray-400"}`}>R$ 1K</span>
+              </div>
+              <div className={`aspect-square rounded-full border-2 flex items-center justify-center ${totalRevenue >= 10000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                <span className={`text-xs font-bold ${totalRevenue >= 10000 ? "text-primary" : "text-gray-400"}`}>R$ 10K</span>
+              </div>
+              <div className={`aspect-square rounded-full border-2 flex items-center justify-center ${totalRevenue >= 20000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                <span className={`text-xs font-bold ${totalRevenue >= 20000 ? "text-primary" : "text-gray-400"}`}>R$ 20K</span>
+              </div>
+              
+              {/* Row 2 */}
+              <button
+                onClick={() => { setPreviewMilestone(milestones.find(m => m.badgeType === "bracelet")!); setShowPreview(true); }}
+                className={`aspect-square rounded-full border-2 overflow-hidden relative ${totalRevenue >= 20000 ? "border-primary" : "border-primary/40"}`}
+              >
+                <Image src="/images/rewards/pulseira-20k.png" alt="Pulseira 20K" fill className={`object-cover ${totalRevenue >= 20000 ? "" : "grayscale opacity-50"}`} />
+              </button>
+              <div className={`aspect-square rounded-full border-2 flex items-center justify-center ${totalRevenue >= 50000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                <span className={`text-xs font-bold ${totalRevenue >= 50000 ? "text-primary" : "text-gray-400"}`}>R$ 50K</span>
+              </div>
+              <div className={`aspect-square rounded-full border-2 flex items-center justify-center ${totalRevenue >= 75000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                <span className={`text-xs font-bold ${totalRevenue >= 75000 ? "text-primary" : "text-gray-400"}`}>R$ 75K</span>
+              </div>
+              
+              {/* Row 3 */}
+              <div className={`aspect-square rounded-full border-2 flex items-center justify-center ${totalRevenue >= 100000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                <span className={`text-xs font-bold ${totalRevenue >= 100000 ? "text-primary" : "text-gray-400"}`}>R$ 100K</span>
+              </div>
+              <button
+                onClick={() => { setPreviewMilestone(milestones.find(m => m.badgeType === "plaque_100k")!); setShowPreview(true); }}
+                className={`aspect-square rounded-full border-2 overflow-hidden relative ${totalRevenue >= 100000 ? "border-primary" : "border-primary/40"}`}
+              >
+                <Image src="/images/rewards/placa-100k.png" alt="Placa 100K" fill className={`object-cover ${totalRevenue >= 100000 ? "" : "grayscale opacity-50"}`} />
+              </button>
+              <div className={`aspect-square rounded-full border-2 flex items-center justify-center ${totalRevenue >= 250000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                <span className={`text-xs font-bold ${totalRevenue >= 250000 ? "text-primary" : "text-gray-400"}`}>R$ 250K</span>
+              </div>
+              
+              {/* Row 4 */}
+              <div className={`aspect-square rounded-full border-2 flex items-center justify-center ${totalRevenue >= 500000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                <span className={`text-xs font-bold ${totalRevenue >= 500000 ? "text-primary" : "text-gray-400"}`}>R$ 500K</span>
+              </div>
+              <button
+                onClick={() => { setPreviewMilestone(milestones.find(m => m.badgeType === "plaque_500k")!); setShowPreview(true); }}
+                className={`aspect-square rounded-full border-2 overflow-hidden relative ${totalRevenue >= 500000 ? "border-primary" : "border-primary/40"}`}
+              >
+                <Image src="/images/rewards/placa-500k.png" alt="Placa 500K" fill className={`object-cover ${totalRevenue >= 500000 ? "" : "grayscale opacity-50"}`} />
+              </button>
+              <div className={`aspect-square rounded-full border-2 flex items-center justify-center ${totalRevenue >= 750000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                <span className={`text-xs font-bold ${totalRevenue >= 750000 ? "text-primary" : "text-gray-400"}`}>R$ 750K</span>
+              </div>
+              
+              {/* Row 5 */}
+              <div className={`aspect-square rounded-full border-2 flex items-center justify-center ${totalRevenue >= 1000000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                <span className={`text-xs font-bold ${totalRevenue >= 1000000 ? "text-primary" : "text-gray-400"}`}>R$ 1M</span>
+              </div>
+              <button
+                onClick={() => { setPreviewMilestone(milestones.find(m => m.badgeType === "plaque_1m")!); setShowPreview(true); }}
+                className={`aspect-square rounded-full border-2 overflow-hidden relative ${totalRevenue >= 1000000 ? "border-primary" : "border-primary/40"}`}
+              >
+                <Image src="/images/rewards/placa-1m.png" alt="Placa 1M" fill className={`object-cover ${totalRevenue >= 1000000 ? "" : "grayscale opacity-50"}`} />
+              </button>
+              <div className="aspect-square" /> {/* Empty cell */}
+            </div>
+            
+            {/* Desktop Layout - Snake Pattern */}
+            <div className="hidden sm:block w-full space-y-2">
               {/* Row 1: R$ 1K -> R$ 10K -> R$ 20K -> [Pulseira] -> R$ 50K */}
               <div className="flex items-center justify-between w-full">
                 {/* R$ 1K */}
-                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 1000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
-                  <span className={`text-sm font-bold ${totalRevenue >= 1000 ? "text-primary" : "text-gray-400"}`}>R$ 1K</span>
+                <div className={`w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 1000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                  <span className={`text-xs md:text-sm font-bold ${totalRevenue >= 1000 ? "text-primary" : "text-gray-400"}`}>R$ 1K</span>
                 </div>
                 
-                <div className={`h-0.5 flex-1 mx-2 ${totalRevenue >= 10000 ? "bg-primary" : "bg-gray-700"}`} />
+                <div className={`h-0.5 flex-1 mx-1 md:mx-2 ${totalRevenue >= 10000 ? "bg-primary" : "bg-gray-700"}`} />
                 
                 {/* R$ 10K */}
-                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 10000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
-                  <span className={`text-sm font-bold ${totalRevenue >= 10000 ? "text-primary" : "text-gray-400"}`}>R$ 10K</span>
+                <div className={`w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 10000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                  <span className={`text-xs md:text-sm font-bold ${totalRevenue >= 10000 ? "text-primary" : "text-gray-400"}`}>R$ 10K</span>
                 </div>
                 
-                <div className={`h-0.5 flex-1 mx-2 ${totalRevenue >= 20000 ? "bg-primary" : "bg-gray-700"}`} />
+                <div className={`h-0.5 flex-1 mx-1 md:mx-2 ${totalRevenue >= 20000 ? "bg-primary" : "bg-gray-700"}`} />
                 
                 {/* R$ 20K */}
-                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 20000 ? "border-primary bg-primary/20" : "border-primary/40 bg-gray-800/50"}`}>
-                  <span className={`text-sm font-bold ${totalRevenue >= 20000 ? "text-primary" : "text-gray-400"}`}>R$ 20K</span>
+                <div className={`w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 20000 ? "border-primary bg-primary/20" : "border-primary/40 bg-gray-800/50"}`}>
+                  <span className={`text-xs md:text-sm font-bold ${totalRevenue >= 20000 ? "text-primary" : "text-gray-400"}`}>R$ 20K</span>
                 </div>
                 
-                <div className={`h-0.5 w-4 mx-1 flex-shrink-0 ${totalRevenue >= 20000 ? "bg-primary" : "bg-gray-700"}`} />
+                <div className={`h-0.5 w-2 md:w-4 mx-0.5 md:mx-1 flex-shrink-0 ${totalRevenue >= 20000 ? "bg-primary" : "bg-gray-700"}`} />
                 
                 {/* Pulseira Image */}
                 <button
                   onClick={() => { setPreviewMilestone(milestones.find(m => m.badgeType === "bracelet")!); setShowPreview(true); }}
-                  className={`w-[90px] h-[90px] rounded-full border-2 overflow-hidden relative flex-shrink-0 transition-transform hover:scale-105 ${totalRevenue >= 20000 ? "border-primary" : "border-primary/40"}`}
+                  className={`w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-full border-2 overflow-hidden relative flex-shrink-0 transition-transform hover:scale-105 ${totalRevenue >= 20000 ? "border-primary" : "border-primary/40"}`}
                 >
                   <Image src="/images/rewards/pulseira-20k.png" alt="Pulseira 20K" fill className={`object-cover ${totalRevenue >= 20000 ? "" : "grayscale opacity-50"}`} />
                 </button>
                 
-                <div className={`h-0.5 flex-1 mx-2 ${totalRevenue >= 50000 ? "bg-primary" : "bg-gray-700"}`} />
+                <div className={`h-0.5 flex-1 mx-1 md:mx-2 ${totalRevenue >= 50000 ? "bg-primary" : "bg-gray-700"}`} />
                 
                 {/* R$ 50K */}
-                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 50000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
-                  <span className={`text-sm font-bold ${totalRevenue >= 50000 ? "text-primary" : "text-gray-400"}`}>R$ 50K</span>
+                <div className={`w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 50000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                  <span className={`text-xs md:text-sm font-bold ${totalRevenue >= 50000 ? "text-primary" : "text-gray-400"}`}>R$ 50K</span>
                 </div>
               </div>
               
               {/* Vertical connector Row 1 -> Row 2 (right side) */}
-              <div className="flex justify-end pr-[42px]">
-                <div className={`w-0.5 h-6 ${totalRevenue >= 75000 ? "bg-primary" : "bg-gray-700"}`} />
+              <div className="flex justify-end pr-[32px] md:pr-[42px]">
+                <div className={`w-0.5 h-4 md:h-6 ${totalRevenue >= 75000 ? "bg-primary" : "bg-gray-700"}`} />
               </div>
 
               {/* Row 2: R$ 375K <- R$ 250K <- [100K Placa] <- R$ 100K <- R$ 75K */}
               <div className="flex items-center justify-between w-full flex-row-reverse">
                 {/* R$ 75K (right) */}
-                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 75000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
-                  <span className={`text-sm font-bold ${totalRevenue >= 75000 ? "text-primary" : "text-gray-400"}`}>R$ 75K</span>
+                <div className={`w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 75000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                  <span className={`text-xs md:text-sm font-bold ${totalRevenue >= 75000 ? "text-primary" : "text-gray-400"}`}>R$ 75K</span>
                 </div>
                 
-                <div className={`h-0.5 w-4 mx-1 flex-shrink-0 ${totalRevenue >= 100000 ? "bg-primary" : "bg-gray-700"}`} />
+                <div className={`h-0.5 w-2 md:w-4 mx-0.5 md:mx-1 flex-shrink-0 ${totalRevenue >= 100000 ? "bg-primary" : "bg-gray-700"}`} />
                 
                 {/* R$ 100K */}
-                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 100000 ? "border-primary bg-primary/20" : "border-primary/40 bg-gray-800/50"}`}>
-                  <span className={`text-sm font-bold ${totalRevenue >= 100000 ? "text-primary" : "text-gray-400"}`}>R$ 100K</span>
+                <div className={`w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 100000 ? "border-primary bg-primary/20" : "border-primary/40 bg-gray-800/50"}`}>
+                  <span className={`text-xs md:text-sm font-bold ${totalRevenue >= 100000 ? "text-primary" : "text-gray-400"}`}>R$ 100K</span>
                 </div>
                 
-                <div className={`h-0.5 w-4 mx-1 flex-shrink-0 ${totalRevenue >= 100000 ? "bg-primary" : "bg-gray-700"}`} />
+                <div className={`h-0.5 w-2 md:w-4 mx-0.5 md:mx-1 flex-shrink-0 ${totalRevenue >= 100000 ? "bg-primary" : "bg-gray-700"}`} />
                 
                 {/* 100K Placa Image */}
                 <button
                   onClick={() => { setPreviewMilestone(milestones.find(m => m.badgeType === "plaque_100k")!); setShowPreview(true); }}
-                  className={`w-[90px] h-[90px] rounded-full border-2 overflow-hidden relative flex-shrink-0 transition-transform hover:scale-105 ${totalRevenue >= 100000 ? "border-primary" : "border-primary/40"}`}
+                  className={`w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-full border-2 overflow-hidden relative flex-shrink-0 transition-transform hover:scale-105 ${totalRevenue >= 100000 ? "border-primary" : "border-primary/40"}`}
                 >
                   <Image src="/images/rewards/placa-100k.png" alt="Placa 100K" fill className={`object-cover ${totalRevenue >= 100000 ? "" : "grayscale opacity-50"}`} />
                 </button>
                 
-                <div className={`h-0.5 flex-1 mx-2 ${totalRevenue >= 250000 ? "bg-primary" : "bg-gray-700"}`} />
+                <div className={`h-0.5 flex-1 mx-1 md:mx-2 ${totalRevenue >= 250000 ? "bg-primary" : "bg-gray-700"}`} />
                 
                 {/* R$ 250K */}
-                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 250000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
-                  <span className={`text-sm font-bold ${totalRevenue >= 250000 ? "text-primary" : "text-gray-400"}`}>R$ 250K</span>
+                <div className={`w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 250000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                  <span className={`text-xs md:text-sm font-bold ${totalRevenue >= 250000 ? "text-primary" : "text-gray-400"}`}>R$ 250K</span>
                 </div>
                 
-                <div className={`h-0.5 flex-1 mx-2 ${totalRevenue >= 375000 ? "bg-primary" : "bg-gray-700"}`} />
+                <div className={`h-0.5 flex-1 mx-1 md:mx-2 ${totalRevenue >= 375000 ? "bg-primary" : "bg-gray-700"}`} />
                 
                 {/* R$ 375K (left) */}
-                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 375000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
-                  <span className={`text-sm font-bold ${totalRevenue >= 375000 ? "text-primary" : "text-gray-400"}`}>R$ 375K</span>
+                <div className={`w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 375000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                  <span className={`text-xs md:text-sm font-bold ${totalRevenue >= 375000 ? "text-primary" : "text-gray-400"}`}>R$ 375K</span>
                 </div>
               </div>
               
               {/* Vertical connector Row 2 -> Row 3 (left side) */}
-              <div className="flex justify-start pl-[42px]">
-                <div className={`w-0.5 h-6 ${totalRevenue >= 500000 ? "bg-primary" : "bg-gray-700"}`} />
+              <div className="flex justify-start pl-[32px] md:pl-[42px]">
+                <div className={`w-0.5 h-4 md:h-6 ${totalRevenue >= 500000 ? "bg-primary" : "bg-gray-700"}`} />
               </div>
 
               {/* Row 3: R$ 500K -> [500K Placa] -> R$ 750K -> R$ 1M -> [1M Placa] */}
               <div className="flex items-center justify-between w-full">
                 {/* R$ 500K */}
-                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 500000 ? "border-primary bg-primary/20" : "border-primary/40 bg-gray-800/50"}`}>
-                  <span className={`text-sm font-bold ${totalRevenue >= 500000 ? "text-primary" : "text-gray-400"}`}>R$ 500K</span>
+                <div className={`w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 500000 ? "border-primary bg-primary/20" : "border-primary/40 bg-gray-800/50"}`}>
+                  <span className={`text-xs md:text-sm font-bold ${totalRevenue >= 500000 ? "text-primary" : "text-gray-400"}`}>R$ 500K</span>
                 </div>
                 
-                <div className={`h-0.5 w-4 mx-1 flex-shrink-0 ${totalRevenue >= 500000 ? "bg-primary" : "bg-gray-700"}`} />
+                <div className={`h-0.5 w-2 md:w-4 mx-0.5 md:mx-1 flex-shrink-0 ${totalRevenue >= 500000 ? "bg-primary" : "bg-gray-700"}`} />
                 
                 {/* 500K Placa Image */}
                 <button
                   onClick={() => { setPreviewMilestone(milestones.find(m => m.badgeType === "plaque_500k")!); setShowPreview(true); }}
-                  className={`w-[90px] h-[90px] rounded-full border-2 overflow-hidden relative flex-shrink-0 transition-transform hover:scale-105 ${totalRevenue >= 500000 ? "border-primary" : "border-primary/40"}`}
+                  className={`w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-full border-2 overflow-hidden relative flex-shrink-0 transition-transform hover:scale-105 ${totalRevenue >= 500000 ? "border-primary" : "border-primary/40"}`}
                 >
                   <Image src="/images/rewards/placa-500k.png" alt="Placa 500K" fill className={`object-cover ${totalRevenue >= 500000 ? "" : "grayscale opacity-50"}`} />
                 </button>
                 
-                <div className={`h-0.5 flex-1 mx-2 ${totalRevenue >= 750000 ? "bg-primary" : "bg-gray-700"}`} />
+                <div className={`h-0.5 flex-1 mx-1 md:mx-2 ${totalRevenue >= 750000 ? "bg-primary" : "bg-gray-700"}`} />
                 
                 {/* R$ 750K */}
-                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 750000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
-                  <span className={`text-sm font-bold ${totalRevenue >= 750000 ? "text-primary" : "text-gray-400"}`}>R$ 750K</span>
+                <div className={`w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 750000 ? "border-primary bg-primary/20" : "border-gray-600 bg-gray-800/50"}`}>
+                  <span className={`text-xs md:text-sm font-bold ${totalRevenue >= 750000 ? "text-primary" : "text-gray-400"}`}>R$ 750K</span>
                 </div>
                 
-                <div className={`h-0.5 flex-1 mx-2 ${totalRevenue >= 1000000 ? "bg-primary" : "bg-gray-700"}`} />
+                <div className={`h-0.5 flex-1 mx-1 md:mx-2 ${totalRevenue >= 1000000 ? "bg-primary" : "bg-gray-700"}`} />
                 
                 {/* R$ 1M */}
-                <div className={`w-[90px] h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 1000000 ? "border-primary bg-primary/20" : "border-primary/40 bg-gray-800/50"}`}>
-                  <span className={`text-sm font-bold ${totalRevenue >= 1000000 ? "text-primary" : "text-gray-400"}`}>R$ 1M</span>
+                <div className={`w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-full border-2 flex items-center justify-center flex-shrink-0 ${totalRevenue >= 1000000 ? "border-primary bg-primary/20" : "border-primary/40 bg-gray-800/50"}`}>
+                  <span className={`text-xs md:text-sm font-bold ${totalRevenue >= 1000000 ? "text-primary" : "text-gray-400"}`}>R$ 1M</span>
                 </div>
                 
-                <div className={`h-0.5 w-4 mx-1 flex-shrink-0 ${totalRevenue >= 1000000 ? "bg-primary" : "bg-gray-700"}`} />
+                <div className={`h-0.5 w-2 md:w-4 mx-0.5 md:mx-1 flex-shrink-0 ${totalRevenue >= 1000000 ? "bg-primary" : "bg-gray-700"}`} />
                 
                 {/* 1M Placa Image */}
                 <button
                   onClick={() => { setPreviewMilestone(milestones.find(m => m.badgeType === "plaque_1m")!); setShowPreview(true); }}
-                  className={`w-[90px] h-[90px] rounded-full border-2 overflow-hidden relative flex-shrink-0 transition-transform hover:scale-105 ${totalRevenue >= 1000000 ? "border-primary" : "border-primary/40"}`}
+                  className={`w-[70px] h-[70px] md:w-[90px] md:h-[90px] rounded-full border-2 overflow-hidden relative flex-shrink-0 transition-transform hover:scale-105 ${totalRevenue >= 1000000 ? "border-primary" : "border-primary/40"}`}
                 >
                   <Image src="/images/rewards/placa-1m.png" alt="Placa 1M" fill className={`object-cover ${totalRevenue >= 1000000 ? "" : "grayscale opacity-50"}`} />
                 </button>
