@@ -29,9 +29,20 @@ export async function GET() {
     const profile = result[0];
     const balance = Number(profile.balance) || 0;
 
+    // Buscar saques pendentes do usuario
+    const pendingResult = await sql`
+      SELECT COALESCE(SUM(amount), 0) as pending_total
+      FROM transactions
+      WHERE user_id = ${user.id}
+        AND type = 'withdrawal'
+        AND status IN ('pending', 'processing', 'awaiting')
+    `;
+    const pendingWithdrawals = Number(pendingResult[0]?.pending_total) || 0;
+
     return NextResponse.json({
       balance,
       availableBalance: balance,
+      pendingWithdrawals,
       name: profile.name,
       email: profile.email,
       kycStatus: profile.kyc_status,
