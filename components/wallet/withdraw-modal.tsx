@@ -113,17 +113,18 @@ export function WithdrawModal({
     }
 
     if (amount < (systemSettings.minWithdrawal || 3)) {
-      setLocalError(`Valor minimo: ${formatCurrency(systemSettings.minWithdrawal || 3)}`);
+      setLocalError(`Valor minimo para receber: ${formatCurrency(systemSettings.minWithdrawal || 3)}`);
       return;
     }
 
-    if (amount > balance) {
-      setLocalError('Saldo insuficiente para esta transferencia');
+    // Verificar se o saldo cobre o valor + taxa
+    if (totalDebit > balance) {
+      setLocalError(`Saldo insuficiente. Para receber ${formatCurrency(amount)}, voce precisa de ${formatCurrency(totalDebit)} (valor + taxa de ${formatCurrency(withdrawalFee)})`);
       return;
     }
 
-    if (feeCalculation.netAmount <= 0) {
-      setLocalError(`Valor muito baixo. Apos taxas de R$ ${feeCalculation.totalFee.toFixed(2)}, nao sobraria valor para transferir.`);
+    if (amount <= 0) {
+      setLocalError('Informe um valor valido para receber');
       return;
     }
 
@@ -137,6 +138,11 @@ export function WithdrawModal({
   const displayError = localError || error;
   const minWithdrawal = systemSettings.minWithdrawal || 25;
   const maxWithdrawal = systemSettings.maxWithdrawal || 50000;
+  
+  // Valor máximo que o usuário pode RECEBER = saldo - taxa de saque
+  const maxReceivable = Math.max(0, balance - withdrawalFee);
+  // Total que será debitado do saldo = valor que quer receber + taxa
+  const totalDebit = amount + withdrawalFee;
 
   // Success state
   if (withdrawSuccess) {
@@ -371,7 +377,7 @@ export function WithdrawModal({
 
           {/* Amount Input */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Valor do saque</label>
+            <label className="text-sm font-medium text-foreground">Quanto voce quer receber?</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
               <Input
@@ -384,37 +390,43 @@ export function WithdrawModal({
                 }}
                 className="pl-10 bg-secondary border-border text-lg h-12"
                 min={minWithdrawal}
-                max={maxWithdrawal}
+                max={maxReceivable}
                 step="0.01"
                 autoFocus
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Minimo: {formatCurrency(minWithdrawal)} | Maximo: {formatCurrency(maxWithdrawal)}
-            </p>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">
+                Minimo: {formatCurrency(minWithdrawal)} | Maximo disponivel: {formatCurrency(maxReceivable)}
+              </p>
+              <p className="text-xs text-primary">
+                Taxa de saque: {formatCurrency(withdrawalFee)} (sera adicionada ao valor)
+              </p>
+            </div>
           </div>
 
           {/* Fee Breakdown */}
           {amount > 0 && (
             <div className="p-4 bg-secondary rounded-xl space-y-3 border border-border">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Valor do saque:</span>
-                <span className="font-medium text-foreground">{formatCurrency(feeCalculation.amount)}</span>
+                <span className="text-muted-foreground">Voce recebe:</span>
+                <span className="font-bold text-xl text-primary">{formatCurrency(amount)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Taxa de saque:</span>
-                <span className="font-medium text-red-400">- {formatCurrency(feeCalculation.totalFee)}</span>
+                <span className="font-medium text-red-400">+ {formatCurrency(withdrawalFee)}</span>
               </div>
               <div className="border-t border-border pt-3 flex justify-between">
-                <span className="font-semibold text-foreground">Destinatario recebe:</span>
-                <span className={`font-bold text-xl ${feeCalculation.netAmount > 0 ? 'text-primary' : 'text-red-400'}`}>
-                  {formatCurrency(feeCalculation.netAmount)}
+                <span className="font-semibold text-foreground">Total debitado do saldo:</span>
+                <span className={`font-bold text-lg ${totalDebit <= balance ? 'text-foreground' : 'text-red-400'}`}>
+                  {formatCurrency(totalDebit)}
                 </span>
               </div>
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Total debitado do saldo:</span>
-                <span>{formatCurrency(feeCalculation.total)}</span>
-              </div>
+              {totalDebit > balance && (
+                <p className="text-xs text-red-400">
+                  Saldo insuficiente! Voce precisa de {formatCurrency(totalDebit)} mas tem apenas {formatCurrency(balance)}
+                </p>
+              )}
             </div>
           )}
 

@@ -126,20 +126,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (amount > currentBalance) {
+    // Calcular taxas usando o sistema centralizado baseado na rota do usuário
+    // NOTA: "amount" agora é o valor que o usuário QUER RECEBER
+    // totalDebit = amount + taxa (o que será debitado do saldo)
+    const systemFees = await getSystemFeesForUser(sessionUser.id);
+    const withdrawalFee = systemFees.withdrawal_fee || 2; // Taxa fixa de saque
+    const netAmount = amount; // Valor que o usuário vai receber
+    const totalFee = withdrawalFee; // Taxa de saque
+    const totalDebit = amount + withdrawalFee; // Total a ser debitado do saldo
+    
+    if (amount <= 0) {
       return NextResponse.json(
-        { error: `Saldo insuficiente. Disponível: R$ ${currentBalance.toFixed(2)}` },
+        { error: "Valor inválido para saque" },
         { status: 400 }
       );
     }
-
-    // Calcular taxas usando o sistema centralizado baseado na rota do usuário
-    const systemFees = await getSystemFeesForUser(sessionUser.id);
-    const { netAmount, totalFee } = calculateWithdrawalFees(amount, systemFees);
     
-    if (netAmount <= 0) {
+    // Verificar se o saldo cobre o valor + taxa
+    if (totalDebit > currentBalance) {
       return NextResponse.json(
-        { error: `Valor muito baixo. Após taxa de R$ ${totalFee.toFixed(2)}, não sobraria valor para transferir.` },
+        { error: `Saldo insuficiente. Para receber R$ ${amount.toFixed(2)}, você precisa de R$ ${totalDebit.toFixed(2)} (valor + taxa de R$ ${totalFee.toFixed(2)})` },
         { status: 400 }
       );
     }
@@ -160,10 +166,10 @@ export async function POST(request: NextRequest) {
     let acquirerWithdrawalId = null;
     let withdrawalStatus = requiresApproval ? "pending" : "processing";
 
-    // Descontar saldo do usuário ANTES de processar
+    // Descontar saldo do usuário ANTES de processar (valor + taxa)
     await sql`
       UPDATE profiles 
-      SET balance = balance - ${amount}
+      SET balance = balance - ${totalDebit}
       WHERE id = ${sessionUser.id}
     `;
 
@@ -190,6 +196,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Salvar saque no banco (incluindo acquirer_withdrawal_id diretamente)
+    // amount = valor a receber, totalDebit = valor debitado (amount + taxa)
     const withdrawalId = crypto.randomUUID();
     const savedResult = await sql`
       INSERT INTO withdrawals (
@@ -198,18 +205,18 @@ export async function POST(request: NextRequest) {
       )
       VALUES (
         ${withdrawalId}, ${sessionUser.id},
-        ${amount}, ${totalFee}, ${netAmount}, ${pixKey}, ${pixKeyType || mapPixKeyType(pixKey)},
+        ${totalDebit}, ${totalFee}, ${netAmount}, ${pixKey}, ${pixKeyType || mapPixKeyType(pixKey)},
         ${withdrawalStatus}, ${acquirerWithdrawalId}, NOW()
       )
       RETURNING id, acquirer_withdrawal_id
     `;
     
-    console.log(`[Withdrawal] Saque salvo: id=${withdrawalId}, acquirer_id=${acquirerWithdrawalId}, status=${withdrawalStatus}`);
+    console.log(`[Withdrawal] Saque salvo: id=${withdrawalId}, total_debit=${totalDebit}, net=${netAmount}, fee=${totalFee}, status=${withdrawalStatus}`);
 
     if (savedResult.length === 0) {
       // Reverter saldo se falhar ao salvar
       await sql`
-        UPDATE profiles SET balance = balance + ${amount} WHERE id = ${sessionUser.id}
+        UPDATE profiles SET balance = balance + ${totalDebit} WHERE id = ${sessionUser.id}
       `;
         
       return NextResponse.json(
