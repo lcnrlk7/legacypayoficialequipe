@@ -57,6 +57,15 @@ export function useNotifications() {
     }
   }, []);
 
+  const playNotificationSound = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = 0;
+      audioRef.current.play().catch(() => {
+        // Ignorar erro se o usuario nao interagiu ainda com a pagina
+      });
+    }
+  }, []);
+
   // Tocar som quando chegar nova notificacao (notificacao visual ja chega via push)
   useEffect(() => {
     if (unreadCount > lastNotificationCount.current && lastNotificationCount.current > 0) {
@@ -66,15 +75,6 @@ export function useNotifications() {
     }
     lastNotificationCount.current = unreadCount;
   }, [unreadCount, playNotificationSound]);
-
-  const playNotificationSound = useCallback(() => {
-    if (audioRef.current) {
-      audioRef.current.currentTime = 0;
-      audioRef.current.play().catch(() => {
-        // Ignorar erro se o usuario nao interagiu ainda com a pagina
-      });
-    }
-  }, []);
 
 
 
