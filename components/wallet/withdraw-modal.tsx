@@ -395,13 +395,15 @@ export function WithdrawModal({
                 autoFocus
               />
             </div>
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">
-                Minimo: {formatCurrency(minWithdrawal)} | Maximo disponivel: {formatCurrency(maxReceivable)}
-              </p>
-              <p className="text-xs text-primary">
-                Taxa de saque: {formatCurrency(withdrawalFee)} (sera adicionada ao valor)
-              </p>
+            <div className="space-y-2 mt-3">
+              <div className="p-3 bg-primary/10 border border-primary/30 rounded-lg">
+                <p className="text-sm text-primary font-medium">
+                  Para sacar tudo, coloque: {formatCurrency(maxReceivable)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Taxa de saque: {formatCurrency(withdrawalFee)} | Minimo: {formatCurrency(minWithdrawal)}
+                </p>
+              </div>
             </div>
           </div>
 
