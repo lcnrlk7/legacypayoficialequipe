@@ -446,9 +446,18 @@ export async function POST(request: NextRequest) {
 
     const transaction = transactions[0];
 
-    // Se o status já é final, não atualizar
-    if (transaction.status === "completed" || transaction.status === "failed") {
-      console.log(`[Medusa Webhook] Transação ${transactionId} já está em status final: ${transaction.status}`);
+    // Verificar se o saldo ja foi creditado para esta transacao
+    const existingCredit = await sql`
+      SELECT id FROM audit_logs 
+      WHERE entity_id = ${transaction.id}
+        AND action = 'PAYMENT_CONFIRMED'
+      LIMIT 1
+    `;
+    const alreadyCredited = existingCredit.length > 0;
+
+    // Se o status já é final E o saldo já foi creditado, não fazer nada
+    if ((transaction.status === "completed" || transaction.status === "failed") && alreadyCredited) {
+      console.log(`[Medusa Webhook] Transação ${transactionId} já processada e creditada. Skipping.`);
       return NextResponse.json({ success: true, message: "Transação já processada" });
     }
 
@@ -461,14 +470,14 @@ export async function POST(request: NextRequest) {
       UPDATE transactions 
       SET 
         status = ${internalStatus},
-        paid_at = ${paidAt ? new Date(paidAt) : (internalStatus === 'completed' ? new Date() : null)},
-        payer_name = ${customer?.name || null},
-        payer_document = ${customer?.document?.number || null},
+        paid_at = COALESCE(paid_at, ${paidAt ? new Date(paidAt) : (internalStatus === 'completed' ? new Date() : null)}),
+        payer_name = COALESCE(payer_name, ${customer?.name || null}),
+        payer_document = COALESCE(payer_document, ${customer?.document?.number || null}),
         updated_at = NOW()
       WHERE id = ${transaction.id}
     `;
 
-    console.log(`[Medusa Webhook] Transação ${transactionId} atualizada para status: ${internalStatus}`);
+    console.log(`[Medusa Webhook] Transação ${transactionId} atualizada para status: ${internalStatus}. Already credited: ${alreadyCredited}`);
 
     // Logar webhook recebido com sucesso
     try {
@@ -488,8 +497,8 @@ export async function POST(request: NextRequest) {
       console.error("[Medusa Webhook] Erro ao logar webhook:", logErr);
     }
 
-    // Se pagamento confirmado, creditar saldo do usuário
-    if (internalStatus === "completed" && transaction.user_id) {
+    // Se pagamento confirmado E saldo ainda nao foi creditado, creditar saldo do usuario
+    if (internalStatus === "completed" && transaction.user_id && !alreadyCredited) {
       const netAmount = Number(transaction.net_amount) || (Number(transaction.amount) - Number(transaction.fee || 0));
       const currentBalance = Number(transaction.profile_balance) || 0;
       const newBalance = currentBalance + netAmount;

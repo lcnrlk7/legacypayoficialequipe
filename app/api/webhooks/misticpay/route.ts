@@ -189,9 +189,18 @@ export async function POST(request: NextRequest) {
 
     const transaction = transactions[0];
 
-    // Se o status já é final, não atualizar
-    if (transaction.status === "completed" || transaction.status === "failed") {
-      console.log(`[MisticPay Webhook] Transaction ${transactionId} already in final status: ${transaction.status}`);
+    // Verificar se o saldo ja foi creditado para esta transacao
+    const existingCredit = await sql`
+      SELECT id FROM audit_logs 
+      WHERE entity_id = ${transaction.id}
+        AND action = 'PAYMENT_CONFIRMED'
+      LIMIT 1
+    `;
+    const alreadyCredited = existingCredit.length > 0;
+
+    // Se o status já é final E o saldo já foi creditado, não fazer nada
+    if ((transaction.status === "completed" || transaction.status === "failed") && alreadyCredited) {
+      console.log(`[MisticPay Webhook] Transaction ${transactionId} already processed and credited. Skipping.`);
       return NextResponse.json({ success: true, message: "Transação já processada" });
     }
 
@@ -200,17 +209,17 @@ export async function POST(request: NextRequest) {
       UPDATE transactions 
       SET 
         status = ${internalStatus},
-        paid_at = ${internalStatus === 'completed' ? new Date() : null},
-        payer_name = ${payer?.name || null},
-        payer_document = ${payer?.document || null},
+        paid_at = COALESCE(paid_at, ${internalStatus === 'completed' ? new Date() : null}),
+        payer_name = COALESCE(payer_name, ${payer?.name || null}),
+        payer_document = COALESCE(payer_document, ${payer?.document || null}),
         updated_at = NOW()
       WHERE id = ${transaction.id}
     `;
 
-    console.log(`[MisticPay Webhook] Transaction ${transactionId} updated to status: ${internalStatus}`);
+    console.log(`[MisticPay Webhook] Transaction ${transactionId} updated to status: ${internalStatus}. Already credited: ${alreadyCredited}`);
 
-    // Se pagamento confirmado, creditar saldo do usuário
-    if (internalStatus === "completed" && transaction.user_id) {
+    // Se pagamento confirmado E saldo ainda nao foi creditado, creditar saldo do usuário
+    if (internalStatus === "completed" && transaction.user_id && !alreadyCredited) {
       const netAmount = Number(transaction.net_amount) || (Number(transaction.amount) - Number(transaction.fee || 0));
       const currentBalance = Number(transaction.profile_balance) || 0;
       const newBalance = currentBalance + netAmount;

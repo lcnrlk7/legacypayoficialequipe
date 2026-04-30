@@ -154,6 +154,35 @@ export default function TransactionsPage() {
     }
   }
 
+  async function fixBalance(transactionId: string) {
+    if (!confirm("Isso irá creditar o valor líquido da transação na conta do usuário. O saldo será somado ao saldo atual. Continuar?")) {
+      return;
+    }
+
+    setConfirmingId(transactionId);
+    try {
+      const response = await fetch("/api/admin/transactions/fix-balance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ transactionId }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert(`Saldo corrigido!\n\nUsuário: ${data.user.email}\nSaldo anterior: R$ ${data.user.previousBalance.toFixed(2)}\nCreditado: R$ ${data.user.creditedAmount.toFixed(2)}\nNovo saldo: R$ ${data.user.newBalance.toFixed(2)}`);
+        loadTransactions();
+      } else {
+        alert(`Erro: ${data.error}`);
+      }
+    } catch (error) {
+      console.error("Error fixing balance:", error);
+      alert("Erro ao corrigir saldo");
+    } finally {
+      setConfirmingId(null);
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="p-6 lg:p-8">
@@ -374,19 +403,21 @@ export default function TransactionsPage() {
                           </button>
                         )}
                         {transaction.status === "completed" && (
-                          <button
-                            onClick={() => confirmTransaction(transaction.id, true)}
-                            disabled={confirmingId === transaction.id}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 text-orange-400 rounded-lg hover:bg-orange-500/20 transition-colors text-sm disabled:opacity-50"
-                            title="Reprocessar: credita o saldo novamente (use se o saldo não foi creditado)"
-                          >
-                            {confirmingId === transaction.id ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <DollarSign className="w-4 h-4" />
-                            )}
-                            Reprocessar
-                          </button>
+                          <>
+                            <button
+                              onClick={() => fixBalance(transaction.id)}
+                              disabled={confirmingId === transaction.id}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 text-blue-400 rounded-lg hover:bg-blue-500/20 transition-colors text-sm disabled:opacity-50"
+                              title="Corrigir Saldo: credita o valor líquido no saldo do usuário"
+                            >
+                              {confirmingId === transaction.id ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <DollarSign className="w-4 h-4" />
+                              )}
+                              Corrigir Saldo
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
