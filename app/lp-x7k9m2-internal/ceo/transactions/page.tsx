@@ -119,8 +119,12 @@ export default function TransactionsPage() {
   const totalVolume = transactions.reduce((acc, t) => acc + Number(t.amount), 0);
   const totalFees = transactions.reduce((acc, t) => acc + Number(t.fee || 0), 0);
 
-  async function confirmTransaction(transactionId: string) {
-    if (!confirm("Tem certeza que deseja confirmar esta transação? O saldo será creditado ao usuário.")) {
+  async function confirmTransaction(transactionId: string, forceReprocess = false) {
+    const message = forceReprocess 
+      ? "ATENÇÃO: Esta transação já foi confirmada. Deseja REPROCESSAR e creditar o saldo novamente? Isso pode duplicar o crédito se o saldo já foi creditado corretamente."
+      : "Tem certeza que deseja confirmar esta transação? O saldo será creditado ao usuário.";
+    
+    if (!confirm(message)) {
       return;
     }
 
@@ -129,13 +133,13 @@ export default function TransactionsPage() {
       const response = await fetch("/api/admin/transactions/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ transactionId }),
+        body: JSON.stringify({ transactionId, forceReprocess }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        alert(`Transação confirmada! Novo saldo do usuário: R$ ${data.user.newBalance.toFixed(2)}`);
+        alert(`Transação ${forceReprocess ? 'reprocessada' : 'confirmada'}! Saldo anterior: R$ ${data.user.previousBalance.toFixed(2)} | Novo saldo: R$ ${data.user.newBalance.toFixed(2)}`);
         loadTransactions();
       } else {
         alert(`Erro: ${data.error}`);
@@ -352,23 +356,37 @@ export default function TransactionsPage() {
                       {formatDate(transaction.created_at)}
                     </td>
                     <td className="p-4">
-                      {transaction.status === "pending" && (
-                        <button
-                          onClick={() => confirmTransaction(transaction.id)}
-                          disabled={confirmingId === transaction.id}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-400 rounded-lg hover:bg-green-500/20 transition-colors text-sm disabled:opacity-50"
-                        >
-                          {confirmingId === transaction.id ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <CheckCircle className="w-4 h-4" />
-                          )}
-                          Confirmar
-                        </button>
-                      )}
-                      {transaction.status === "completed" && (
-                        <span className="text-xs text-muted-foreground">Confirmado</span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {transaction.status === "pending" && (
+                          <button
+                            onClick={() => confirmTransaction(transaction.id, false)}
+                            disabled={confirmingId === transaction.id}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500/10 text-green-400 rounded-lg hover:bg-green-500/20 transition-colors text-sm disabled:opacity-50"
+                          >
+                            {confirmingId === transaction.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <CheckCircle className="w-4 h-4" />
+                            )}
+                            Confirmar
+                          </button>
+                        )}
+                        {transaction.status === "completed" && (
+                          <button
+                            onClick={() => confirmTransaction(transaction.id, true)}
+                            disabled={confirmingId === transaction.id}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-orange-500/10 text-orange-400 rounded-lg hover:bg-orange-500/20 transition-colors text-sm disabled:opacity-50"
+                            title="Reprocessar: credita o saldo novamente (use se o saldo não foi creditado)"
+                          >
+                            {confirmingId === transaction.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <DollarSign className="w-4 h-4" />
+                            )}
+                            Reprocessar
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
