@@ -395,18 +395,41 @@ export function mapMisticPayStatus(status: string): string {
 export function mapPixKeyType(pixKey: string): "CPF" | "CNPJ" | "EMAIL" | "TELEFONE" | "CHAVE_ALEATORIA" {
   const cleanKey = pixKey.replace(/\D/g, "");
   
-  if (/^[0-9]{11}$/.test(cleanKey)) {
-    return "CPF";
-  }
-  if (/^[0-9]{14}$/.test(cleanKey)) {
-    return "CNPJ";
-  }
+  // Email primeiro (tem @)
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(pixKey)) {
     return "EMAIL";
   }
-  if (/^\+?[0-9]{10,13}$/.test(cleanKey)) {
+  
+  // CNPJ tem 14 dígitos
+  if (/^[0-9]{14}$/.test(cleanKey)) {
+    return "CNPJ";
+  }
+  
+  // Telefone: 10-11 dígitos começando com DDD válido (11-99)
+  // DDDs brasileiros vão de 11 a 99, e o 9º dígito para celular
+  // Ex: 91982086529 = DDD 91 + 982086529
+  if (/^[0-9]{10,11}$/.test(cleanKey)) {
+    const ddd = parseInt(cleanKey.substring(0, 2));
+    // DDDs válidos no Brasil: 11-19, 21-29, 31-39, 41-49, 51-55, 61-69, 71-79, 81-89, 91-99
+    if (ddd >= 11 && ddd <= 99) {
+      // Se começa com 9 após o DDD, é celular (telefone)
+      const thirdDigit = cleanKey.charAt(2);
+      if (thirdDigit === '9' || cleanKey.length === 10) {
+        return "TELEFONE";
+      }
+    }
+  }
+  
+  // CPF tem 11 dígitos (mas não é telefone)
+  if (/^[0-9]{11}$/.test(cleanKey)) {
+    return "CPF";
+  }
+  
+  // Telefone com código do país (+55)
+  if (/^55[0-9]{10,11}$/.test(cleanKey)) {
     return "TELEFONE";
   }
+  
   return "CHAVE_ALEATORIA";
 }
 
