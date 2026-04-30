@@ -72,13 +72,16 @@ export async function POST(request: NextRequest) {
 
     // Registrar no audit log
     await sql`
-      INSERT INTO audit_logs (id, user_id, action, action_type, description, metadata, created_at)
+      INSERT INTO audit_logs (id, user_id, action, entity_id, entity_type, description, old_value, new_value, metadata, created_at)
       VALUES (
         ${crypto.randomUUID()},
         ${transaction.user_id},
         'BALANCE_FIX',
-        'balance_correction',
+        ${transaction.id},
+        'transaction',
         ${`Correção de saldo para transação ${transaction.id}. Valor: R$ ${netAmount.toFixed(2)}`},
+        ${currentBalance.toString()},
+        ${newBalance.toString()},
         ${JSON.stringify({ 
           transaction_id: transaction.id, 
           amount: Number(transaction.amount),

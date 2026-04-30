@@ -84,13 +84,16 @@ export async function POST(request: NextRequest) {
     // Log de auditoria
     try {
       await sql`
-        INSERT INTO audit_logs (id, user_id, action, action_type, description, metadata, created_at)
+        INSERT INTO audit_logs (id, user_id, action, entity_id, entity_type, description, old_value, new_value, metadata, created_at)
         VALUES (
           ${crypto.randomUUID()},
           ${transaction.user_id},
-          ${forceReprocess ? 'Transação reprocessada pelo admin' : 'Transação confirmada manualmente pelo admin'},
           'transaction_manual_confirm',
+          ${transaction.id},
+          'transaction',
           ${`Transação ${transaction.id} ${forceReprocess ? 'reprocessada' : 'confirmada'}. Valor líquido: R$ ${netAmount.toFixed(2)}`},
+          ${currentBalance.toString()},
+          ${newBalance.toString()},
           ${JSON.stringify({ 
             transaction_id: transaction.id, 
             amount: Number(transaction.amount),

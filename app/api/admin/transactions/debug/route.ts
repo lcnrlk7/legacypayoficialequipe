@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
 
         // Buscar audit logs recentes do usuario
         const logsResult = await sql`
-          SELECT id, action, action_type, description, metadata, created_at
+          SELECT id, action, entity_type, description, metadata, created_at
           FROM audit_logs
           WHERE user_id = ${user.id}
           ORDER BY created_at DESC
@@ -87,10 +87,10 @@ export async function GET(request: NextRequest) {
       if (user) {
         // Buscar audit logs da transacao
         const logsResult = await sql`
-          SELECT id, action, action_type, description, metadata, created_at
+          SELECT id, action, entity_type, description, metadata, created_at
           FROM audit_logs
           WHERE entity_id = ${transactionId}
-             OR (user_id = ${user.id} AND action_type IN ('transaction_manual_confirm', 'PAYMENT_CONFIRMED'))
+             OR (user_id = ${user.id} AND action IN ('transaction_manual_confirm', 'PAYMENT_CONFIRMED'))
           ORDER BY created_at DESC
           LIMIT 10
         `;
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
       auditLogs: auditLogs.map(log => ({
         id: log.id,
         action: log.action,
-        action_type: log.action_type,
+        entity_type: log.entity_type,
         description: log.description,
         metadata: log.metadata,
         created_at: log.created_at,

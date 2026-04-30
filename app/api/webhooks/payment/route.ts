@@ -49,8 +49,8 @@ export async function POST(request: NextRequest) {
           `;
 
           await sql`
-            INSERT INTO audit_logs (id, user_id, user_email, user_name, action, action_type, description, metadata, created_at)
-            VALUES (${crypto.randomUUID()}, ${transaction.user_id}, ${transaction.profile_email}, ${transaction.profile_name}, ${'Pagamento PIX confirmado'}, ${'transaction'}, ${`Pagamento de R$ ${transaction.amount.toFixed(2)} confirmado`}, ${JSON.stringify({ transaction_id: transaction.id, payer: data.payer })}, NOW())
+            INSERT INTO audit_logs (id, user_id, action, entity_id, entity_type, description, metadata, created_at)
+            VALUES (${crypto.randomUUID()}, ${transaction.user_id}, 'PAYMENT_CONFIRMED', ${transaction.id}, 'transaction', ${`Pagamento de R$ ${transaction.amount.toFixed(2)} confirmado`}, ${JSON.stringify({ transaction_id: transaction.id, payer: data.payer })}, NOW())
           `;
 
           await sql`
