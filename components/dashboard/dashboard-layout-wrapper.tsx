@@ -50,7 +50,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-background flex overflow-x-hidden">
       {!isKYCApproved && <KYCBlocker kycStatus={kycStatus} />}
       <DashboardSidebar user={userForComponents} profile={profile} />
-      <div className="flex-1 flex flex-col lg:ml-64 min-w-0">
+      <div className="flex-1 flex flex-col lg:ml-64 min-w-0 pt-14 lg:pt-0">
         <DashboardHeader user={userForComponents} profile={profile} />
         <main className="flex-1 p-3 sm:p-4 lg:p-8 pb-24 sm:pb-4 overflow-x-hidden">{children}</main>
       </div>

@@ -92,7 +92,7 @@ export function DashboardHeader({ profile }: HeaderProps) {
     : 100;
 
   return (
-    <header className="h-14 sm:h-16 lg:h-20 bg-card border-b border-border flex items-center justify-between pl-14 pr-3 sm:pl-4 sm:pr-4 lg:px-8">
+    <header className="hidden lg:flex h-20 bg-card border-b border-border items-center justify-between px-8">
       {/* Search - hidden on mobile */}
       <div className="hidden md:flex items-center gap-2 flex-1 max-w-md">
         <div className="relative flex-1">

@@ -280,13 +280,26 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
         <SidebarContent />
       </aside>
 
-      {/* Mobile Menu Button */}
-      <button
-        onClick={() => setIsMobileOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-card border border-border rounded-xl text-foreground"
-      >
-        <Menu className="w-6 h-6" />
-      </button>
+      {/* Mobile Header Bar - Barra fixa no topo */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-card border-b border-border z-40 flex items-center justify-between px-3">
+        <button
+          onClick={() => setIsMobileOpen(true)}
+          className="p-2 bg-secondary border border-border rounded-xl text-foreground flex-shrink-0"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+        
+        {/* Saldo e Notificacoes no mobile */}
+        <div className="flex items-center gap-2">
+          <div className="text-right">
+            <p className="text-[10px] text-muted-foreground">Saldo Liquido</p>
+            <p className="text-sm font-bold text-primary">
+              {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(profile?.balance || 0))}
+            </p>
+          </div>
+          <NotificationCenter />
+        </div>
+      </div>
 
       {/* Mobile Sidebar */}
       <AnimatePresence>
