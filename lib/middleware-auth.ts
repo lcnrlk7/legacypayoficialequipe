@@ -91,6 +91,7 @@ export async function handleAuth(request: NextRequest) {
     '/api/v1/',
     '/api/webhooks/',
     '/api/setup/',
+    '/api/cron/',
   ]
 
   const isPublicPath = publicPaths.some(path => pathname === path || pathname.startsWith(path + '/')) ||
