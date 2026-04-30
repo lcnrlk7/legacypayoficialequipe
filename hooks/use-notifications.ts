@@ -57,20 +57,15 @@ export function useNotifications() {
     }
   }, []);
 
-  // Tocar som e mostrar notificacao quando chegar nova notificacao
+  // Tocar som quando chegar nova notificacao (notificacao visual ja chega via push)
   useEffect(() => {
     if (unreadCount > lastNotificationCount.current && lastNotificationCount.current > 0) {
-      // Nova notificacao chegou
+      // Nova notificacao chegou - tocar som apenas
       playNotificationSound();
-      
-      // Mostrar notificacao do browser se permitido
-      const latestNotification = notifications.find(n => !n.read);
-      if (latestNotification && permission === "granted") {
-        showBrowserNotification(latestNotification.title, latestNotification.body);
-      }
+      // Nao mostrar notificacao do browser aqui pois ja chega via push notification
     }
     lastNotificationCount.current = unreadCount;
-  }, [unreadCount, notifications, permission]);
+  }, [unreadCount, playNotificationSound]);
 
   const playNotificationSound = useCallback(() => {
     if (audioRef.current) {
@@ -81,20 +76,7 @@ export function useNotifications() {
     }
   }, []);
 
-  const showBrowserNotification = useCallback((title: string, body: string) => {
-    if (!isSupported || permission !== "granted") return;
-    
-    try {
-      new Notification(title, {
-        body,
-        icon: "/logo-icon.png",
-        badge: "/logo-icon.png",
-        tag: "legacypay-notification",
-      });
-    } catch (error) {
-      console.error("Erro ao mostrar notificacao:", error);
-    }
-  }, [isSupported, permission]);
+
 
   const requestPermission = useCallback(async () => {
     if (!isSupported) return false;
