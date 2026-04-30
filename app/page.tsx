@@ -404,7 +404,10 @@ export default function Home() {
                 A MELHOR CONDICAO
               </div>
               <div className="w-14 h-14 bg-orange-500/20 rounded-xl flex items-center justify-center mb-4 mt-2">
-                <Zap className="w-7 h-7 text-orange-500" />
+                <svg className="w-7 h-7 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="1" x2="12" y2="23"/>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
               </div>
               <h3 className="text-xl font-semibold mb-2">PIX Instantaneo</h3>
               <div className="text-4xl font-bold text-orange-500 mb-1">1%</div>
