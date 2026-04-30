@@ -7,11 +7,13 @@ import {
   TrendingUp,
   Users,
   ArrowUpRight,
+  ArrowDownLeft,
   Loader2,
   Search,
   RefreshCw,
   Clock,
   CheckCircle,
+  Filter,
 } from "lucide-react";
 
 interface UserFee {
@@ -20,16 +22,31 @@ interface UserFee {
   email: string;
   fee_percentage: number;
   route_type: string;
+  // Taxas separadas
+  deposit_fees: number;
+  withdrawal_fees: number;
   total_fees_paid: number;
-  total_transactions: number;
+  // Volumes separados
+  deposit_volume: number;
+  withdrawal_volume: number;
   total_volume: number;
+  // Transacoes separadas
+  deposit_transactions: number;
+  withdrawal_transactions: number;
+  total_transactions: number;
   last_transaction_at: string | null;
 }
 
 interface FeesSummary {
   totalFeesCollected: number;
+  totalDepositFees: number;
+  totalWithdrawalFees: number;
   totalVolume: number;
+  totalDepositVolume: number;
+  totalWithdrawalVolume: number;
   totalTransactions: number;
+  totalDepositTransactions: number;
+  totalWithdrawalTransactions: number;
   averageFeePercentage: number;
   activeUsersCount: number;
   totalUsersCount: number;
@@ -43,6 +60,7 @@ export default function AdminFeesPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [feeTypeFilter, setFeeTypeFilter] = useState<"all" | "deposit" | "withdrawal">("all");
 
   const loadFees = useCallback(async (showLoading = true) => {
     if (showLoading) setIsLoading(true);
@@ -168,7 +186,7 @@ export default function AdminFeesPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -183,9 +201,16 @@ export default function AdminFeesPage() {
           <p className="text-2xl font-bold text-white">
             {formatCurrency(summary?.totalFeesCollected || 0)}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Receita total da plataforma
-          </p>
+          <div className="mt-2 space-y-1">
+            <div className="flex justify-between text-xs">
+              <span className="text-blue-400">Depositos:</span>
+              <span className="text-blue-400 font-medium">{formatCurrency(summary?.totalDepositFees || 0)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-orange-400">Saques:</span>
+              <span className="text-orange-400 font-medium">{formatCurrency(summary?.totalWithdrawalFees || 0)}</span>
+            </div>
+          </div>
         </motion.div>
 
         <motion.div
@@ -203,9 +228,16 @@ export default function AdminFeesPage() {
           <p className="text-2xl font-bold text-white">
             {formatCurrency(summary?.totalVolume || 0)}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Volume processado
-          </p>
+          <div className="mt-2 space-y-1">
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Depositos:</span>
+              <span className="text-white">{formatCurrency(summary?.totalDepositVolume || 0)}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Saques:</span>
+              <span className="text-white">{formatCurrency(summary?.totalWithdrawalVolume || 0)}</span>
+            </div>
+          </div>
         </motion.div>
 
         <motion.div
@@ -218,14 +250,21 @@ export default function AdminFeesPage() {
             <div className="p-2 rounded-xl bg-purple-500/20">
               <ArrowUpRight className="w-5 h-5 text-purple-400" />
             </div>
-            <span className="text-sm text-purple-400">Transações</span>
+            <span className="text-sm text-purple-400">Transacoes</span>
           </div>
           <p className="text-2xl font-bold text-white">
             {summary?.totalTransactions || 0}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Total de transações
-          </p>
+          <div className="mt-2 space-y-1">
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Depositos:</span>
+              <span className="text-white">{summary?.totalDepositTransactions || 0}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Saques:</span>
+              <span className="text-white">{summary?.totalWithdrawalTransactions || 0}</span>
+            </div>
+          </div>
         </motion.div>
 
         <motion.div
@@ -238,27 +277,68 @@ export default function AdminFeesPage() {
             <div className="p-2 rounded-xl bg-orange-500/20">
               <Users className="w-5 h-5 text-orange-400" />
             </div>
-            <span className="text-sm text-orange-400">Taxa Média</span>
+            <span className="text-sm text-orange-400">Taxa Media</span>
           </div>
           <p className="text-2xl font-bold text-white">
             {(summary?.averageFeePercentage || 0).toFixed(2)}%
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Percentual médio cobrado
+            Percentual medio cobrado
           </p>
         </motion.div>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-        <input
-          type="text"
-          placeholder="Buscar por nome ou email..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-12 pr-4 py-3 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
-        />
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Buscar por nome ou email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+          />
+        </div>
+        
+        {/* Filter by fee type */}
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-muted-foreground" />
+          <div className="flex rounded-xl overflow-hidden border border-border">
+            <button
+              onClick={() => setFeeTypeFilter("all")}
+              className={`px-4 py-2 text-sm font-medium transition-colors ${
+                feeTypeFilter === "all"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-secondary text-muted-foreground hover:text-white"
+              }`}
+            >
+              Todas
+            </button>
+            <button
+              onClick={() => setFeeTypeFilter("deposit")}
+              className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-1 ${
+                feeTypeFilter === "deposit"
+                  ? "bg-blue-500 text-white"
+                  : "bg-secondary text-muted-foreground hover:text-white"
+              }`}
+            >
+              <ArrowDownLeft className="w-3 h-3" />
+              Depositos
+            </button>
+            <button
+              onClick={() => setFeeTypeFilter("withdrawal")}
+              className={`px-4 py-2 text-sm font-medium transition-colors flex items-center gap-1 ${
+                feeTypeFilter === "withdrawal"
+                  ? "bg-orange-500 text-white"
+                  : "bg-secondary text-muted-foreground hover:text-white"
+              }`}
+            >
+              <ArrowUpRight className="w-3 h-3" />
+              Saques
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Users Table */}
@@ -279,7 +359,7 @@ export default function AdminFeesPage() {
                   Taxa %
                 </th>
                 <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">
-                  Taxas Pagas
+                  {feeTypeFilter === "deposit" ? "Taxas Deposito" : feeTypeFilter === "withdrawal" ? "Taxas Saque" : "Taxas Pagas"}
                 </th>
                 <th className="text-right px-6 py-4 text-sm font-medium text-muted-foreground">
                   Volume
@@ -351,16 +431,44 @@ export default function AdminFeesPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <span className="text-green-400 font-semibold text-lg">
-                        {formatCurrency(user.total_fees_paid)}
-                      </span>
+                      <div className="flex flex-col items-end">
+                        <span className="text-green-400 font-semibold text-lg">
+                          {formatCurrency(
+                            feeTypeFilter === "deposit" 
+                              ? user.deposit_fees 
+                              : feeTypeFilter === "withdrawal" 
+                                ? user.withdrawal_fees 
+                                : user.total_fees_paid
+                          )}
+                        </span>
+                        {feeTypeFilter === "all" && (user.deposit_fees > 0 || user.withdrawal_fees > 0) && (
+                          <div className="flex gap-2 text-xs mt-1">
+                            {user.deposit_fees > 0 && (
+                              <span className="text-blue-400">D: {formatCurrency(user.deposit_fees)}</span>
+                            )}
+                            {user.withdrawal_fees > 0 && (
+                              <span className="text-orange-400">S: {formatCurrency(user.withdrawal_fees)}</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right text-white font-medium">
-                      {formatCurrency(user.total_volume)}
+                      {formatCurrency(
+                        feeTypeFilter === "deposit" 
+                          ? user.deposit_volume 
+                          : feeTypeFilter === "withdrawal" 
+                            ? user.withdrawal_volume 
+                            : user.total_volume
+                      )}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <span className="px-2 py-1 rounded-full bg-secondary text-white text-sm">
-                        {user.total_transactions}
+                        {feeTypeFilter === "deposit" 
+                          ? user.deposit_transactions 
+                          : feeTypeFilter === "withdrawal" 
+                            ? user.withdrawal_transactions 
+                            : user.total_transactions}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right text-muted-foreground text-sm">
@@ -388,25 +496,45 @@ export default function AdminFeesPage() {
             </div>
             <div className="flex items-center gap-6">
               <div className="text-right">
-                <p className="text-xs text-muted-foreground mb-1">Total Taxas (filtrado)</p>
+                <p className="text-xs text-muted-foreground mb-1">
+                  Total Taxas {feeTypeFilter === "deposit" ? "(Depositos)" : feeTypeFilter === "withdrawal" ? "(Saques)" : "(Todas)"}
+                </p>
                 <p className="text-green-400 font-bold text-lg">
                   {formatCurrency(
-                    filteredUsers.reduce((acc, u) => acc + u.total_fees_paid, 0)
+                    filteredUsers.reduce((acc, u) => acc + (
+                      feeTypeFilter === "deposit" 
+                        ? u.deposit_fees 
+                        : feeTypeFilter === "withdrawal" 
+                          ? u.withdrawal_fees 
+                          : u.total_fees_paid
+                    ), 0)
                   )}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-muted-foreground mb-1">Total Volume (filtrado)</p>
+                <p className="text-xs text-muted-foreground mb-1">Total Volume</p>
                 <p className="text-white font-bold text-lg">
                   {formatCurrency(
-                    filteredUsers.reduce((acc, u) => acc + u.total_volume, 0)
+                    filteredUsers.reduce((acc, u) => acc + (
+                      feeTypeFilter === "deposit" 
+                        ? u.deposit_volume 
+                        : feeTypeFilter === "withdrawal" 
+                          ? u.withdrawal_volume 
+                          : u.total_volume
+                    ), 0)
                   )}
                 </p>
               </div>
               <div className="text-right">
-                <p className="text-xs text-muted-foreground mb-1">Total Transações</p>
+                <p className="text-xs text-muted-foreground mb-1">Total Transacoes</p>
                 <p className="text-white font-bold text-lg">
-                  {filteredUsers.reduce((acc, u) => acc + u.total_transactions, 0)}
+                  {filteredUsers.reduce((acc, u) => acc + (
+                    feeTypeFilter === "deposit" 
+                      ? u.deposit_transactions 
+                      : feeTypeFilter === "withdrawal" 
+                        ? u.withdrawal_transactions 
+                        : u.total_transactions
+                  ), 0)}
                 </p>
               </div>
             </div>
