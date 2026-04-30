@@ -197,12 +197,18 @@ export async function createPixPayment(
           clientSecret: config.api_secret || "",
         });
 
+        // URL do webhook para receber notificações de status do depósito
+        const webhookUrl = process.env.NEXT_PUBLIC_APP_URL 
+          ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/misticpay`
+          : "https://legacypay.site/api/webhooks/misticpay";
+
         const result = await client.createPixCharge({
-          amount: amount * 100, // Converter para centavos
+          amount: amount, // MisticPay recebe valor em REAIS (ex: 4.55 = R$ 4,55)
           payerName: payerName || "Cliente",
           payerDocument: payerDocument || "00000000000",
           transactionId: externalId,
           description: description || "Pagamento PIX",
+          projectWebhook: webhookUrl, // Webhook para receber status do depósito
         });
 
         if (result.success && result.data) {
@@ -349,13 +355,20 @@ export async function createWithdrawal(
 
         // Converter tipo de chave para formato MisticPay (CPF, CNPJ, EMAIL, TELEFONE, CHAVE_ALEATORIA)
         const misticPayKeyType = convertToMisticPayKeyType(pixKeyType) || mapPixKeyType(pixKey);
-        console.log(`[MisticPay] Saque: valor líquido=${amount}, com taxa=${amountToSend}, pixKey=${pixKey}, tipo=${misticPayKeyType}`);
+        
+        // URL do webhook para receber notificações de status do saque
+        const webhookUrl = process.env.NEXT_PUBLIC_APP_URL 
+          ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/misticpay`
+          : "https://legacypay.site/api/webhooks/misticpay";
+        
+        console.log(`[MisticPay] Saque: valor=${amountToSend}, pixKey=${pixKey}, tipo=${misticPayKeyType}, webhook=${webhookUrl}`);
 
         const result = await client.withdraw({
           amount: amountToSend, // MisticPay recebe valor em REAIS, não centavos
           pixKey,
           pixKeyType: misticPayKeyType,
           description: description || "Saque PIX",
+          projectWebhook: webhookUrl, // Webhook para receber status do saque
         });
 
         if (result.success && result.data) {
