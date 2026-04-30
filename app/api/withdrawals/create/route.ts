@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
     // NOTA: "amount" agora é o valor que o usuário QUER RECEBER
     // totalDebit = amount + taxa (o que será debitado do saldo)
     const systemFees = await getSystemFeesForUser(sessionUser.id);
-    const withdrawalFee = systemFees.withdrawal_fee || 2; // Taxa fixa de saque
+    const withdrawalFee = systemFees.withdrawalFee || 2; // Taxa fixa de saque
     const netAmount = amount; // Valor que o usuário vai receber
     const totalFee = withdrawalFee; // Taxa de saque
     const totalDebit = amount + withdrawalFee; // Total a ser debitado do saldo
