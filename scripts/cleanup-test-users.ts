@@ -47,8 +47,24 @@ async function cleanupTestUsers() {
     `;
     console.log(`  - ${deletedTx.length} transações deletadas`);
 
-    // 4. Deletar checkouts
-    console.log("\n4. Deletando checkouts...");
+    // 4. Buscar checkouts dos usuários para deletar checkout_orders primeiro
+    console.log("\n4. Deletando checkout_orders e checkouts...");
+    const userCheckouts = await sql`
+      SELECT id FROM checkouts WHERE user_id = ANY(${userIds})
+    `;
+    const checkoutIds = userCheckouts.map(c => c.id);
+    
+    if (checkoutIds.length > 0) {
+      // Deletar checkout_orders primeiro (foreign key)
+      const deletedOrders = await sql`
+        DELETE FROM checkout_orders 
+        WHERE checkout_id = ANY(${checkoutIds})
+        RETURNING id
+      `;
+      console.log(`  - ${deletedOrders.length} checkout_orders deletados`);
+    }
+    
+    // Agora deletar checkouts
     const deletedCheckouts = await sql`
       DELETE FROM checkouts 
       WHERE user_id = ANY(${userIds})
@@ -83,17 +99,26 @@ async function cleanupTestUsers() {
     `;
     console.log(`  - ${deletedLogs.length} audit logs deletados`);
 
-    // 8. Deletar notifications
-    console.log("\n8. Deletando notificações...");
-    const deletedNotifs = await sql`
-      DELETE FROM notifications 
+    // 8. Deletar integration_errors
+    console.log("\n8. Deletando integration_errors...");
+    const deletedErrors = await sql`
+      DELETE FROM integration_errors 
       WHERE user_id = ANY(${userIds})
       RETURNING id
     `;
-    console.log(`  - ${deletedNotifs.length} notificações deletadas`);
+    console.log(`  - ${deletedErrors.length} integration_errors deletados`);
 
-    // 9. Deletar os próprios usuários
-    console.log("\n9. Deletando usuários de teste...");
+    // 9. Deletar admin_notifications
+    console.log("\n9. Deletando admin_notifications...");
+    const deletedAdminNotifs = await sql`
+      DELETE FROM admin_notifications 
+      WHERE created_by = ANY(${userIds})
+      RETURNING id
+    `;
+    console.log(`  - ${deletedAdminNotifs.length} admin_notifications deletados`);
+
+    // 10. Deletar os próprios usuários
+    console.log("\n10. Deletando usuários de teste...");
     const deletedUsers = await sql`
       DELETE FROM profiles 
       WHERE id = ANY(${userIds})
