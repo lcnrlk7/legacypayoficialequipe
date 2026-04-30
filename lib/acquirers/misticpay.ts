@@ -168,6 +168,7 @@ export class MisticPay {
 
   /**
    * Verifica o status de uma transação
+   * Alias: getTransactionStatus
    */
   async checkTransaction(transactionId: string): Promise<CheckTransactionResponse> {
     try {
@@ -214,6 +215,22 @@ export class MisticPay {
         error: error instanceof Error ? error.message : "Erro de conexão com o provedor de pagamento",
       };
     }
+  }
+
+  /**
+   * Alias para checkTransaction - mantém compatibilidade com outras adquirentes
+   */
+  async getTransactionStatus(transactionId: string) {
+    const result = await this.checkTransaction(transactionId);
+    if (result.success && result.data) {
+      return {
+        transactionState: result.data.status,
+        status: result.data.status,
+        value: result.data.value,
+        fee: result.data.fee,
+      };
+    }
+    return null;
   }
 
   /**
