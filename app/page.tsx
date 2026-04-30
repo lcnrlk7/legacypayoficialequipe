@@ -28,11 +28,11 @@ export default function Home() {
           </Link>
           
           <nav className="hidden md:flex items-center gap-8">
-            <Link href="#inicio" className="text-sm text-gray-400 hover:text-white transition-colors">Inicio</Link>
-            <Link href="#solucoes" className="text-sm text-gray-400 hover:text-white transition-colors">Solucoes</Link>
+            <Link href="#inicio" className="text-sm text-gray-400 hover:text-white transition-colors">Início</Link>
+            <Link href="#solucoes" className="text-sm text-gray-400 hover:text-white transition-colors">Soluções</Link>
             <Link href="#taxas" className="text-sm text-gray-400 hover:text-white transition-colors">Taxas</Link>
-            <Link href="/dashboard/integration" className="text-sm text-gray-400 hover:text-white transition-colors">Documentacao</Link>
-            <Link href="#sobre" className="text-sm text-gray-400 hover:text-white transition-colors">Sobre nos</Link>
+            <Link href="/dashboard/integration" className="text-sm text-gray-400 hover:text-white transition-colors">Documentação</Link>
+            <Link href="#sobre" className="text-sm text-gray-400 hover:text-white transition-colors">Sobre nós</Link>
           </nav>
           
           <div className="flex items-center gap-3">
@@ -53,22 +53,22 @@ export default function Home() {
             {/* Left content */}
             <div className="relative z-10">
               <h1 className="text-5xl lg:text-6xl font-bold leading-tight mb-6">
-                A nova geracao de{" "}
+                A nova geração de{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">pagamentos</span>
-                <br />comeca aqui.
+                <br />começa aqui.
               </h1>
               
               <p className="text-lg text-gray-400 mb-8 max-w-lg">
-                Sua propria gateway completa, rapida, segura e escalavel.
+                Sua própria gateway de pagamentos PIX. Rápida, segura e totalmente escalável para o seu negócio.
               </p>
               
               <div className="flex flex-wrap gap-4 mb-12">
                 <Link href="/auth/register" className="group inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full font-medium text-black hover:shadow-xl hover:shadow-orange-500/30 transition-all">
-                  Comecar agora
+                  Começar agora
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
-                <Link href="#demo" className="inline-flex items-center gap-2 px-6 py-3 border border-white/20 rounded-full font-medium hover:bg-white/5 transition-all">
-                  Ver demonstracao
+                <Link href="#solucoes" className="inline-flex items-center gap-2 px-6 py-3 border border-white/20 rounded-full font-medium hover:bg-white/5 transition-all">
+                  Conhecer soluções
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -76,8 +76,8 @@ export default function Home() {
               <div className="flex flex-wrap items-center gap-8 text-sm text-gray-500">
                 <div className="flex items-center gap-2">
                   <Zap className="w-4 h-4 text-orange-500" />
-                  <span>Ativacao rapida</span>
-                  <span className="text-gray-600">em ate 5 minutos</span>
+                  <span>Ativação rápida</span>
+                  <span className="text-gray-600">em até 5 minutos</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 text-orange-500" />
@@ -87,7 +87,7 @@ export default function Home() {
                 <div className="flex items-center gap-2">
                   <Headphones className="w-4 h-4 text-orange-500" />
                   <span>Suporte premium</span>
-                  <span className="text-gray-600">24h por dia</span>
+                  <span className="text-gray-600">24 horas por dia</span>
                 </div>
               </div>
             </div>
@@ -119,12 +119,12 @@ export default function Home() {
                       <div className="text-xs text-green-500">+8.2%</div>
                     </div>
                     <div>
-                      <div className="text-xs text-gray-500">Transacoes</div>
+                      <div className="text-xs text-gray-500">Transações</div>
                       <div className="text-lg font-bold text-white">12.543</div>
                       <div className="text-xs text-green-500">+8.2%</div>
                     </div>
                     <div>
-                      <div className="text-xs text-gray-500">Aprovacao</div>
+                      <div className="text-xs text-gray-500">Aprovação</div>
                       <div className="text-lg font-bold text-white">96,8%</div>
                       <div className="text-xs text-green-500">+2%</div>
                     </div>
@@ -138,7 +138,7 @@ export default function Home() {
                   {/* Chart Area */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="bg-[#151515] rounded-lg p-3">
-                      <div className="text-xs text-gray-500 mb-2">Volume de vendas</div>
+                      <div className="text-xs text-gray-500 mb-2">Volume de Vendas</div>
                       <div className="h-24 flex items-end gap-1">
                         {[40, 65, 45, 70, 55, 80, 60, 75, 85, 70, 90, 75].map((h, i) => (
                           <div key={i} className="flex-1 bg-gradient-to-t from-orange-600 to-orange-400 rounded-t" style={{ height: `${h}%` }} />
@@ -146,7 +146,7 @@ export default function Home() {
                       </div>
                     </div>
                     <div className="bg-[#151515] rounded-lg p-3">
-                      <div className="text-xs text-gray-500 mb-2">Status das transacoes</div>
+                      <div className="text-xs text-gray-500 mb-2">Status das Transações</div>
                       <div className="flex items-center justify-center h-24">
                         <div className="relative w-20 h-20">
                           <svg className="w-full h-full -rotate-90">
@@ -179,7 +179,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl lg:text-4xl font-bold">
-              Tudo que voce precisa para escalar seu negocio
+              Tudo que você precisa para escalar seu negócio
             </h2>
           </div>
           
@@ -189,9 +189,9 @@ export default function Home() {
               <div className="w-12 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center mb-4 group-hover:bg-orange-500/10 transition-colors">
                 <Zap className="w-6 h-6 text-orange-500" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">Pagamentos Instantaneos</h3>
+              <h3 className="text-lg font-semibold mb-1">Pagamentos Instantâneos</h3>
               <p className="text-sm text-gray-500 mt-3">
-                Receba vendas via PIX com processamento rapido e seguro.
+                Receba suas vendas via PIX com processamento rápido, seguro e sem complicações.
               </p>
             </div>
             
@@ -200,9 +200,9 @@ export default function Home() {
               <div className="w-12 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center mb-4 group-hover:bg-orange-500/10 transition-colors">
                 <BarChart3 className="w-6 h-6 text-orange-500" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">Automacao de Vendas</h3>
+              <h3 className="text-lg font-semibold mb-1">Automação de Vendas</h3>
               <p className="text-sm text-gray-500 mt-3">
-                Automatize entregas, acessos e processos da sua operacao digital.
+                Automatize entregas, liberação de acessos e processos da sua operação digital.
               </p>
             </div>
             
@@ -211,9 +211,9 @@ export default function Home() {
               <div className="w-12 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center mb-4 group-hover:bg-orange-500/10 transition-colors">
                 <Users className="w-6 h-6 text-orange-500" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">Gestao de Afiliados</h3>
+              <h3 className="text-lg font-semibold mb-1">Gestão de Afiliados</h3>
               <p className="text-sm text-gray-500 mt-3">
-                Crie e gerencie seu proprio programa de afiliados para escalar suas vendas.
+                Crie e gerencie seu próprio programa de afiliados para escalar suas vendas.
               </p>
             </div>
             
@@ -233,9 +233,9 @@ export default function Home() {
               <div className="w-12 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center mb-4 group-hover:bg-orange-500/10 transition-colors">
                 <Shield className="w-6 h-6 text-orange-500" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">PIX Instantaneo e Seguro</h3>
+              <h3 className="text-lg font-semibold mb-1">PIX Instantâneo e Seguro</h3>
               <p className="text-sm text-gray-500 mt-3">
-                Receba pagamentos via PIX com processamento instantaneo e seguro.
+                Receba pagamentos via PIX com processamento instantâneo e máxima segurança.
               </p>
             </div>
             
@@ -246,7 +246,7 @@ export default function Home() {
               </div>
               <h3 className="text-lg font-semibold mb-1">API Completa e Documentada</h3>
               <p className="text-sm text-gray-500 mt-3">
-                Integre com sua aplicacao de forma simples e rapida com nossa API robusta e segura.
+                Integre com sua aplicação de forma simples e rápida com nossa API robusta e segura.
               </p>
             </div>
           </div>
@@ -265,7 +265,7 @@ export default function Home() {
                   <span className="text-orange-500">tempo real</span>
                 </h2>
                 <p className="text-gray-400 mb-8">
-                  Dashboards avancados, graficos inteligentes e dados em tempo real para voce tomar decisoes rapidas e ganhar mais.
+                  Dashboards avançados, gráficos inteligentes e dados em tempo real para você tomar decisões rápidas e aumentar seus resultados.
                 </p>
                 
                 <div className="space-y-4">
@@ -273,19 +273,19 @@ export default function Home() {
                     <div className="w-6 h-6 bg-orange-500/20 rounded flex items-center justify-center">
                       <Check className="w-4 h-4 text-orange-500" />
                     </div>
-                    <span className="text-sm">Graficos em tempo real</span>
+                    <span className="text-sm">Gráficos em tempo real</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-6 h-6 bg-orange-500/20 rounded flex items-center justify-center">
                       <Check className="w-4 h-4 text-orange-500" />
                     </div>
-                    <span className="text-sm">Relatorios personalizados</span>
+                    <span className="text-sm">Relatórios personalizados</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-6 h-6 bg-orange-500/20 rounded flex items-center justify-center">
                       <Check className="w-4 h-4 text-orange-500" />
                     </div>
-                    <span className="text-sm">Exportacao de dados</span>
+                    <span className="text-sm">Exportação de dados</span>
                   </div>
                 </div>
               </div>
@@ -293,7 +293,7 @@ export default function Home() {
               {/* Right - Dashboard Preview */}
               <div className="bg-[#0d0d0d] rounded-2xl p-6 border border-white/5">
                 <div className="flex items-center justify-between mb-6">
-                  <div className="text-sm font-medium">Relatorio de vendas</div>
+                  <div className="text-sm font-medium">Relatório de Vendas</div>
                   <div className="px-3 py-1 bg-[#1a1a1a] rounded text-xs">Hoje</div>
                 </div>
                 
@@ -305,12 +305,12 @@ export default function Home() {
                     <div className="text-xs text-green-500">+12.5%</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Transacoes</div>
+                    <div className="text-xs text-gray-500">Transações</div>
                     <div className="text-lg font-bold">12.543</div>
                     <div className="text-xs text-green-500">+8.2%</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Ticket medio</div>
+                    <div className="text-xs text-gray-500">Ticket médio</div>
                     <div className="text-lg font-bold">R$ 78,90</div>
                     <div className="text-xs text-green-500">+5.4%</div>
                   </div>
@@ -324,7 +324,7 @@ export default function Home() {
                 {/* Charts */}
                 <div className="grid grid-cols-3 gap-4">
                   <div className="col-span-2 bg-[#151515] rounded-xl p-4">
-                    <div className="text-xs text-gray-500 mb-2">Volume de vendas</div>
+                    <div className="text-xs text-gray-500 mb-2">Volume de Vendas</div>
                     <div className="h-32 flex items-end gap-1">
                       {[30, 45, 35, 50, 40, 60, 45, 55, 65, 50, 70, 55, 75, 60, 80, 65, 85, 70, 90, 75, 85, 80, 95, 85].map((h, i) => (
                         <div key={i} className="flex-1 bg-gradient-to-t from-orange-600 to-orange-400 rounded-t opacity-80 hover:opacity-100 transition-opacity" style={{ height: `${h}%` }} />
@@ -339,7 +339,7 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="bg-[#151515] rounded-xl p-4">
-                    <div className="text-xs text-gray-500 mb-2">Transacoes por status</div>
+                    <div className="text-xs text-gray-500 mb-2">Transações por Status</div>
                     <div className="flex items-center justify-center h-28">
                       <div className="relative w-24 h-24">
                         <svg className="w-full h-full -rotate-90">
@@ -388,7 +388,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl lg:text-4xl font-bold">
-              Estrutura de taxas que cabe no seu bolso
+              Taxas transparentes que cabem no seu bolso
             </h2>
           </div>
           
@@ -396,7 +396,7 @@ export default function Home() {
             {/* PIX - Highlighted */}
             <div className="relative bg-gradient-to-b from-orange-500/20 to-[#111111] border border-orange-500/30 rounded-2xl p-8">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-orange-500 rounded-full text-xs font-medium text-black">
-                A MELHOR CONDICAO
+                A MELHOR CONDIÇÃO
               </div>
               <div className="w-14 h-14 bg-orange-500/20 rounded-xl flex items-center justify-center mb-4 mt-2">
                 <svg className="w-7 h-7 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -404,10 +404,10 @@ export default function Home() {
                   <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                 </svg>
               </div>
-              <h3 className="text-xl font-semibold mb-2">PIX Instantaneo</h3>
+              <h3 className="text-xl font-semibold mb-2">PIX Instantâneo</h3>
               <div className="text-4xl font-bold text-orange-500 mb-1">1%</div>
               <div className="text-2xl font-bold text-orange-500 mb-2">+ R$1,00</div>
-              <p className="text-sm text-gray-500">Taxa fixa por transacao.</p>
+              <p className="text-sm text-gray-500">Taxa fixa por transação.</p>
               <p className="text-xs text-gray-600 mt-2">Receba na hora, sem burocracia.</p>
             </div>
             
@@ -419,8 +419,8 @@ export default function Home() {
               <h3 className="text-xl font-semibold mb-2">API PIX</h3>
               <div className="text-4xl font-bold text-orange-500 mb-1">1%</div>
               <div className="text-2xl font-bold text-orange-500 mb-2">+ R$1,00</div>
-              <p className="text-sm text-gray-500">Integre via API.</p>
-              <p className="text-xs text-gray-600 mt-2">Documentacao completa e suporte.</p>
+              <p className="text-sm text-gray-500">Integração via API.</p>
+              <p className="text-xs text-gray-600 mt-2">Documentação completa e suporte dedicado.</p>
             </div>
           </div>
         </div>
@@ -440,16 +440,16 @@ export default function Home() {
               <div className="w-16 h-16 bg-[#111111] border border-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Shield className="w-8 h-8 text-orange-500" />
               </div>
-              <h3 className="font-semibold mb-1">Seguranca maxima</h3>
-              <p className="text-xs text-gray-500">Seus dados protegidos com criptografia avancada.</p>
+              <h3 className="font-semibold mb-1">Segurança Máxima</h3>
+              <p className="text-xs text-gray-500">Seus dados protegidos com criptografia avançada.</p>
             </div>
             
             <div className="text-center">
               <div className="w-16 h-16 bg-[#111111] border border-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Server className="w-8 h-8 text-orange-500" />
               </div>
-              <h3 className="font-semibold mb-1">Infraestrutura robusta</h3>
-              <p className="text-xs text-gray-500">Alta disponibilidade e escalabilidade.</p>
+              <h3 className="font-semibold mb-1">Infraestrutura Robusta</h3>
+              <p className="text-xs text-gray-500">Alta disponibilidade e escalabilidade garantidas.</p>
             </div>
             
             <div className="text-center">
@@ -457,23 +457,23 @@ export default function Home() {
                 <Headphones className="w-8 h-8 text-orange-500" />
               </div>
               <h3 className="font-semibold mb-1">Suporte 24/7</h3>
-              <p className="text-xs text-gray-500">Time especializado sempre a disposicao.</p>
+              <p className="text-xs text-gray-500">Time especializado sempre à disposição.</p>
             </div>
             
             <div className="text-center">
               <div className="w-16 h-16 bg-[#111111] border border-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Eye className="w-8 h-8 text-orange-500" />
               </div>
-              <h3 className="font-semibold mb-1">Sem taxa escondida</h3>
-              <p className="text-xs text-gray-500">Transparencia total em todas as operacoes.</p>
+              <h3 className="font-semibold mb-1">Sem Taxas Escondidas</h3>
+              <p className="text-xs text-gray-500">Transparência total em todas as operações.</p>
             </div>
             
             <div className="text-center">
               <div className="w-16 h-16 bg-[#111111] border border-white/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Clock className="w-8 h-8 text-orange-500" />
               </div>
-              <h3 className="font-semibold mb-1">Ativacao rapida</h3>
-              <p className="text-xs text-gray-500">Comece a usar em minutos, nao em dias.</p>
+              <h3 className="font-semibold mb-1">Ativação Rápida</h3>
+              <p className="text-xs text-gray-500">Comece a usar em minutos, não em dias.</p>
             </div>
           </div>
         </div>
@@ -490,11 +490,11 @@ export default function Home() {
             <div className="relative z-10 grid lg:grid-cols-2 gap-12 items-center">
               <div>
                 <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-                  Legacy Pay — nao e so uma gateway, e o{" "}
-                  <span className="text-orange-500">proximo nivel.</span>
+                  Legacy Pay — não é só uma gateway, é o{" "}
+                  <span className="text-orange-500">próximo nível.</span>
                 </h2>
                 <p className="text-gray-400 mb-6">
-                  Transforme sua operacao, aumente suas conversoes e escale seu negocio com tecnologia de ponta.
+                  Transforme sua operação, aumente suas conversões e escale seu negócio com tecnologia de ponta.
                 </p>
                 <Link href="/auth/register" className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full font-medium text-black hover:shadow-xl hover:shadow-orange-500/30 transition-all">
                   Criar minha conta agora
@@ -505,15 +505,15 @@ export default function Home() {
               <div className="grid grid-cols-3 gap-6">
                 <div className="text-center">
                   <div className="text-3xl lg:text-4xl font-bold text-orange-500">+25K</div>
-                  <div className="text-sm text-gray-500">Negocios ativos</div>
+                  <div className="text-sm text-gray-500">Negócios ativos</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl lg:text-4xl font-bold text-orange-500">+2.5M</div>
-                  <div className="text-sm text-gray-500">Transacoes por mes</div>
+                  <div className="text-sm text-gray-500">Transações por mês</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl lg:text-4xl font-bold text-orange-500">+R$ 1B</div>
-                  <div className="text-sm text-gray-500">Processados por mes</div>
+                  <div className="text-sm text-gray-500">Processados por mês</div>
                 </div>
               </div>
             </div>
@@ -531,7 +531,7 @@ export default function Home() {
                 <Image src="/logo.png" alt="Legacy Pay" width={140} height={40} className="h-8 w-auto" />
               </Link>
               <p className="text-sm text-gray-500 max-w-sm">
-                A plataforma completa de pagamentos para negocios digitais e empresas que querem crescer.
+                A plataforma completa de pagamentos PIX para negócios digitais e empresas que querem crescer.
               </p>
             </div>
             
@@ -550,7 +550,7 @@ export default function Home() {
             <div>
               <h4 className="font-semibold mb-4">Empresa</h4>
               <ul className="space-y-2 text-sm text-gray-500">
-                <li><Link href="#sobre" className="hover:text-white transition-colors">Sobre nos</Link></li>
+                <li><Link href="#sobre" className="hover:text-white transition-colors">Sobre nós</Link></li>
                 <li><Link href="https://www.instagram.com/legacy_pay/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Instagram</Link></li>
                 <li><Link href="https://discord.gg/legacypay" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Discord</Link></li>
                 <li><Link href="https://wa.me/5534999353187" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Contato</Link></li>
@@ -561,7 +561,7 @@ export default function Home() {
             <div>
               <h4 className="font-semibold mb-4">Suporte</h4>
               <ul className="space-y-2 text-sm text-gray-500">
-                <li><Link href="/dashboard/integration" className="hover:text-white transition-colors">Documentacao API</Link></li>
+                <li><Link href="/dashboard/integration" className="hover:text-white transition-colors">Documentação API</Link></li>
                 <li><Link href="https://wa.me/5534999353187" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Central de ajuda</Link></li>
                 <li><Link href="https://discord.gg/legacypay" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Comunidade Discord</Link></li>
                 <li><Link href="mailto:contato@legacypay.shop" className="hover:text-white transition-colors">Fale conosco</Link></li>
