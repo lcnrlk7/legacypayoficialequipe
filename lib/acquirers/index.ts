@@ -294,8 +294,16 @@ export async function createWithdrawal(
           clientSecret: config.api_secret || "",
         });
 
+        // MisticPay cobra R$ 0,50 de taxa por saque automaticamente
+        // Então enviamos valor + taxa para que o cliente receba o valor correto
+        // Ex: usuário quer receber R$ 80, enviamos R$ 80,50, MisticPay desconta R$ 0,50
+        const MISTICPAY_WITHDRAWAL_FEE = 0.50;
+        const amountToSend = amount + MISTICPAY_WITHDRAWAL_FEE;
+
+        console.log(`[MisticPay] Saque: valor líquido=${amount}, com taxa=${amountToSend}, pixKey=${pixKey}`);
+
         const result = await client.withdraw({
-          amount: amount * 100, // Converter para centavos
+          amount: amountToSend * 100, // Converter para centavos (inclui taxa MisticPay)
           pixKey,
           pixKeyType: mapPixKeyType(pixKey),
           description: description || "Saque PIX",
