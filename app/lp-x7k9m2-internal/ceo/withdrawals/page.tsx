@@ -202,7 +202,7 @@ export default function WithdrawalsPage() {
 
   const totalPending = withdrawals
     .filter((w) => w.status === "pending")
-    .reduce((acc, w) => acc + w.amount, 0);
+    .reduce((acc, w) => acc + (Number(w.amount) || 0), 0);
 
   if (isLoading) {
     return (
