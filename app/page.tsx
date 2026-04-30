@@ -52,11 +52,6 @@ export default function Home() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left content */}
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-full mb-6">
-                <div className="w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
-                <span className="text-sm text-orange-400">A NOVA GERACAO DE PAGAMENTOS</span>
-              </div>
-              
               <h1 className="text-5xl lg:text-6xl font-bold leading-tight mb-6">
                 A nova geracao de{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-orange-600">pagamentos</span>
