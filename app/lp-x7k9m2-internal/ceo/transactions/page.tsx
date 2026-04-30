@@ -18,10 +18,12 @@ interface Transaction {
   type: string;
   amount: number;
   fee: number;
+  net_amount?: number;
   status: string;
   pix_key: string;
   description: string;
   created_at: string;
+  paid_at?: string;
   user_email?: string;
   user_name?: string;
 }
