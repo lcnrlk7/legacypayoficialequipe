@@ -31,7 +31,7 @@ export default function Home() {
             <Link href="#inicio" className="text-sm text-gray-400 hover:text-white transition-colors">Inicio</Link>
             <Link href="#solucoes" className="text-sm text-gray-400 hover:text-white transition-colors">Solucoes</Link>
             <Link href="#taxas" className="text-sm text-gray-400 hover:text-white transition-colors">Taxas</Link>
-            <Link href="#docs" className="text-sm text-gray-400 hover:text-white transition-colors">Documentacao</Link>
+            <Link href="/dashboard/integration" className="text-sm text-gray-400 hover:text-white transition-colors">Documentacao</Link>
             <Link href="#sobre" className="text-sm text-gray-400 hover:text-white transition-colors">Sobre nos</Link>
           </nav>
           
@@ -444,7 +444,7 @@ export default function Home() {
       </section>
 
       {/* Why Choose Section */}
-      <section className="relative py-20 px-6">
+      <section id="sobre" className="relative py-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-full mb-4">
@@ -559,10 +559,10 @@ export default function Home() {
             <div>
               <h4 className="font-semibold mb-4">Produtos</h4>
               <ul className="space-y-2 text-sm text-gray-500">
-                <li><Link href="#" className="hover:text-white transition-colors">Pagamentos</Link></li>
-                <li><Link href="#" className="hover:text-white transition-colors">Split de pagamentos</Link></li>
-                <li><Link href="#" className="hover:text-white transition-colors">Links de pagamento</Link></li>
-                <li><Link href="#" className="hover:text-white transition-colors">API</Link></li>
+                <li><Link href="#solucoes" className="hover:text-white transition-colors">Pagamentos PIX</Link></li>
+                <li><Link href="#taxas" className="hover:text-white transition-colors">Taxas</Link></li>
+                <li><Link href="/dashboard/checkout" className="hover:text-white transition-colors">Links de pagamento</Link></li>
+                <li><Link href="/dashboard/integration" className="hover:text-white transition-colors">API</Link></li>
               </ul>
             </div>
             
@@ -570,10 +570,10 @@ export default function Home() {
             <div>
               <h4 className="font-semibold mb-4">Empresa</h4>
               <ul className="space-y-2 text-sm text-gray-500">
-                <li><Link href="#" className="hover:text-white transition-colors">Sobre nos</Link></li>
-                <li><Link href="#" className="hover:text-white transition-colors">Blog</Link></li>
-                <li><Link href="#" className="hover:text-white transition-colors">Carreiras</Link></li>
-                <li><Link href="#" className="hover:text-white transition-colors">Contato</Link></li>
+                <li><Link href="#sobre" className="hover:text-white transition-colors">Sobre nos</Link></li>
+                <li><Link href="https://www.instagram.com/legacy_pay/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Instagram</Link></li>
+                <li><Link href="https://discord.gg/legacypay" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Discord</Link></li>
+                <li><Link href="https://wa.me/5534999353187" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Contato</Link></li>
               </ul>
             </div>
             
@@ -581,10 +581,10 @@ export default function Home() {
             <div>
               <h4 className="font-semibold mb-4">Suporte</h4>
               <ul className="space-y-2 text-sm text-gray-500">
-                <li><Link href="#" className="hover:text-white transition-colors">Documentacao</Link></li>
-                <li><Link href="#" className="hover:text-white transition-colors">Central de ajuda</Link></li>
-                <li><Link href="#" className="hover:text-white transition-colors">Status da API</Link></li>
-                <li><Link href="#" className="hover:text-white transition-colors">Fale conosco</Link></li>
+                <li><Link href="/dashboard/integration" className="hover:text-white transition-colors">Documentacao API</Link></li>
+                <li><Link href="https://wa.me/5534999353187" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Central de ajuda</Link></li>
+                <li><Link href="https://discord.gg/legacypay" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Comunidade Discord</Link></li>
+                <li><Link href="mailto:contato@legacypay.shop" className="hover:text-white transition-colors">Fale conosco</Link></li>
               </ul>
             </div>
           </div>
