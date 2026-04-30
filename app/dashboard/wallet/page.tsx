@@ -207,7 +207,7 @@ const handleDeposit = async () => {
     }
   };
 
-  const handleWithdraw = async (amount: number, pixKey: string) => {
+  const handleWithdraw = async (amount: number, pixKey: string, pixKeyType: string) => {
     if (!amount || amount <= 0 || !pixKey) {
       setError("Preencha todos os campos");
       return;
@@ -220,15 +220,15 @@ const handleDeposit = async () => {
 
     // Taxa fixa de saque
     const withdrawalFee = systemSettings.withdrawalFee || 5;
-    const netAmount = amount - withdrawalFee;
+    const totalDebit = amount + withdrawalFee;
 
-    if (netAmount <= 0) {
-      setError(`Valor muito baixo. Apos taxa de R$ ${withdrawalFee.toFixed(2).replace('.', ',')}, nao sobraria valor para transferir.`);
+    if (amount <= 0) {
+      setError("Informe um valor valido para receber");
       return;
     }
 
-    if (amount > balance) {
-      setError("Saldo insuficiente");
+    if (totalDebit > balance) {
+      setError(`Saldo insuficiente. Para receber R$ ${amount.toFixed(2)}, voce precisa de R$ ${totalDebit.toFixed(2)}`);
       return;
     }
 
@@ -246,7 +246,7 @@ const handleDeposit = async () => {
         body: JSON.stringify({
           amount: amount,
           pixKey: pixKey,
-          pixKeyType: "PIX",
+          pixKeyType: pixKeyType, // Tipo selecionado pelo usuário
         }),
       });
 

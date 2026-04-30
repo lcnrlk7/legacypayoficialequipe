@@ -22,7 +22,7 @@ interface WithdrawModalProps {
   loading: boolean;
   error: string | null;
   withdrawSuccess: boolean;
-  onWithdraw: (amount: number, pixKey: string) => Promise<void>;
+  onWithdraw: (amount: number, pixKey: string, pixKeyType: string) => Promise<void>;
   onClose: () => void;
 }
 
@@ -129,7 +129,7 @@ export function WithdrawModal({
     }
 
     try {
-      await onWithdraw(amount, withdrawPixKey);
+      await onWithdraw(amount, withdrawPixKey, pixKeyType);
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : 'Erro ao processar saque');
     }

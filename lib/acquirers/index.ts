@@ -268,6 +268,33 @@ export async function createPixPayment(
 }
 
 /**
+ * Converte o tipo de chave PIX do frontend para o formato da MisticPay
+ */
+function convertToMisticPayKeyType(keyType?: string): "CPF" | "CNPJ" | "EMAIL" | "TELEFONE" | "CHAVE_ALEATORIA" | null {
+  if (!keyType) return null;
+  
+  const normalized = keyType.toUpperCase().trim();
+  
+  switch (normalized) {
+    case "CPF":
+      return "CPF";
+    case "CNPJ":
+      return "CNPJ";
+    case "EMAIL":
+      return "EMAIL";
+    case "TELEFONE":
+    case "PHONE":
+      return "TELEFONE";
+    case "ALEATORIA":
+    case "RANDOM":
+    case "CHAVE_ALEATORIA":
+      return "CHAVE_ALEATORIA";
+    default:
+      return null;
+  }
+}
+
+/**
  * Solicita saque PIX usando a adquirente configurada para o usuário
  * @param userId - ID do usuário para determinar a rota (white/black)
  */
@@ -316,12 +343,14 @@ export async function createWithdrawal(
           // Continuar mesmo se não conseguir verificar o saldo
         }
 
-        console.log(`[MisticPay] Saque: valor líquido=${amount}, com taxa=${amountToSend}, pixKey=${pixKey}`);
+        // Converter tipo de chave para formato MisticPay (CPF, CNPJ, EMAIL, TELEFONE, CHAVE_ALEATORIA)
+        const misticPayKeyType = convertToMisticPayKeyType(pixKeyType) || mapPixKeyType(pixKey);
+        console.log(`[MisticPay] Saque: valor líquido=${amount}, com taxa=${amountToSend}, pixKey=${pixKey}, tipo=${misticPayKeyType}`);
 
         const result = await client.withdraw({
           amount: amountToSend, // MisticPay recebe valor em REAIS, não centavos
           pixKey,
-          pixKeyType: mapPixKeyType(pixKey),
+          pixKeyType: misticPayKeyType,
           description: description || "Saque PIX",
         });
 
