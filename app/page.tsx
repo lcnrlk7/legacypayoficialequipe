@@ -243,12 +243,12 @@ export default function Home() {
             {/* Feature 5 */}
             <div className="group bg-[#111111] border border-white/5 rounded-2xl p-6 hover:border-orange-500/30 transition-all duration-300">
               <div className="w-12 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center mb-4 group-hover:bg-orange-500/10 transition-colors">
-                <CreditCard className="w-6 h-6 text-orange-500" />
+                <Zap className="w-6 h-6 text-orange-500" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">Multiplas Formas</h3>
-              <h4 className="text-orange-500 font-medium mb-3">de Pagamento.</h4>
+              <h3 className="text-lg font-semibold mb-1">PIX Instantaneo</h3>
+              <h4 className="text-orange-500 font-medium mb-3">e Seguro.</h4>
               <p className="text-sm text-gray-500">
-                Ofereca PIX, cartao de credito e outras opcoes para facilitar a compra.
+                Receba pagamentos via PIX com processamento instantaneo e seguro.
               </p>
             </div>
             
