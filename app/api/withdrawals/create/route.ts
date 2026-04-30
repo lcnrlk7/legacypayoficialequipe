@@ -156,9 +156,9 @@ export async function POST(request: NextRequest) {
     `;
     const userRouteType = userRouteResult[0]?.route_type || 'black';
     
-    // Saques automáticos até R$ 500, acima disso vai para aprovação manual no painel admin
-    const AUTO_WITHDRAWAL_LIMIT = 500;
-    const requiresApproval = amount >= AUTO_WITHDRAWAL_LIMIT;
+    // Saques automáticos até R$ 400, acima disso vai para aprovação manual no painel admin
+    const AUTO_WITHDRAWAL_LIMIT = 400;
+    const requiresApproval = amount > AUTO_WITHDRAWAL_LIMIT;
 
     // Buscar adquirente baseado na rota do usuário
     const acquirer = await getAcquirerForUser(sessionUser.id);

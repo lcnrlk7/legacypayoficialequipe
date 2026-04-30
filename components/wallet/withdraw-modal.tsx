@@ -429,6 +429,11 @@ export function WithdrawModal({
                   Saldo insuficiente! Voce precisa de {formatCurrency(totalDebit)} mas tem apenas {formatCurrency(balance)}
                 </p>
               )}
+              {amount > 400 && (
+                <p className="text-xs text-yellow-500 mt-2">
+                  Saques acima de R$ 400,00 requerem aprovacao manual.
+                </p>
+              )}
             </div>
           )}
 
