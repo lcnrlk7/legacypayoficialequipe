@@ -183,9 +183,6 @@ export default function Home() {
       <section id="solucoes" className="relative py-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-full mb-4">
-              <span className="text-sm text-orange-400">SOLUCOES COMPLETAS</span>
-            </div>
             <h2 className="text-3xl lg:text-4xl font-bold">
               Tudo que voce precisa para escalar seu negocio
             </h2>
@@ -197,10 +194,9 @@ export default function Home() {
               <div className="w-12 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center mb-4 group-hover:bg-orange-500/10 transition-colors">
                 <Zap className="w-6 h-6 text-orange-500" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">Pagamentos</h3>
-              <h4 className="text-orange-500 font-medium mb-3">Instantaneos</h4>
-              <p className="text-sm text-gray-500">
-                Receba vendas via PIX e cartao com processamento rapido e seguro.
+              <h3 className="text-lg font-semibold mb-1">Pagamentos Instantaneos</h3>
+              <p className="text-sm text-gray-500 mt-3">
+                Receba vendas via PIX com processamento rapido e seguro.
               </p>
             </div>
             
@@ -209,10 +205,9 @@ export default function Home() {
               <div className="w-12 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center mb-4 group-hover:bg-orange-500/10 transition-colors">
                 <BarChart3 className="w-6 h-6 text-orange-500" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">Automacao</h3>
-              <h4 className="text-orange-500 font-medium mb-3">de Vendas.</h4>
-              <p className="text-sm text-gray-500">
-                Automatize entregas, acesse alunos e processos da sua operacao digital.
+              <h3 className="text-lg font-semibold mb-1">Automacao de Vendas</h3>
+              <p className="text-sm text-gray-500 mt-3">
+                Automatize entregas, acessos e processos da sua operacao digital.
               </p>
             </div>
             
@@ -221,9 +216,8 @@ export default function Home() {
               <div className="w-12 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center mb-4 group-hover:bg-orange-500/10 transition-colors">
                 <Users className="w-6 h-6 text-orange-500" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">Gestao de</h3>
-              <h4 className="text-orange-500 font-medium mb-3">Afiliados.</h4>
-              <p className="text-sm text-gray-500">
+              <h3 className="text-lg font-semibold mb-1">Gestao de Afiliados</h3>
+              <p className="text-sm text-gray-500 mt-3">
                 Crie e gerencie seu proprio programa de afiliados para escalar suas vendas.
               </p>
             </div>
@@ -233,9 +227,8 @@ export default function Home() {
               <div className="w-12 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center mb-4 group-hover:bg-orange-500/10 transition-colors">
                 <LineChart className="w-6 h-6 text-orange-500" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">Analytics em</h3>
-              <h4 className="text-orange-500 font-medium mb-3">Tempo Real.</h4>
-              <p className="text-sm text-gray-500">
+              <h3 className="text-lg font-semibold mb-1">Analytics em Tempo Real</h3>
+              <p className="text-sm text-gray-500 mt-3">
                 Acompanhe vendas, rentabilidade e desempenho do seu funil em dashboards intuitivos.
               </p>
             </div>
@@ -243,11 +236,10 @@ export default function Home() {
             {/* Feature 5 */}
             <div className="group bg-[#111111] border border-white/5 rounded-2xl p-6 hover:border-orange-500/30 transition-all duration-300">
               <div className="w-12 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center mb-4 group-hover:bg-orange-500/10 transition-colors">
-                <Zap className="w-6 h-6 text-orange-500" />
+                <Shield className="w-6 h-6 text-orange-500" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">PIX Instantaneo</h3>
-              <h4 className="text-orange-500 font-medium mb-3">e Seguro.</h4>
-              <p className="text-sm text-gray-500">
+              <h3 className="text-lg font-semibold mb-1">PIX Instantaneo e Seguro</h3>
+              <p className="text-sm text-gray-500 mt-3">
                 Receba pagamentos via PIX com processamento instantaneo e seguro.
               </p>
             </div>
@@ -257,9 +249,8 @@ export default function Home() {
               <div className="w-12 h-12 bg-[#1a1a1a] rounded-xl flex items-center justify-center mb-4 group-hover:bg-orange-500/10 transition-colors">
                 <Code2 className="w-6 h-6 text-orange-500" />
               </div>
-              <h3 className="text-lg font-semibold mb-1">API Completa</h3>
-              <h4 className="text-orange-500 font-medium mb-3">e Documentada.</h4>
-              <p className="text-sm text-gray-500">
+              <h3 className="text-lg font-semibold mb-1">API Completa e Documentada</h3>
+              <p className="text-sm text-gray-500 mt-3">
                 Integre com sua aplicacao de forma simples e rapida com nossa API robusta e segura.
               </p>
             </div>
@@ -274,12 +265,9 @@ export default function Home() {
             <div className="grid lg:grid-cols-2 gap-12 items-center">
               {/* Left content */}
               <div>
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-full mb-4">
-                  <span className="text-sm text-orange-400">DASHBOARD PODEROSO</span>
-                </div>
                 <h2 className="text-3xl lg:text-4xl font-bold mb-4">
                   Controle total da sua operacao em{" "}
-                  <span className="text-orange-500">tempo real.</span>
+                  <span className="text-orange-500">tempo real</span>
                 </h2>
                 <p className="text-gray-400 mb-8">
                   Dashboards avancados, graficos inteligentes e dados em tempo real para voce tomar decisoes rapidas e ganhar mais.
@@ -404,9 +392,6 @@ export default function Home() {
       <section id="taxas" className="relative py-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-full mb-4">
-              <span className="text-sm text-orange-400">TAXAS SIMPLES E TRANSPARENTES</span>
-            </div>
             <h2 className="text-3xl lg:text-4xl font-bold">
               Estrutura de taxas que cabe no seu bolso
             </h2>
@@ -447,11 +432,8 @@ export default function Home() {
       <section id="sobre" className="relative py-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-orange-500/10 border border-orange-500/20 rounded-full mb-4">
-              <span className="text-sm text-orange-400">POR QUE ESCOLHER A LEGACY PAY?</span>
-            </div>
             <h2 className="text-3xl lg:text-4xl font-bold">
-              Feito para quem quer ir alem
+              Por que escolher a Legacy Pay?
             </h2>
           </div>
           
