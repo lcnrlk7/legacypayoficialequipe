@@ -189,9 +189,20 @@ export async function POST(request: NextRequest) {
         acquirerWithdrawalId = String(withdrawalResult.withdrawalId);
         withdrawalStatus = "processing";
       } else {
-        // Se falhar no processamento automático, deixar pendente para aprovação manual
+        // Se falhar no processamento automático, devolver saldo e marcar como failed
         console.error("[Withdrawal] Falha ao processar saque automático:", withdrawalResult.error);
-        withdrawalStatus = "pending";
+        
+        // Devolver saldo ao usuário
+        await sql`
+          UPDATE profiles SET balance = balance + ${totalDebit} WHERE id = ${sessionUser.id}
+        `;
+        
+        // Retornar erro com mensagem da adquirente
+        const errorMessage = withdrawalResult.error || "Falha ao processar saque na adquirente";
+        return NextResponse.json({
+          success: false,
+          error: errorMessage,
+        }, { status: 400 });
       }
     }
 
