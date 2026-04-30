@@ -148,6 +148,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Se não é saque, buscar transação de depósito
+    // Busca por external_id, acquirer_transaction_id, ou acquirer_id no metadata
     const transactions = await sql`
       SELECT t.id, t.user_id, t.amount, t.fee, t.net_amount, t.status,
              p.balance as profile_balance
@@ -155,6 +156,7 @@ export async function POST(request: NextRequest) {
       LEFT JOIN profiles p ON t.user_id = p.id
       WHERE t.external_id = ${String(transactionId)} 
          OR t.acquirer_transaction_id = ${String(transactionId)}
+         OR t.metadata->>'acquirer_id' = ${String(transactionId)}
     `;
 
     if (transactions.length === 0) {
