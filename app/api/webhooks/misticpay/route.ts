@@ -56,14 +56,12 @@ export async function POST(request: NextRequest) {
 
     console.log("[MisticPay Webhook] Payload parseado:", JSON.stringify(payload, null, 2));
 
-    // Registrar todo webhook recebido para debug (user_id e obrigatorio, usar system)
-    const systemUserId = '00000000-0000-0000-0000-000000000000';
+    // Registrar webhook recebido para debug
     try {
       await sql`
-        INSERT INTO webhook_logs (id, user_id, url, payload, response_status, success, created_at)
+        INSERT INTO webhook_logs (id, url, payload, response_status, success, created_at)
         VALUES (
           ${crypto.randomUUID()},
-          ${systemUserId},
           'misticpay-incoming',
           ${JSON.stringify(payload)},
           200,
@@ -71,7 +69,6 @@ export async function POST(request: NextRequest) {
           NOW()
         )
       `;
-      console.log("[MisticPay Webhook] Log salvo com sucesso");
     } catch (logError) {
       console.error("[MisticPay Webhook] Erro ao logar webhook:", logError);
     }
