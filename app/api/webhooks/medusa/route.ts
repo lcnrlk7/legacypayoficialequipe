@@ -6,6 +6,7 @@ import {
   notifyPixPaid,
   notifyDeposit 
 } from "@/lib/notifications";
+import { logTransactionStatusUpdate, logWithdrawalStatusUpdate, logWebhookReceived } from "@/lib/discord-webhook";
 
 /**
  * Webhook para receber notificações da Medusa Payments
@@ -252,10 +253,22 @@ async function updateWithdrawalStatus(
       WHERE id = ${withdrawal.id}
     `;
     
-    console.log(`[Medusa Webhook] Saque ${withdrawal.id} CONCLUIDO! Bruto: R$ ${grossAmount.toFixed(2)}, Taxa: R$ ${fee.toFixed(2)}, Liquido: R$ ${netAmount.toFixed(2)}`);
-    
-    // Notificar usuario usando a funcao de notificacao com valor bruto, liquido e taxa
-    await notifyWithdrawalCompleted(userId, grossAmount, netAmount, fee, pixKey, metadata.end_to_end);
+        console.log(`[Medusa Webhook] Saque ${withdrawal.id} CONCLUIDO! Bruto: R$ ${grossAmount.toFixed(2)}, Taxa: R$ ${fee.toFixed(2)}, Liquido: R$ ${netAmount.toFixed(2)}`);
+        
+        // Notificar usuario usando a funcao de notificacao com valor bruto, liquido e taxa
+        await notifyWithdrawalCompleted(userId, grossAmount, netAmount, fee, pixKey, metadata.end_to_end);
+        
+        // Log para Discord
+        logWithdrawalStatusUpdate({
+          withdrawalId: withdrawal.id as string,
+          userName: withdrawal.profile_name as string || "N/A",
+          userEmail: withdrawal.profile_email as string || "",
+          amount: grossAmount,
+          netAmount: netAmount,
+          oldStatus: withdrawal.status as string,
+          newStatus: "completed",
+          pixKey: pixKey,
+        });
     
   } else if (internalStatus === "failed" || internalStatus === "cancelled") {
     newStatus = "failed";
@@ -516,6 +529,17 @@ export async function POST(request: NextRequest) {
       // Notificar usuario sobre o deposito/PIX recebido com valor bruto e liquido
       const grossAmount = Number(transaction.amount) || 0;
       await notifyPixPaid(transaction.user_id as string, grossAmount, netAmount);
+      
+      // Log para Discord - transacao confirmada
+      logTransactionStatusUpdate({
+        transactionId: transaction.id as string,
+        userName: transaction.profile_name as string || "N/A",
+        userEmail: transaction.profile_email as string || "",
+        amount: grossAmount,
+        oldStatus: "pending",
+        newStatus: "completed",
+        payerName: customer?.name,
+      });
 
       // Registrar audit log
       await sql`

@@ -4,6 +4,7 @@ import { sql } from "@/lib/db";
 import { createMisticPayClient } from "@/lib/acquirers/misticpay";
 import { MedusaPayments } from "@/lib/acquirers/medusa";
 import { getSystemFeesForUser } from "@/lib/acquirers";
+import { logNewTransaction } from "@/lib/discord-webhook";
 
 export async function POST(request: NextRequest) {
   try {
@@ -285,6 +286,21 @@ export async function POST(request: NextRequest) {
         NOW()
       )
     `;
+    
+    // Log para Discord
+    logNewTransaction({
+      transactionId: transaction.id,
+      userName: profile.name || "N/A",
+      userEmail: profile.email || "",
+      amount: amount,
+      fee: fee,
+      netAmount: netAmount,
+      payerName: payerName || profile.name || "Cliente",
+      payerDocument: payerDocument,
+      description: description || "Deposito via PIX",
+      route: userRouteType,
+      status: "pending",
+    });
 
     return NextResponse.json({
       success: true,
