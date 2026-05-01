@@ -38,10 +38,10 @@ export async function GET() {
       }
     });
 
-    // Buscar total de taxas pagas pelo usuário
+    // Buscar total de taxas pagas pelo usuário (volume apenas de depositos)
     const transactionsResult = await sql`
       SELECT COALESCE(SUM(fee), 0) as total_fees, 
-             COALESCE(SUM(amount), 0) as total_volume,
+             COALESCE(SUM(CASE WHEN type IN ('pix_in', 'deposit') THEN amount ELSE 0 END), 0) as total_volume,
              COUNT(*) as total_transactions
       FROM transactions
       WHERE user_id = ${user.id} AND status = 'completed'
