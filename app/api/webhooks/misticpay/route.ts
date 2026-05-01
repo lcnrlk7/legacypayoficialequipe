@@ -56,12 +56,14 @@ export async function POST(request: NextRequest) {
 
     console.log("[MisticPay Webhook] Payload parseado:", JSON.stringify(payload, null, 2));
 
-    // Registrar todo webhook recebido para debug
+    // Registrar todo webhook recebido para debug (user_id e obrigatorio, usar system)
+    const systemUserId = '00000000-0000-0000-0000-000000000000';
     try {
       await sql`
-        INSERT INTO webhook_logs (id, url, payload, response_status, success, created_at)
+        INSERT INTO webhook_logs (id, user_id, url, payload, response_status, success, created_at)
         VALUES (
           ${crypto.randomUUID()},
+          ${systemUserId},
           'misticpay-incoming',
           ${JSON.stringify(payload)},
           200,
@@ -69,6 +71,7 @@ export async function POST(request: NextRequest) {
           NOW()
         )
       `;
+      console.log("[MisticPay Webhook] Log salvo com sucesso");
     } catch (logError) {
       console.error("[MisticPay Webhook] Erro ao logar webhook:", logError);
     }
@@ -107,16 +110,23 @@ export async function POST(request: NextRequest) {
 
     // Primeiro, verificar se é um callback de saque
     // Busca por acquirer_withdrawal_id ou pelo ID no campo id (alguns webhooks enviam assim)
+    const transactionIdStr = String(transactionId);
+    console.log(`[MisticPay Webhook] Buscando saque com transactionId: "${transactionIdStr}" (tipo original: ${typeof transactionId})`);
+    
     const withdrawals = await sql`
-      SELECT w.id, w.user_id, w.amount, w.fee, w.net_amount, w.status, w.pix_key,
+      SELECT w.id, w.user_id, w.amount, w.fee, w.net_amount, w.status, w.pix_key, w.acquirer_withdrawal_id,
              p.email as profile_email, p.name as profile_name, p.balance as profile_balance
       FROM withdrawals w
       LEFT JOIN profiles p ON w.user_id = p.id
-      WHERE w.acquirer_withdrawal_id = ${String(transactionId)}
-         OR w.id = ${String(transactionId)}
+      WHERE w.acquirer_withdrawal_id = ${transactionIdStr}
+         OR w.id = ${transactionIdStr}
+         OR CAST(w.acquirer_withdrawal_id AS TEXT) = ${transactionIdStr}
     `;
     
-    console.log(`[MisticPay Webhook] Buscando saque com ID ${transactionId}, encontrados: ${withdrawals.length}`);
+    console.log(`[MisticPay Webhook] Resultado busca saque: encontrados ${withdrawals.length} registros`);
+    if (withdrawals.length > 0) {
+      console.log(`[MisticPay Webhook] Saque encontrado: id=${withdrawals[0].id}, acquirer_id=${withdrawals[0].acquirer_withdrawal_id}, status_atual=${withdrawals[0].status}`);
+    }
 
     if (withdrawals.length > 0) {
       // É um callback de saque
