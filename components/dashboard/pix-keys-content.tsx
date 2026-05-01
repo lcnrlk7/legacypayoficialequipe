@@ -148,7 +148,7 @@ export function PixKeysContent({ pixKeys: initialPixKeys, userId }: PixKeysConte
             Chaves PIX
           </h1>
           <p className="text-muted-foreground mt-1">
-            Gerencie suas chaves para receber pagamentos
+            Cadastre suas chaves para receber seus saques
           </p>
         </div>
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -268,7 +268,7 @@ export function PixKeysContent({ pixKeys: initialPixKeys, userId }: PixKeysConte
             Nenhuma chave PIX cadastrada
           </p>
           <p className="text-sm text-muted-foreground mt-1">
-            Crie uma chave para começar a receber pagamentos
+            Cadastre uma chave para receber seus saques
           </p>
         </motion.div>
       ) : (
