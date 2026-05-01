@@ -3,6 +3,7 @@ import { registerUser, createToken } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { sendWelcomeEmail } from "@/lib/email";
 import { rateLimit, getClientIP, logSuspiciousActivity, isValidEmail, isValidCPF } from "@/lib/security";
+import { logNewUser } from "@/lib/discord-webhook";
 
 const COOKIE_NAME = "auth-token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -126,6 +127,17 @@ export async function POST(request: NextRequest) {
         INSERT INTO audit_logs (user_id, action, entity_type, new_value, created_at)
         VALUES (${user.id}, 'REGISTER', 'auth', ${JSON.stringify({ email, name, referralCode })}, NOW())
       `;
+      
+      // Log para Discord
+      logNewUser({
+        userId: user.id,
+        name: name,
+        email: email,
+        document: cpf?.replace(/\D/g, ""),
+        phone: phone?.replace(/\D/g, ""),
+        referralCode: user.referral_code,
+        referredBy: referralCode,
+      });
     } catch (logError) {
       console.error("[v0] Error logging registration:", logError);
     }

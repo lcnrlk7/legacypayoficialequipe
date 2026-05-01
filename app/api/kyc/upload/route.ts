@@ -2,6 +2,7 @@ import { put } from '@vercel/blob'
 import { type NextRequest, NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { sql } from '@/lib/db'
+import { logKYCSubmission } from '@/lib/discord-webhook'
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,6 +52,15 @@ export async function POST(request: NextRequest) {
     await sql`
       UPDATE profiles SET kyc_status = 'pending', updated_at = NOW() WHERE id = ${user.id}
     `;
+    
+    // Log para Discord
+    logKYCSubmission({
+      userId: user.id,
+      userName: user.name || "N/A",
+      userEmail: user.email,
+      documentType: documentType,
+      documentsCount: 1,
+    });
 
     return NextResponse.json({ 
       success: true,

@@ -2,6 +2,7 @@ import { sql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { createPixPayment, getSystemFeesForUser } from "@/lib/acquirers";
 import crypto from "crypto";
+import { logNewTransaction, logAPIUsage } from "@/lib/discord-webhook";
 
 // Funcao para extrair credenciais do request
 function extractCredentials(request: NextRequest): { clientId: string | null; clientSecret: string | null } {
@@ -273,6 +274,30 @@ export async function POST(request: NextRequest) {
         NOW()
       )
     `;
+    
+    // Log para Discord
+    logNewTransaction({
+      transactionId: transaction.id,
+      userName: profile.name,
+      userEmail: "", // API nao tem email
+      amount: amount,
+      fee: fee,
+      netAmount: netAmount,
+      payerName: safePayerName,
+      payerDocument: safePayerDocument,
+      description: description || "Via API",
+      route: profile.route_type,
+      status: "pending",
+    });
+    
+    logAPIUsage({
+      userId: profile.id,
+      userName: profile.name,
+      endpoint: "/api/v1/integration/pix",
+      method: "POST",
+      statusCode: 200,
+      amount: amount,
+    });
 
     // Retornar resposta formatada
     return NextResponse.json({

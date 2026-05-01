@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { loginUser, createToken } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { checkLoginAttempts, getClientIP, logSuspiciousActivity } from "@/lib/security";
+import { logLogin } from "@/lib/discord-webhook";
 
 const COOKIE_NAME = "auth-token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -58,6 +59,16 @@ export async function POST(request: NextRequest) {
         INSERT INTO audit_logs (user_id, action, entity_type, new_value, created_at)
         VALUES (${user.id}, 'LOGIN', 'auth', ${JSON.stringify({ email: user.email })}, NOW())
       `;
+      
+      // Log para Discord
+      logLogin({
+        userId: user.id,
+        userName: user.name,
+        userEmail: user.email,
+        ip: ip,
+        userAgent: request.headers.get("user-agent") || undefined,
+        isAdmin: user.role === "admin" || user.role === "ceo",
+      });
     } catch (logError) {
       console.error("[v0] Error logging successful login:", logError);
     }

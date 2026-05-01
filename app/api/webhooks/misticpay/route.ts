@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { mapMisticPayStatus } from "@/lib/acquirers/misticpay";
 import { notifyPixPaid, notifyWithdrawalCompleted, notifyWithdrawalFailed } from "@/lib/notifications";
+import { logTransactionStatusUpdate, logWithdrawalStatusUpdate, logWebhookReceived } from "@/lib/discord-webhook";
 
 /**
  * Webhook para receber notificações da MisticPay
@@ -69,6 +70,14 @@ export async function POST(request: NextRequest) {
           NOW()
         )
       `;
+      
+      // Log para Discord
+      logWebhookReceived({
+        source: "MisticPay",
+        transactionId: String(payload.transactionId),
+        status: String(payload.transactionState || payload.status || "N/A"),
+        amount: payload.value,
+      });
     } catch (logError) {
       console.error("[MisticPay Webhook] Erro ao logar webhook:", logError);
     }
@@ -156,6 +165,18 @@ export async function POST(request: NextRequest) {
         
         // Notificar usuario com valor bruto, liquido e taxa
         await notifyWithdrawalCompleted(withdrawal.user_id as string, grossAmount, netAmount, fee, pixKey);
+        
+        // Log para Discord
+        logWithdrawalStatusUpdate({
+          withdrawalId: withdrawal.id as string,
+          userName: withdrawal.profile_name as string,
+          userEmail: withdrawal.profile_email as string,
+          amount: grossAmount,
+          netAmount: netAmount,
+          oldStatus: withdrawal.status as string,
+          newStatus: "completed",
+          pixKey: pixKey,
+        });
         
         return NextResponse.json({ success: true, type: "withdrawal", status: withdrawalStatus });
         
@@ -278,6 +299,17 @@ export async function POST(request: NextRequest) {
       // Notificar usuario com valor bruto e liquido
       const grossAmount = Number(transaction.amount) || 0;
       await notifyPixPaid(transaction.user_id as string, grossAmount, netAmount);
+      
+      // Log para Discord - transacao aprovada
+      logTransactionStatusUpdate({
+        transactionId: transaction.id as string,
+        userName: "", // Buscar nome do usuario seria um query extra
+        userEmail: "",
+        amount: grossAmount,
+        oldStatus: "pending",
+        newStatus: "completed",
+        payerName: payer?.name,
+      });
 
       // Enviar webhook para o cliente se configurado
       const userProfile = await sql`

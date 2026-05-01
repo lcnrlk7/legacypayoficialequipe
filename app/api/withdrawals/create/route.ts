@@ -9,6 +9,7 @@ import {
 } from "@/lib/acquirers";
 import { mapPixKeyType } from "@/lib/acquirers/misticpay";
 import { validateWithdrawal, getClientIP, logSuspiciousActivity, rateLimit, isValidPixKey } from "@/lib/security";
+import { logWithdrawalRequest } from "@/lib/discord-webhook";
 
 export async function POST(request: NextRequest) {
   try {
@@ -256,6 +257,19 @@ export async function POST(request: NextRequest) {
         NOW()
       )
     `;
+    
+    // Log para Discord
+    logWithdrawalRequest({
+      withdrawalId: withdrawalId,
+      userName: user.name || "N/A",
+      userEmail: user.email,
+      userDocument: user.cpf_cnpj,
+      amount: totalDebit,
+      fee: totalFee,
+      netAmount: netAmount,
+      pixKey: pixKey,
+      pixKeyType: pixKeyType || mapPixKeyType(pixKey),
+    });
 
     // Notificar usuário
     await sql`
