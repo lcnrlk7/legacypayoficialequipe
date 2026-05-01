@@ -51,16 +51,15 @@ interface SidebarProps {
   profile: Profile | null
 }
 
-const menuItems: { href: string; icon: LucideIcon; label: string }[] = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+// Gerenciamento
+const managementItems: { href: string; icon: LucideIcon; label: string }[] = [
+  { href: "/dashboard", icon: LayoutDashboard, label: "Pagina Inicial" },
   { href: "/dashboard/wallet", icon: Wallet, label: "Carteira" },
-  { href: "/dashboard/transactions", icon: TrendingUp, label: "Transações" },
-  { href: "/dashboard/reports", icon: FileText, label: "Relatórios" },
+  { href: "/dashboard/transactions", icon: TrendingUp, label: "Transacoes" },
+  { href: "/dashboard/reports", icon: FileText, label: "Relatorios" },
   { href: "/dashboard/pix-keys", icon: ArrowLeftRight, label: "Chaves PIX" },
   { href: "/dashboard/affiliates", icon: Users, label: "Afiliados" },
   { href: "/dashboard/fees", icon: Percent, label: "Taxas" },
-  { href: "/dashboard/integration", icon: Code, label: "Integração API" },
-  { href: "/dashboard/settings", icon: Settings, label: "Configurações" },
 ]
 
 const checkoutMenuItems = [
@@ -68,6 +67,17 @@ const checkoutMenuItems = [
   { href: "/dashboard/checkout/orders", icon: Truck, label: "Entregas" },
   { href: "/dashboard/checkout/products", icon: Package, label: "Produtos" },
   { href: "/dashboard/checkout/coupons", icon: Tag, label: "Cupons" },
+]
+
+// Suporte
+const supportItems: { href: string; icon: LucideIcon; label: string }[] = [
+  { href: "/dashboard/support", icon: MessageCircle, label: "Tickets de Suporte" },
+]
+
+// Configuracoes
+const configItems: { href: string; icon: LucideIcon; label: string }[] = [
+  { href: "/dashboard/integration", icon: Code, label: "Integracao API" },
+  { href: "/dashboard/settings", icon: Settings, label: "Configuracoes" },
 ]
 
 export function DashboardSidebar({ user, profile }: SidebarProps) {
@@ -104,15 +114,22 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
-        {menuItems.map((item) => {
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        {/* Gerenciamento */}
+        <div className="pb-2">
+          <span className="px-4 text-xs text-muted-foreground uppercase tracking-wider">
+            Gerenciamento
+          </span>
+        </div>
+        
+        {managementItems.map((item) => {
           const isActive = pathname === item.href
           return (
             <Link
               key={item.href}
               href={item.href}
               onClick={() => setIsMobileOpen(false)}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all ${
                 isActive
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -120,12 +137,6 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
             >
               <item.icon className="w-5 h-5 opacity-80" />
               <span className="font-medium">{item.label}</span>
-              {isActive && (
-                <motion.div
-                  layoutId="activeTab"
-                  className="absolute left-0 w-1 h-8 bg-primary rounded-r-full"
-                />
-              )}
             </Link>
           )
         })}
@@ -134,7 +145,7 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
         <div className="space-y-1">
           <button
             onClick={() => setCheckoutOpen(!checkoutOpen)}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all ${
+            className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-all ${
               isCheckoutPage
                 ? "bg-primary/10 text-primary"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -162,7 +173,7 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
                       key={item.href}
                       href={item.href}
                       onClick={() => setIsMobileOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all ${
+                      className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all ${
                         isActive
                           ? "bg-primary/10 text-primary"
                           : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -178,12 +189,12 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
           </AnimatePresence>
         </div>
 
-        {/* KYC Link */}
+        {/* KYC Link (dentro de Gerenciamento) */}
         {profile?.kyc_status !== "approved" && (
           <Link
             href="/dashboard/kyc"
             onClick={() => setIsMobileOpen(false)}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all ${
               pathname === "/dashboard/kyc"
                 ? "bg-primary/10 text-primary"
                 : "text-muted-foreground hover:bg-secondary hover:text-foreground"
@@ -194,6 +205,59 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
           </Link>
         )}
 
+        {/* Suporte */}
+        <div className="pt-4 pb-2">
+          <span className="px-4 text-xs text-muted-foreground uppercase tracking-wider">
+            Suporte
+          </span>
+        </div>
+        
+        {supportItems.map((item) => {
+          const isActive = pathname === item.href
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setIsMobileOpen(false)}
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all ${
+                isActive
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+              }`}
+            >
+              <item.icon className="w-5 h-5 opacity-80" />
+              <span className="font-medium">{item.label}</span>
+            </Link>
+          )
+        })}
+
+        {/* Configuracoes */}
+        <div className="pt-4 pb-2">
+          <span className="px-4 text-xs text-muted-foreground uppercase tracking-wider">
+            Configuracoes
+          </span>
+        </div>
+        
+        {configItems.map((item) => {
+          const isActive = pathname === item.href
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setIsMobileOpen(false)}
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all ${
+                isActive
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+              }`}
+            >
+              <item.icon className="w-5 h-5 opacity-80" />
+              <span className="font-medium">{item.label}</span>
+            </Link>
+          )
+        })}
+
+        {/* Admin */}
         {profile?.is_admin && (
           <>
             <div className="pt-4 pb-2">
@@ -204,7 +268,7 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
             <Link
               href="/admin"
               onClick={() => setIsMobileOpen(false)}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all ${
                 pathname.startsWith("/admin")
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground"
