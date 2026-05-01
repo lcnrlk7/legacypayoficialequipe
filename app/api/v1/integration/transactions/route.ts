@@ -40,11 +40,24 @@ export async function GET(request: NextRequest) {
       WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
     `;
 
+    // Se nao encontrou em user_integrations, tentar na tabela profiles
     if (integrationResult.length === 0) {
-      return NextResponse.json(
-        { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
-        { status: 401 }
-      );
+      const profileResult = await sql`
+        SELECT id as user_id, is_active, true as integration_active
+        FROM profiles
+        WHERE (client_id = ${clientId} AND client_secret = ${clientSecret})
+           OR (api_key = ${clientId} AND client_secret = ${clientSecret})
+      `;
+      
+      if (profileResult.length === 0) {
+        return NextResponse.json(
+          { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
+          { status: 401 }
+        );
+      }
+      
+      // Usar resultado do profiles
+      integrationResult.push(profileResult[0]);
     }
 
     const integration = integrationResult[0];

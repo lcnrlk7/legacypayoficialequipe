@@ -76,7 +76,8 @@ export async function POST(request: NextRequest) {
       const profileResult = await sql`
         SELECT id, name, kyc_status, route_type, balance, api_enabled, is_active
         FROM profiles
-        WHERE api_key = ${clientId} AND api_secret = ${clientSecret}
+        WHERE (client_id = ${clientId} AND client_secret = ${clientSecret})
+           OR (api_key = ${clientId} AND client_secret = ${clientSecret})
       `;
 
       if (profileResult.length > 0) {
@@ -351,7 +352,8 @@ export async function GET(request: NextRequest) {
       // Tentar na tabela profiles (lp_/sk_)
       const profileResult = await sql`
         SELECT id, api_enabled FROM profiles
-        WHERE api_key = ${clientId} AND api_secret = ${clientSecret}
+        WHERE (client_id = ${clientId} AND client_secret = ${clientSecret})
+           OR (api_key = ${clientId} AND client_secret = ${clientSecret})
       `;
       
       if (profileResult.length > 0) {

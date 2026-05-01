@@ -25,10 +25,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar usuário pelas credenciais
+    // Buscar usuário pelas credenciais (client_id e client_secret)
     const userResult = await sql`
       SELECT * FROM profiles
-      WHERE api_key = ${clientId} AND api_secret = ${clientSecret}
+      WHERE (client_id = ${clientId} AND client_secret = ${clientSecret})
+         OR (api_key = ${clientId} AND client_secret = ${clientSecret})
     `;
 
     if (userResult.length === 0) {
