@@ -128,6 +128,10 @@ export async function POST(request: NextRequest) {
         VALUES (${user.id}, 'REGISTER', 'auth', ${JSON.stringify({ email, name, referralCode })}, NOW())
       `;
       
+      // Buscar referral_code do usuario recem criado
+      const userProfile = await sql`SELECT referral_code FROM profiles WHERE id = ${user.id}`;
+      const userReferralCode = userProfile[0]?.referral_code;
+      
       // Log para Discord
       logNewUser({
         userId: user.id,
@@ -135,7 +139,7 @@ export async function POST(request: NextRequest) {
         email: email,
         document: cpf?.replace(/\D/g, ""),
         phone: phone?.replace(/\D/g, ""),
-        referralCode: user.referral_code,
+        referralCode: userReferralCode,
         referredBy: referralCode,
       });
     } catch (logError) {
