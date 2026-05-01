@@ -1,33 +1,55 @@
 import { sql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 
+// Funcao para extrair credenciais do request (suporta Basic Auth e headers separados)
+function extractCredentials(request: NextRequest): { clientId: string | null; clientSecret: string | null } {
+  // Tentar Basic Auth primeiro
+  const authHeader = request.headers.get("authorization");
+  if (authHeader && authHeader.startsWith("Basic ")) {
+    try {
+      const base64Credentials = authHeader.slice(6);
+      const credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
+      const [clientId, clientSecret] = credentials.split(":");
+      if (clientId && clientSecret) {
+        return { clientId, clientSecret };
+      }
+    } catch {
+      // Ignorar erro e tentar outros metodos
+    }
+  }
+  
+  // Tentar headers separados (x-client-id / x-client-secret)
+  const headerClientId = request.headers.get("x-client-id") || request.headers.get("client-id");
+  const headerClientSecret = request.headers.get("x-client-secret") || request.headers.get("client-secret");
+  if (headerClientId && headerClientSecret) {
+    return { clientId: headerClientId, clientSecret: headerClientSecret };
+  }
+  
+  // Tentar Bearer token (client_id:client_secret em base64)
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    try {
+      const token = authHeader.slice(7);
+      const decoded = Buffer.from(token, "base64").toString("utf-8");
+      const [clientId, clientSecret] = decoded.split(":");
+      if (clientId && clientSecret) {
+        return { clientId, clientSecret };
+      }
+    } catch {
+      // Ignorar erro
+    }
+  }
+  
+  return { clientId: null, clientSecret: null };
+}
+
 // GET - Consultar saldo da conta
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization");
+    const { clientId, clientSecret } = extractCredentials(request);
     
-    if (!authHeader || !authHeader.startsWith("Basic ")) {
-      return NextResponse.json(
-        { success: false, error: "Credenciais não fornecidas", code: "UNAUTHORIZED" },
-        { status: 401 }
-      );
-    }
-
-    const base64Credentials = authHeader.slice(6);
-    let credentials: string;
-    try {
-      credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
-    } catch {
-      return NextResponse.json(
-        { success: false, error: "Credenciais mal formatadas", code: "INVALID_CREDENTIALS" },
-        { status: 401 }
-      );
-    }
-    const [clientId, clientSecret] = credentials.split(":");
-
     if (!clientId || !clientSecret) {
       return NextResponse.json(
-        { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
+        { success: false, error: "Credenciais não fornecidas. Use Basic Auth ou headers x-client-id/x-client-secret", code: "UNAUTHORIZED" },
         { status: 401 }
       );
     }
@@ -37,7 +59,7 @@ export async function GET(request: NextRequest) {
       SELECT ui.user_id, ui.is_active as integration_active,
              p.id as profile_id, p.balance, p.kyc_status, p.is_active
       FROM user_integrations ui
-      INNER JOIN profiles p ON p.id = ui.user_id
+      INNER JOIN profiles p ON p.id::text = ui.user_id::text
       WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
     `;
 
@@ -91,7 +113,7 @@ export async function GET(request: NextRequest) {
         COALESCE(SUM(amount) FILTER (WHERE status = 'completed'), 0) as total_received,
         COALESCE(SUM(fee) FILTER (WHERE status = 'completed'), 0) as total_fees
       FROM transactions 
-      WHERE user_id = ${profile.id} AND type = 'pix_in'
+      WHERE user_id::text = ${profile.id}::text AND type = 'pix_in'
     `;
 
     const stats = statsResult[0];

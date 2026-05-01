@@ -4,23 +4,41 @@ import { getAcquirerForUser, getSystemFeesForUser } from "@/lib/acquirers";
 import { createPixPayment } from "@/lib/acquirers";
 import { notifyNewTransaction } from "@/lib/push-notifications";
 
+// Funcao para extrair credenciais do request
+function extractCredentials(request: NextRequest): { clientId: string | null; clientSecret: string | null } {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader && authHeader.startsWith("Basic ")) {
+    try {
+      const base64Credentials = authHeader.slice(6);
+      const credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
+      const [clientId, clientSecret] = credentials.split(":");
+      if (clientId && clientSecret) return { clientId, clientSecret };
+    } catch { /* ignorar */ }
+  }
+  
+  const headerClientId = request.headers.get("x-client-id") || request.headers.get("client-id");
+  const headerClientSecret = request.headers.get("x-client-secret") || request.headers.get("client-secret");
+  if (headerClientId && headerClientSecret) return { clientId: headerClientId, clientSecret: headerClientSecret };
+  
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    try {
+      const token = authHeader.slice(7);
+      const decoded = Buffer.from(token, "base64").toString("utf-8");
+      const [clientId, clientSecret] = decoded.split(":");
+      if (clientId && clientSecret) return { clientId, clientSecret };
+    } catch { /* ignorar */ }
+  }
+  
+  return { clientId: null, clientSecret: null };
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Basic ")) {
-      return NextResponse.json(
-        { error: "Credenciais não fornecidas", code: "UNAUTHORIZED" },
-        { status: 401 }
-      );
-    }
-
-    const base64Credentials = authHeader.slice(6);
-    const credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
-    const [clientId, clientSecret] = credentials.split(":");
-
+    const { clientId, clientSecret } = extractCredentials(request);
+    
     if (!clientId || !clientSecret) {
       return NextResponse.json(
-        { error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
+        { error: "Credenciais não fornecidas", code: "UNAUTHORIZED" },
         { status: 401 }
       );
     }

@@ -1017,16 +1017,41 @@ export default function IntegrationPage() {
 
                 {/* Auth */}
                 <div className="bg-secondary/30 rounded-xl p-4">
-                  <h4 className="text-sm font-semibold text-foreground mb-2">Autenticacao (Basic Auth)</h4>
+                  <h4 className="text-sm font-semibold text-foreground mb-2">Autenticacao</h4>
                   <p className="text-sm text-muted-foreground mb-3">
-                    Junte Client ID + Client Secret com dois pontos e codifique em Base64:
+                    Voce pode autenticar de 3 formas diferentes:
                   </p>
-                  <code className="block p-3 bg-background rounded-lg text-xs font-mono mb-3">
-                    Authorization: Basic base64(client_id:client_secret)
-                  </code>
-                  <p className="text-xs text-muted-foreground mb-2">Exemplo em JavaScript:</p>
+                  
+                  <div className="space-y-3">
+                    <div className="bg-background rounded-lg p-3">
+                      <p className="text-xs font-semibold text-green-400 mb-1">Opcao 1: Headers separados (Recomendado)</p>
+                      <code className="block text-xs font-mono text-muted-foreground">
+                        x-client-id: seu_client_id{"\n"}
+                        x-client-secret: seu_client_secret
+                      </code>
+                    </div>
+                    
+                    <div className="bg-background rounded-lg p-3">
+                      <p className="text-xs font-semibold text-blue-400 mb-1">Opcao 2: Basic Auth</p>
+                      <code className="block text-xs font-mono text-muted-foreground">
+                        Authorization: Basic base64(client_id:client_secret)
+                      </code>
+                    </div>
+                    
+                    <div className="bg-background rounded-lg p-3">
+                      <p className="text-xs font-semibold text-purple-400 mb-1">Opcao 3: Bearer Token</p>
+                      <code className="block text-xs font-mono text-muted-foreground">
+                        Authorization: Bearer base64(client_id:client_secret)
+                      </code>
+                    </div>
+                  </div>
+                  
+                  <p className="text-xs text-muted-foreground mt-3 mb-2">Exemplo em JavaScript (Headers):</p>
                   <code className="block p-2 bg-background rounded-lg text-xs font-mono">
-                    {`const credentials = btoa(client_id + ":" + client_secret);`}
+{`headers: {
+  "x-client-id": "seu_client_id",
+  "x-client-secret": "seu_client_secret"
+}`}
                   </code>
                 </div>
 
