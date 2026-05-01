@@ -64,12 +64,12 @@ export async function POST(
       userEmail: userCheck[0].email as string,
       oldStatus: userCheck[0].kyc_status as string,
       newStatus: "approved",
-      adminName: admin.userName || "Admin",
+      adminName: admin.name || "Admin",
     });
     
     logAdminAction({
-      adminName: admin.userName || "Admin",
-      adminEmail: admin.userEmail || "",
+      adminName: admin.name || "Admin",
+      adminEmail: admin.email || "",
       action: "KYC Aprovado",
       target: `${userCheck[0].name} (${userCheck[0].email})`,
       details: skipDocuments ? "Aprovado sem documentos" : "Aprovado com documentos",

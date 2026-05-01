@@ -86,12 +86,12 @@ export async function PATCH(
         oldStatus: withdrawal.status,
         newStatus: "completed",
         pixKey: markPaidPixKey,
-        adminName: admin.userName || "Admin",
+        adminName: admin.name || "Admin",
       });
       
       logAdminAction({
-        adminName: admin.userName || "Admin",
-        adminEmail: admin.userEmail || "",
+        adminName: admin.name || "Admin",
+        adminEmail: admin.email || "",
         action: "Saque Marcado como Pago",
         target: `${withdrawal.profile_name} (${withdrawal.profile_email})`,
         details: `Valor: R$ ${markPaidNet.toFixed(2)}`,
@@ -190,12 +190,12 @@ export async function PATCH(
         oldStatus: "pending",
         newStatus: "processing",
         pixKey: withdrawal.pix_key || "",
-        adminName: admin.userName || "Admin",
+        adminName: admin.name || "Admin",
       });
       
       logAdminAction({
-        adminName: admin.userName || "Admin",
-        adminEmail: admin.userEmail || "",
+        adminName: admin.name || "Admin",
+        adminEmail: admin.email || "",
         action: "Saque Aprovado",
         target: `${withdrawal.profile_name} (${withdrawal.profile_email})`,
         details: `Valor: R$ ${(Number(withdrawal.net_amount) || 0).toFixed(2)} | Acquirer ID: ${acquirerWithdrawalId}`,
@@ -255,12 +255,12 @@ export async function PATCH(
         oldStatus: "pending",
         newStatus: "rejected",
         pixKey: withdrawal.pix_key || "",
-        adminName: admin.userName || "Admin",
+        adminName: admin.name || "Admin",
       });
       
       logAdminAction({
-        adminName: admin.userName || "Admin",
-        adminEmail: admin.userEmail || "",
+        adminName: admin.name || "Admin",
+        adminEmail: admin.email || "",
         action: "Saque Rejeitado",
         target: `${withdrawal.profile_name} (${withdrawal.profile_email})`,
         details: `Valor: R$ ${withdrawalAmount.toFixed(2)} | Motivo: ${reason || "Nao informado"}`,

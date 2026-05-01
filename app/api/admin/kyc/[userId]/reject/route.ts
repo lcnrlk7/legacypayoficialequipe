@@ -62,13 +62,13 @@ export async function POST(
       userEmail: userCheck[0].email as string,
       oldStatus: "pending",
       newStatus: "rejected",
-      adminName: admin.userName || "Admin",
+      adminName: admin.name || "Admin",
       reason: reason || "Documentos invalidos",
     });
     
     logAdminAction({
-      adminName: admin.userName || "Admin",
-      adminEmail: admin.userEmail || "",
+      adminName: admin.name || "Admin",
+      adminEmail: admin.email || "",
       action: "KYC Rejeitado",
       target: `${userCheck[0].name} (${userCheck[0].email})`,
       details: reason || "Documentos invalidos",
