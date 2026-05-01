@@ -1,6 +1,16 @@
 // Sistema de Logs para Discord - LegacyPay
 // Envia logs em tempo real para webhooks do Discord com embeds personalizadas
 
+// Importa waitUntil dinamicamente para evitar erro quando nao disponivel
+let waitUntilFn: ((promise: Promise<unknown>) => void) | null = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const vercelFunctions = require("@vercel/functions");
+  waitUntilFn = vercelFunctions.waitUntil;
+} catch {
+  // @vercel/functions nao disponivel (ambiente local)
+}
+
 const DISCORD_WEBHOOKS = {
   sistema: "https://discord.com/api/webhooks/1499837126609731725/rd7ex3iTcCjGnunDuap0KL-NfnEKhX8FIvywgHwbBa8mR_oXAQZSwad26S-CusN1t16q",
   transacoes: "https://discord.com/api/webhooks/1499837272516722770/NapVqX-BUAD0nhELgeowLVwbN_01r-7iE720EjFQJrk8q6CasynT1TEGPfI_m2Aqphf6",
@@ -50,23 +60,38 @@ interface DiscordWebhookPayload {
   embeds?: DiscordEmbed[];
 }
 
-// Funcao base para enviar webhook (fire-and-forget)
-async function sendDiscordWebhook(
+// Funcao base para enviar webhook (usa waitUntil para garantir execucao em serverless)
+function sendDiscordWebhook(
   webhookUrl: string,
   payload: DiscordWebhookPayload
-): Promise<void> {
-  try {
-    await fetch(webhookUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        username: "LegacyPay Logs",
-        avatar_url: "https://legacypay.site/logo.png",
-        ...payload,
-      }),
-    });
-  } catch (error) {
-    console.error("[Discord Webhook] Erro ao enviar:", error);
+): void {
+  const sendRequest = async () => {
+    try {
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: "LegacyPay Logs",
+          avatar_url: "https://legacypay.site/logo.png",
+          ...payload,
+        }),
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[Discord Webhook] Erro HTTP ${response.status}: ${errorText}`);
+      }
+    } catch (error) {
+      console.error("[Discord Webhook] Erro ao enviar:", error);
+    }
+  };
+  
+  // Usa waitUntil para garantir que a funcao execute mesmo apos a resposta ser enviada
+  if (waitUntilFn) {
+    waitUntilFn(sendRequest());
+  } else {
+    // Fallback para ambiente local ou quando waitUntil nao esta disponivel
+    sendRequest().catch(console.error);
   }
 }
 
@@ -102,7 +127,7 @@ function maskEmail(email: string): string {
 
 // ==================== LOGS DE TRANSACOES ====================
 
-export async function logNewTransaction(data: {
+export function logNewTransaction(data: {
   transactionId: string;
   userName: string;
   userEmail: string;
@@ -114,10 +139,10 @@ export async function logNewTransaction(data: {
   description?: string;
   route: string;
   status: string;
-}): Promise<void> {
+}): void {
   const embed: DiscordEmbed = {
-    title: "Nova Transacao PIX Recebida",
-    color: COLORS.success,
+    title: "Nova Transacao PIX Criada",
+    color: COLORS.warning,
     fields: [
       { name: "ID da Transacao", value: `\`${data.transactionId}\``, inline: false },
       { name: "Usuario", value: data.userName || "N/A", inline: true },
@@ -128,7 +153,7 @@ export async function logNewTransaction(data: {
       { name: "Valor Liquido", value: formatBRL(data.netAmount), inline: true },
       { name: "Pagador", value: data.payerName || "N/A", inline: true },
       { name: "CPF/CNPJ", value: maskDocument(data.payerDocument || ""), inline: true },
-      { name: "Status", value: `\`${data.status.toUpperCase()}\``, inline: true },
+      { name: "Status", value: "`AGUARDANDO PAGAMENTO`", inline: true },
     ],
     footer: { text: `LegacyPay • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
@@ -140,14 +165,12 @@ export async function logNewTransaction(data: {
     embed.fields?.push({ name: "Descricao", value: data.description, inline: false });
   }
 
-  // Enviar para webhook de transacoes e geral
-  await Promise.all([
-    sendDiscordWebhook(DISCORD_WEBHOOKS.transacoes, { embeds: [embed] }),
-    sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] }),
-  ]);
+  // Enviar para webhook de transacoes e geral (fire-and-forget com waitUntil)
+  sendDiscordWebhook(DISCORD_WEBHOOKS.transacoes, { embeds: [embed] });
+  sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] });
 }
 
-export async function logTransactionStatusUpdate(data: {
+export function logTransactionStatusUpdate(data: {
   transactionId: string;
   userName: string;
   userEmail: string;
@@ -155,12 +178,12 @@ export async function logTransactionStatusUpdate(data: {
   oldStatus: string;
   newStatus: string;
   payerName?: string;
-}): Promise<void> {
+}): void {
   const isCompleted = data.newStatus === "completed";
   const isFailed = data.newStatus === "failed" || data.newStatus === "expired";
 
   const embed: DiscordEmbed = {
-    title: isCompleted ? "Transacao Aprovada" : isFailed ? "Transacao Falhou" : "Status Atualizado",
+    title: isCompleted ? "PIX Pago - Saldo Creditado" : isFailed ? "Transacao Falhou" : "Status Atualizado",
     color: isCompleted ? COLORS.success : isFailed ? COLORS.error : COLORS.warning,
     fields: [
       { name: "ID da Transacao", value: `\`${data.transactionId}\``, inline: false },
@@ -176,15 +199,13 @@ export async function logTransactionStatusUpdate(data: {
     author: { name: "Atualizacao de Transacao", icon_url: "https://cdn-icons-png.flaticon.com/512/1827/1827933.png" },
   };
 
-  await Promise.all([
-    sendDiscordWebhook(DISCORD_WEBHOOKS.transacoes, { embeds: [embed] }),
-    sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] }),
-  ]);
+  sendDiscordWebhook(DISCORD_WEBHOOKS.transacoes, { embeds: [embed] });
+  sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] });
 }
 
 // ==================== LOGS DE SAQUES ====================
 
-export async function logWithdrawalRequest(data: {
+export function logWithdrawalRequest(data: {
   withdrawalId: string;
   userName: string;
   userEmail: string;
@@ -194,7 +215,7 @@ export async function logWithdrawalRequest(data: {
   netAmount: number;
   pixKey: string;
   pixKeyType: string;
-}): Promise<void> {
+}): void {
   const embed: DiscordEmbed = {
     title: "Nova Solicitacao de Saque",
     color: COLORS.warning,
@@ -216,13 +237,11 @@ export async function logWithdrawalRequest(data: {
     author: { name: "Sistema de Saques", icon_url: "https://cdn-icons-png.flaticon.com/512/2489/2489756.png" },
   };
 
-  await Promise.all([
-    sendDiscordWebhook(DISCORD_WEBHOOKS.saques, { embeds: [embed] }),
-    sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] }),
-  ]);
+  sendDiscordWebhook(DISCORD_WEBHOOKS.saques, { embeds: [embed] });
+  sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] });
 }
 
-export async function logWithdrawalStatusUpdate(data: {
+export function logWithdrawalStatusUpdate(data: {
   withdrawalId: string;
   userName: string;
   userEmail: string;
@@ -232,7 +251,7 @@ export async function logWithdrawalStatusUpdate(data: {
   newStatus: string;
   pixKey: string;
   adminName?: string;
-}): Promise<void> {
+}): void {
   const isCompleted = data.newStatus === "completed";
   const isRejected = data.newStatus === "rejected" || data.newStatus === "failed";
 
@@ -257,15 +276,13 @@ export async function logWithdrawalStatusUpdate(data: {
     embed.fields?.push({ name: "Aprovado por", value: data.adminName, inline: true });
   }
 
-  await Promise.all([
-    sendDiscordWebhook(DISCORD_WEBHOOKS.saques, { embeds: [embed] }),
-    sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] }),
-  ]);
+  sendDiscordWebhook(DISCORD_WEBHOOKS.saques, { embeds: [embed] });
+  sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] });
 }
 
 // ==================== LOGS DE CADASTROS E KYC ====================
 
-export async function logNewUser(data: {
+export function logNewUser(data: {
   userId: string;
   name: string;
   email: string;
@@ -273,7 +290,7 @@ export async function logNewUser(data: {
   phone?: string;
   referralCode?: string;
   referredBy?: string;
-}): Promise<void> {
+}): void {
   const embed: DiscordEmbed = {
     title: "Novo Usuario Cadastrado",
     color: COLORS.primary,
@@ -295,19 +312,17 @@ export async function logNewUser(data: {
     embed.fields?.push({ name: "Indicado por", value: data.referredBy, inline: true });
   }
 
-  await Promise.all([
-    sendDiscordWebhook(DISCORD_WEBHOOKS.cadastros, { embeds: [embed] }),
-    sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] }),
-  ]);
+  sendDiscordWebhook(DISCORD_WEBHOOKS.cadastros, { embeds: [embed] });
+  sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] });
 }
 
-export async function logKYCSubmission(data: {
+export function logKYCSubmission(data: {
   userId: string;
   userName: string;
   userEmail: string;
   documentType: string;
   documentsCount: number;
-}): Promise<void> {
+}): void {
   const embed: DiscordEmbed = {
     title: "Nova Solicitacao de KYC",
     color: COLORS.info,
@@ -325,13 +340,11 @@ export async function logKYCSubmission(data: {
     author: { name: "Sistema de KYC", icon_url: "https://cdn-icons-png.flaticon.com/512/6195/6195699.png" },
   };
 
-  await Promise.all([
-    sendDiscordWebhook(DISCORD_WEBHOOKS.cadastros, { embeds: [embed] }),
-    sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] }),
-  ]);
+  sendDiscordWebhook(DISCORD_WEBHOOKS.cadastros, { embeds: [embed] });
+  sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] });
 }
 
-export async function logKYCStatusUpdate(data: {
+export function logKYCStatusUpdate(data: {
   userId: string;
   userName: string;
   userEmail: string;
@@ -339,7 +352,7 @@ export async function logKYCStatusUpdate(data: {
   newStatus: string;
   adminName?: string;
   reason?: string;
-}): Promise<void> {
+}): void {
   const isApproved = data.newStatus === "approved";
   const isRejected = data.newStatus === "rejected";
 
@@ -365,20 +378,18 @@ export async function logKYCStatusUpdate(data: {
     embed.fields?.push({ name: "Motivo", value: data.reason, inline: false });
   }
 
-  await Promise.all([
-    sendDiscordWebhook(DISCORD_WEBHOOKS.cadastros, { embeds: [embed] }),
-    sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] }),
-  ]);
+  sendDiscordWebhook(DISCORD_WEBHOOKS.cadastros, { embeds: [embed] });
+  sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] });
 }
 
 // ==================== LOGS DE SISTEMA ====================
 
-export async function logSystemEvent(data: {
+export function logSystemEvent(data: {
   title: string;
   description: string;
   type: "info" | "warning" | "error" | "success";
   fields?: Array<{ name: string; value: string; inline?: boolean }>;
-}): Promise<void> {
+}): void {
   const colorMap = {
     info: COLORS.info,
     warning: COLORS.warning,
@@ -403,19 +414,17 @@ export async function logSystemEvent(data: {
     author: { name: "Sistema LegacyPay", icon_url: iconMap[data.type] },
   };
 
-  await Promise.all([
-    sendDiscordWebhook(DISCORD_WEBHOOKS.sistema, { embeds: [embed] }),
-    sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] }),
-  ]);
+  sendDiscordWebhook(DISCORD_WEBHOOKS.sistema, { embeds: [embed] });
+  sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] });
 }
 
-export async function logAdminAction(data: {
+export function logAdminAction(data: {
   adminName: string;
   adminEmail: string;
   action: string;
   target?: string;
   details?: string;
-}): Promise<void> {
+}): void {
   const embed: DiscordEmbed = {
     title: "Acao Administrativa",
     color: COLORS.purple,
@@ -437,20 +446,18 @@ export async function logAdminAction(data: {
     embed.fields?.push({ name: "Detalhes", value: data.details, inline: false });
   }
 
-  await Promise.all([
-    sendDiscordWebhook(DISCORD_WEBHOOKS.sistema, { embeds: [embed] }),
-    sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] }),
-  ]);
+  sendDiscordWebhook(DISCORD_WEBHOOKS.sistema, { embeds: [embed] });
+  sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] });
 }
 
-export async function logLogin(data: {
+export function logLogin(data: {
   userId: string;
   userName: string;
   userEmail: string;
   ip?: string;
   userAgent?: string;
   isAdmin?: boolean;
-}): Promise<void> {
+}): void {
   const embed: DiscordEmbed = {
     title: data.isAdmin ? "Login Admin" : "Login de Usuario",
     color: data.isAdmin ? COLORS.purple : COLORS.info,
@@ -470,17 +477,17 @@ export async function logLogin(data: {
     embed.fields?.push({ name: "Dispositivo", value: ua, inline: false });
   }
 
-  await sendDiscordWebhook(DISCORD_WEBHOOKS.sistema, { embeds: [embed] });
+  sendDiscordWebhook(DISCORD_WEBHOOKS.sistema, { embeds: [embed] });
 }
 
-export async function logAPIUsage(data: {
+export function logAPIUsage(data: {
   userId: string;
   userName: string;
   endpoint: string;
   method: string;
   statusCode: number;
   amount?: number;
-}): Promise<void> {
+}): void {
   const isSuccess = data.statusCode >= 200 && data.statusCode < 300;
 
   const embed: DiscordEmbed = {
@@ -500,12 +507,12 @@ export async function logAPIUsage(data: {
     embed.fields?.push({ name: "Valor", value: formatBRL(data.amount), inline: true });
   }
 
-  await sendDiscordWebhook(DISCORD_WEBHOOKS.sistema, { embeds: [embed] });
+  sendDiscordWebhook(DISCORD_WEBHOOKS.sistema, { embeds: [embed] });
 }
 
 // ==================== LOGS DE AFILIADOS ====================
 
-export async function logAffiliateCommission(data: {
+export function logAffiliateCommission(data: {
   affiliateId: string;
   affiliateName: string;
   affiliateEmail: string;
@@ -513,7 +520,7 @@ export async function logAffiliateCommission(data: {
   transactionAmount: number;
   commissionAmount: number;
   commissionRate: number;
-}): Promise<void> {
+}): void {
   const embed: DiscordEmbed = {
     title: "Comissao de Afiliado",
     color: COLORS.pink,
@@ -531,22 +538,20 @@ export async function logAffiliateCommission(data: {
     author: { name: "Sistema de Afiliados", icon_url: "https://cdn-icons-png.flaticon.com/512/3135/3135789.png" },
   };
 
-  await Promise.all([
-    sendDiscordWebhook(DISCORD_WEBHOOKS.transacoes, { embeds: [embed] }),
-    sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] }),
-  ]);
+  sendDiscordWebhook(DISCORD_WEBHOOKS.transacoes, { embeds: [embed] });
+  sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] });
 }
 
 // ==================== LOGS DE CHECKOUT ====================
 
-export async function logCheckoutCreated(data: {
+export function logCheckoutCreated(data: {
   checkoutId: string;
   userName: string;
   userEmail: string;
   productName: string;
   amount: number;
   checkoutUrl: string;
-}): Promise<void> {
+}): void {
   const embed: DiscordEmbed = {
     title: "Novo Checkout Criado",
     color: COLORS.info,
@@ -562,17 +567,17 @@ export async function logCheckoutCreated(data: {
     author: { name: "Sistema de Checkout", icon_url: "https://cdn-icons-png.flaticon.com/512/3144/3144456.png" },
   };
 
-  await sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] });
+  sendDiscordWebhook(DISCORD_WEBHOOKS.geral, { embeds: [embed] });
 }
 
 // ==================== LOGS DE WEBHOOK ====================
 
-export async function logWebhookReceived(data: {
+export function logWebhookReceived(data: {
   source: string;
   transactionId: string;
   status: string;
   amount?: number;
-}): Promise<void> {
+}): void {
   const embed: DiscordEmbed = {
     title: "Webhook Recebido",
     color: COLORS.info,
@@ -590,5 +595,5 @@ export async function logWebhookReceived(data: {
     embed.fields?.push({ name: "Valor", value: formatBRL(data.amount), inline: true });
   }
 
-  await sendDiscordWebhook(DISCORD_WEBHOOKS.sistema, { embeds: [embed] });
+  sendDiscordWebhook(DISCORD_WEBHOOKS.sistema, { embeds: [embed] });
 }

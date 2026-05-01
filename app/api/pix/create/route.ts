@@ -287,7 +287,7 @@ export async function POST(request: NextRequest) {
       )
     `;
     
-    // Log para Discord
+    // Log para Discord (usa waitUntil para garantir execucao)
     logNewTransaction({
       transactionId: transaction.id,
       userName: profile.name || "N/A",
