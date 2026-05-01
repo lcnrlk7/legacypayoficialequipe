@@ -263,7 +263,7 @@ export async function POST(request: NextRequest) {
       withdrawalId: withdrawalId,
       userName: user.name || "N/A",
       userEmail: user.email,
-      userDocument: user.cpf_cnpj,
+      userDocument: (user as Record<string, unknown>).cpf_cnpj as string || undefined,
       amount: totalDebit,
       fee: totalFee,
       netAmount: netAmount,
