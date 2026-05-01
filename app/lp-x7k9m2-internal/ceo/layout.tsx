@@ -29,86 +29,48 @@ import {
   Clock,
 } from "lucide-react";
 
-const menuItems = [
+// Menu organizado em categorias
+const menuCategories = [
   {
-    label: "Dashboard",
-    href: "/lp-x7k9m2-internal/ceo",
-    icon: LayoutDashboard,
+    title: "Visao Geral",
+    items: [
+      { label: "Dashboard", href: "/lp-x7k9m2-internal/ceo", icon: LayoutDashboard },
+      { label: "Relatorios", href: "/lp-x7k9m2-internal/ceo/reports", icon: FileBarChart },
+    ],
   },
   {
-    label: "Usuários",
-    href: "/lp-x7k9m2-internal/ceo/users",
-    icon: Users,
+    title: "Usuarios & Equipe",
+    items: [
+      { label: "Usuarios", href: "/lp-x7k9m2-internal/ceo/users", icon: Users },
+      { label: "Equipe", href: "/lp-x7k9m2-internal/ceo/team", icon: UserCog },
+      { label: "KYC", href: "/lp-x7k9m2-internal/ceo/kyc", icon: FileCheck },
+      { label: "Afiliados", href: "/lp-x7k9m2-internal/ceo/affiliates", icon: UsersRound },
+    ],
   },
   {
-    label: "Equipe",
-    href: "/lp-x7k9m2-internal/ceo/team",
-    icon: UserCog,
+    title: "Financeiro",
+    items: [
+      { label: "Transacoes", href: "/lp-x7k9m2-internal/ceo/transactions", icon: ArrowLeftRight },
+      { label: "Saques", href: "/lp-x7k9m2-internal/ceo/withdrawals", icon: Wallet },
+      { label: "Taxas", href: "/lp-x7k9m2-internal/ceo/fees", icon: Percent },
+    ],
   },
   {
-    label: "KYC",
-    href: "/lp-x7k9m2-internal/ceo/kyc",
-    icon: FileCheck,
+    title: "Engajamento",
+    items: [
+      { label: "Premiacoes", href: "/lp-x7k9m2-internal/ceo/rewards", icon: Gift },
+      { label: "Notificacoes", href: "/lp-x7k9m2-internal/ceo/notifications", icon: Bell },
+      { label: "Push Notifications", href: "/lp-x7k9m2-internal/ceo/push", icon: BellRing },
+    ],
   },
   {
-    label: "Transações",
-    href: "/lp-x7k9m2-internal/ceo/transactions",
-    icon: ArrowLeftRight,
-  },
-  {
-    label: "Saques",
-    href: "/lp-x7k9m2-internal/ceo/withdrawals",
-    icon: Wallet,
-  },
-  {
-    label: "Taxas",
-    href: "/lp-x7k9m2-internal/ceo/fees",
-    icon: Percent,
-  },
-  {
-    label: "Relatórios",
-    href: "/lp-x7k9m2-internal/ceo/reports",
-    icon: FileBarChart,
-  },
-  {
-    label: "Premiacoes",
-    href: "/lp-x7k9m2-internal/ceo/rewards",
-    icon: Gift,
-  },
-  {
-    label: "Afiliados",
-    href: "/lp-x7k9m2-internal/ceo/affiliates",
-    icon: UsersRound,
-  },
-  {
-    label: "Notificacoes",
-    href: "/lp-x7k9m2-internal/ceo/notifications",
-    icon: Bell,
-  },
-  {
-    label: "Push Notifications",
-    href: "/lp-x7k9m2-internal/ceo/push",
-    icon: BellRing,
-  },
-  {
-    label: "Webhooks",
-    href: "/lp-x7k9m2-internal/ceo/webhooks",
-    icon: Webhook,
-  },
-  {
-    label: "Logs",
-    href: "/lp-x7k9m2-internal/ceo/logs",
-    icon: Activity,
-  },
-  {
-    label: "Adquirentes",
-    href: "/lp-x7k9m2-internal/ceo/acquirers",
-    icon: Server,
-  },
-  {
-    label: "Configurações",
-    href: "/lp-x7k9m2-internal/ceo/settings",
-    icon: Settings,
+    title: "Sistema",
+    items: [
+      { label: "Webhooks", href: "/lp-x7k9m2-internal/ceo/webhooks", icon: Webhook },
+      { label: "Logs", href: "/lp-x7k9m2-internal/ceo/logs", icon: Activity },
+      { label: "Adquirentes", href: "/lp-x7k9m2-internal/ceo/acquirers", icon: Server },
+      { label: "Configuracoes", href: "/lp-x7k9m2-internal/ceo/settings", icon: Settings },
+    ],
   },
 ];
 
@@ -272,23 +234,34 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
           </div>
 
           <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            {menuItems.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                  }`}
-                >
-                  <item.icon className="w-5 h-5" />
-                  <span className="font-medium">{item.label}</span>
-                </Link>
-              );
-            })}
+            {menuCategories.map((category, categoryIndex) => (
+              <div key={category.title} className={categoryIndex > 0 ? "pt-4" : ""}>
+                <div className="pb-2">
+                  <span className="px-4 text-xs text-muted-foreground uppercase tracking-wider">
+                    {category.title}
+                  </span>
+                </div>
+                {category.items.map((item) => {
+                  const isActive = item.href === "/lp-x7k9m2-internal/ceo" 
+                    ? pathname === item.href 
+                    : pathname.startsWith(item.href);
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all ${
+                        isActive
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                      }`}
+                    >
+                      <item.icon className="w-5 h-5" />
+                      <span className="font-medium text-sm">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
 
           <div className="p-4 border-t border-border">
@@ -360,25 +333,36 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
                   </div>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-1">
-                  {menuItems.map((item) => {
-                    const isActive = pathname === item.href;
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onClick={() => setSidebarOpen(false)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                          isActive
-                            ? "bg-primary/10 text-primary"
-                            : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-                        }`}
-                      >
-                        <item.icon className="w-5 h-5" />
-                        <span className="font-medium">{item.label}</span>
-                      </Link>
-                    );
-                  })}
+                <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+                  {menuCategories.map((category, categoryIndex) => (
+                    <div key={category.title} className={categoryIndex > 0 ? "pt-4" : ""}>
+                      <div className="pb-2">
+                        <span className="px-4 text-xs text-muted-foreground uppercase tracking-wider">
+                          {category.title}
+                        </span>
+                      </div>
+                      {category.items.map((item) => {
+                        const isActive = item.href === "/lp-x7k9m2-internal/ceo" 
+                          ? pathname === item.href 
+                          : pathname.startsWith(item.href);
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setSidebarOpen(false)}
+                            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all ${
+                              isActive
+                                ? "bg-primary/10 text-primary"
+                                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                            }`}
+                          >
+                            <item.icon className="w-5 h-5" />
+                            <span className="font-medium text-sm">{item.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  ))}
                 </nav>
 
                 <div className="p-4 border-t border-border">

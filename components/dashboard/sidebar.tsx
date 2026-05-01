@@ -266,10 +266,10 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
               </span>
             </div>
             <Link
-              href="/admin"
+              href="/lp-x7k9m2-internal/ceo"
               onClick={() => setIsMobileOpen(false)}
               className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all ${
-                pathname.startsWith("/admin")
+                pathname.startsWith("/lp-x7k9m2-internal")
                   ? "bg-primary/10 text-primary"
                   : "text-muted-foreground hover:bg-secondary hover:text-foreground"
               }`}
@@ -394,7 +394,6 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
           </>
         )}
       </AnimatePresence>
-
-          </>
+    </>
   )
 }
