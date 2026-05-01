@@ -32,7 +32,8 @@ import { notifyPixPaid, notifyWithdrawalCompleted, notifyWithdrawalFailed } from
 
 interface MisticPayWebhookPayload {
   transactionId: string | number;
-  transactionState: "PENDENTE" | "COMPLETO" | "FALHA" | "CANCELADO" | "QUEUED";
+  transactionState?: "PENDENTE" | "COMPLETO" | "FALHA" | "CANCELADO" | "QUEUED" | "COMPLETED" | "PAID";
+  status?: string; // Alternativo para transactionState
   value: number;
   fee?: number;
   transactionType: string;
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
       console.error("[MisticPay Webhook] Erro ao logar webhook:", logError);
     }
 
-    const { transactionId, transactionState, payer, transactionType } = payload;
+    const { transactionId, transactionState, status, payer, transactionType } = payload;
 
     if (!transactionId) {
       console.log("[MisticPay Webhook] Payload sem ID:", payload);
@@ -82,8 +83,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // MisticPay pode enviar status em transactionState ou status
+    const rawStatus = transactionState || status || "PENDENTE";
+    
+    // Normalizar status (COMPLETED, PAID -> COMPLETO)
+    let normalizedStatus = rawStatus.toUpperCase();
+    if (normalizedStatus === "COMPLETED" || normalizedStatus === "PAID") {
+      normalizedStatus = "COMPLETO";
+    } else if (normalizedStatus === "FAILED" || normalizedStatus === "CANCELLED") {
+      normalizedStatus = "FALHA";
+    }
+    
     // Mapear status da MisticPay para status interno
-    const internalStatus = mapMisticPayStatus(transactionState);
+    const internalStatus = mapMisticPayStatus(normalizedStatus);
+    
+    console.log(`[MisticPay Webhook] Status raw=${rawStatus}, normalizado=${normalizedStatus}, interno=${internalStatus}`);
 
     // Detectar se é um callback de SAQUE
     // A MisticPay pode enviar como WITHDRAWAL, PIX_OUT ou RETIRADA

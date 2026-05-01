@@ -281,8 +281,10 @@ export async function GET(request: Request) {
         for (const withdrawal of misticWithdrawals) {
           try {
             const result = await misticClient.checkTransaction(withdrawal.acquirer_withdrawal_id);
+            console.log(`[Sync MisticPay] Resposta para saque ${withdrawal.id}:`, JSON.stringify(result));
             
             if (result.success && result.data) {
+              // MisticPay retorna status em result.data.status (que e mapeado de transactionState)
               const state = (result.data.status || "").toUpperCase();
               console.log(`[Sync MisticPay] Saque ${withdrawal.id}: estado=${state}`);
 
