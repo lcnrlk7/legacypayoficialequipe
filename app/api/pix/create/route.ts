@@ -28,13 +28,8 @@ export async function POST(request: NextRequest) {
       settings[s.key] = parseFloat(s.value) || settings[s.key];
     });
 
-    if (amount < settings.min_deposit) {
-      return NextResponse.json(
-        { error: `Valor mínimo: R$ ${settings.min_deposit.toFixed(2)}` },
-        { status: 400 }
-      );
-    }
-
+    // Nota: o minimo de deposito especifico da adquirente sera verificado depois de buscar o profile
+    
     if (amount > settings.max_deposit) {
       return NextResponse.json(
         { error: `Valor máximo: R$ ${settings.max_deposit.toFixed(2)}` },
@@ -73,6 +68,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Conta desativada" },
         { status: 403 }
+      );
+    }
+
+    // Buscar minimo de deposito da adquirente especifica do usuario
+    const userAcquirerResult = await sql`
+      SELECT p.acquirer_id, a.min_deposit as acquirer_min_deposit
+      FROM profiles p
+      LEFT JOIN acquirers a ON a.id = p.acquirer_id AND a.is_active = true
+      WHERE p.id = ${profile.id}
+    `;
+    
+    const acquirerMinDeposit = userAcquirerResult[0]?.acquirer_min_deposit;
+    const effectiveMinDeposit = acquirerMinDeposit ? Number(acquirerMinDeposit) : settings.min_deposit;
+
+    if (amount < effectiveMinDeposit) {
+      return NextResponse.json(
+        { error: `Valor mínimo: R$ ${effectiveMinDeposit.toFixed(2)}` },
+        { status: 400 }
       );
     }
 

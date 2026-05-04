@@ -89,9 +89,20 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    if (amount < settings.min_withdrawal) {
+    // Buscar minimo de saque da adquirente especifica do usuario
+    const userAcquirerResult = await sql`
+      SELECT p.acquirer_id, a.min_withdrawal as acquirer_min_withdrawal
+      FROM profiles p
+      LEFT JOIN acquirers a ON a.id = p.acquirer_id AND a.is_active = true
+      WHERE p.id = ${sessionUser.id}
+    `;
+    
+    const acquirerMinWithdrawal = userAcquirerResult[0]?.acquirer_min_withdrawal;
+    const effectiveMinWithdrawal = acquirerMinWithdrawal ? Number(acquirerMinWithdrawal) : settings.min_withdrawal;
+
+    if (amount < effectiveMinWithdrawal) {
       return NextResponse.json(
-        { error: `Valor mínimo para saque: R$ ${settings.min_withdrawal.toFixed(2)}` },
+        { error: `Valor mínimo para saque: R$ ${effectiveMinWithdrawal.toFixed(2)}` },
         { status: 400 }
       );
     }
