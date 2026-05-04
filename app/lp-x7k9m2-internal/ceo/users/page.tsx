@@ -318,15 +318,25 @@ export default function UsersPage() {
     setSelectedUser(user);
     const defaultWithdrawalFee = user.route_type === "white" ? 2 : 5;
     const defaultFixedFee = user.route_type === "white" ? 1.50 : 1.00;
-  setEditForm({
-  daily_limit: user.daily_limit || 10000,
-  fee_percentage: user.fee_percentage?.toString() || "2.5",
-  fixed_fee: user.fixed_fee?.toString() || defaultFixedFee.toString(),
-  withdrawal_fee: user.withdrawal_fee?.toString() || defaultWithdrawalFee.toString(),
-  route_type: user.route_type || "white",
-  acquirer_id: user.acquirer_id || "",
-  is_active: user.is_active,
-  });
+    
+    // Se usuario nao tem acquirer_id, buscar a primeira adquirente da rota dele
+    let acquirerId = user.acquirer_id || "";
+    if (!acquirerId && acquirers.length > 0) {
+      const defaultAcquirer = acquirers.find(a => a.route_type === (user.route_type || "white"));
+      if (defaultAcquirer) {
+        acquirerId = defaultAcquirer.id;
+      }
+    }
+    
+    setEditForm({
+      daily_limit: user.daily_limit || 10000,
+      fee_percentage: user.fee_percentage?.toString() || "2.5",
+      fixed_fee: user.fixed_fee?.toString() || defaultFixedFee.toString(),
+      withdrawal_fee: user.withdrawal_fee?.toString() || defaultWithdrawalFee.toString(),
+      route_type: user.route_type || "white",
+      acquirer_id: acquirerId,
+      is_active: user.is_active,
+    });
     setShowModal(true);
   };
 
@@ -803,74 +813,45 @@ export default function UsersPage() {
                   Rota
                 </label>
                 <select
-                  value={editForm.route_type}
+                  value={editForm.acquirer_id || ""}
                   onChange={(e) => {
-                    const newRoute = e.target.value;
-                    // WHITE: 0% + R$ 1.50 fixo, R$ 2.00 saque
-                    // BLACK: 4% + R$ 0.00 fixo, R$ 5.00 saque
-                    const newWithdrawalFee = newRoute === "white" ? "2" : "5";
-                    const newFixedFee = newRoute === "white" ? "1.50" : "0";
-                    const newFeePercentage = newRoute === "white" ? "0" : "4";
-                    setEditForm({ 
-                      ...editForm, 
-                      route_type: newRoute,
-                      withdrawal_fee: newWithdrawalFee,
-                      fixed_fee: newFixedFee,
-                      fee_percentage: newFeePercentage,
-                    });
+                    const selectedAcquirer = acquirers.find(a => a.id === e.target.value);
+                    if (selectedAcquirer) {
+                      setEditForm({
+                        ...editForm,
+                        acquirer_id: selectedAcquirer.id,
+                        route_type: selectedAcquirer.route_type,
+                        fee_percentage: selectedAcquirer.fee_percentage.toString(),
+                        withdrawal_fee: selectedAcquirer.withdrawal_fee.toString(),
+                        fixed_fee: "0",
+                      });
+                    }
                   }}
                   className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
                 >
-                  <option value="white" className="bg-card">
-                    Rota White (MisticPay) - Taxa: R$ 1,50 fixo | Saque: R$ 2,00
-                  </option>
-                  <option value="black" className="bg-card">
-                    Rota Black (Medusa) - Taxa: 4% | Saque: R$ 5,00
-                  </option>
+                  {acquirers.filter(a => a.route_type === "white").length > 0 && (
+                    <optgroup label="WHITE" className="bg-card text-muted-foreground">
+                      {acquirers.filter(a => a.route_type === "white").map(acq => (
+                        <option key={acq.id} value={acq.id} className="bg-card text-white">
+                          Rota White ({acq.name}) - Taxa: {acq.fee_percentage}% | Saque: R$ {Number(acq.withdrawal_fee).toFixed(2)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {acquirers.filter(a => a.route_type === "black").length > 0 && (
+                    <optgroup label="BLACK" className="bg-card text-muted-foreground">
+                      {acquirers.filter(a => a.route_type === "black").map(acq => (
+                        <option key={acq.id} value={acq.id} className="bg-card text-white">
+                          Rota Black ({acq.name}) - Taxa: {acq.fee_percentage}% | Saque: R$ {Number(acq.withdrawal_fee).toFixed(2)}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
-  <p className="text-xs text-muted-foreground mt-2">
-  Selecione a rota do usuario (White ou Black)
-  </p>
-  </div>
-  
-  <div>
-  <label className="text-sm font-medium text-muted-foreground mb-2 block">
-  Adquirente Especifica
-  </label>
-  <select
-  value={editForm.acquirer_id}
-  onChange={(e) => {
-    const selectedAcquirer = acquirers.find(a => a.id === e.target.value);
-    if (selectedAcquirer) {
-      setEditForm({
-        ...editForm,
-        acquirer_id: e.target.value,
-        route_type: selectedAcquirer.route_type,
-        fee_percentage: selectedAcquirer.fee_percentage.toString(),
-        withdrawal_fee: selectedAcquirer.withdrawal_fee.toString(),
-      });
-    } else {
-      setEditForm({
-        ...editForm,
-        acquirer_id: "",
-      });
-    }
-  }}
-  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
-  >
-  <option value="" className="bg-card">
-  Automatico (baseado na rota)
-  </option>
-  {acquirers.filter(a => a.route_type === editForm.route_type).map(acq => (
-    <option key={acq.id} value={acq.id} className="bg-card">
-      {acq.name} - Taxa: {acq.fee_percentage}% | Saque: R$ {Number(acq.withdrawal_fee).toFixed(2)} | Min Dep: R$ {Number(acq.min_deposit).toFixed(2)}
-    </option>
-  ))}
-  </select>
-  <p className="text-xs text-muted-foreground mt-2">
-  Selecione uma adquirente especifica ou deixe automatico
-  </p>
-  </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Selecione a adquirente/rota do usuario
+                </p>
+              </div>
   
   <div className="flex items-center gap-3">
                 <input
