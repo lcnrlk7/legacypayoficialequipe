@@ -98,9 +98,21 @@ export async function POST(request: NextRequest) {
 
     // Buscar adquirente baseado na rota do usuário (white = MisticPay, black = Promisse Pay)
     const userRouteType = profile.route_type || 'black';
-    const acquirerResult = await sql`
-      SELECT * FROM acquirers WHERE is_active = true AND route_type = ${userRouteType} LIMIT 1
-    `;
+    
+    // Buscar adquirente especifica do usuario ou pela rota
+    let acquirerResult;
+    if (profile.acquirer_id) {
+      acquirerResult = await sql`
+        SELECT * FROM acquirers WHERE id = ${profile.acquirer_id} AND is_active = true LIMIT 1
+      `;
+    }
+    
+    // Se nao tem adquirente especifica ou nao encontrou, buscar pela rota
+    if (!acquirerResult || acquirerResult.length === 0) {
+      acquirerResult = await sql`
+        SELECT * FROM acquirers WHERE is_active = true AND route_type = ${userRouteType} ORDER BY priority LIMIT 1
+      `;
+    }
 
     if (acquirerResult.length === 0) {
       return NextResponse.json(
@@ -136,7 +148,7 @@ export async function POST(request: NextRequest) {
         description: description || "Depósito via PIX - LegacyPay",
         projectWebhook: webhookUrl,
       });
-    } else if (acquirer.code === 'medusa') {
+    } else if (acquirer.code === 'medusa' || acquirer.code === 'medusa_white') {
       try {
         const medusa = new MedusaPayments({
           secretKey: acquirer.api_key,

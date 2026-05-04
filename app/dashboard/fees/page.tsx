@@ -19,6 +19,7 @@ interface UserFees {
   pix_percentage_fee: number;
   withdrawal_fee: number;
   user_fee_percentage: number;
+  has_percentage_fee: boolean;
   gateway_name: string;
   route_type: string;
   daily_limit: number;
@@ -181,8 +182,12 @@ export default function FeesPage() {
           }`} />
           <p className={`text-sm ${fees.route_type === 'black' ? 'text-orange-400' : 'text-green-400'}`}>
             Você está na <strong>{fees.gateway_name}</strong> -{' '}
-            {fees.route_type === 'black' ? (
-              <>Taxa de <strong>{formatPercent(fees.pix_percentage_fee)} + {formatCurrency(fees.pix_fixed_fee)}</strong> por transação</>
+            {fees.has_percentage_fee ? (
+              fees.pix_fixed_fee > 0 ? (
+                <>Taxa de <strong>{formatPercent(fees.pix_percentage_fee)} + {formatCurrency(fees.pix_fixed_fee)}</strong> por transação</>
+              ) : (
+                <>Taxa de <strong>{formatPercent(fees.pix_percentage_fee)}</strong> por transação</>
+              )
             ) : (
               <>Taxa fixa de <strong>{formatCurrency(fees.pix_fixed_fee)}</strong> por transação</>
             )}
@@ -229,9 +234,11 @@ export default function FeesPage() {
             <div className="flex items-center justify-between p-4 bg-background/50 rounded-xl">
               <span className="text-muted-foreground">Taxa por transacao</span>
               <span className="text-2xl font-bold text-primary">
-                {fees?.route_type === 'black' 
-                  ? `${formatPercent(fees?.pix_percentage_fee || 4)} + ${formatCurrency(fees?.pix_fixed_fee || 0)}`
-                  : formatCurrency(fees?.pix_fixed_fee || 1.50)
+                {fees?.has_percentage_fee 
+                  ? (fees?.pix_fixed_fee > 0 
+                      ? `${formatPercent(fees?.pix_percentage_fee)} + ${formatCurrency(fees?.pix_fixed_fee)}`
+                      : formatPercent(fees?.pix_percentage_fee))
+                  : formatCurrency(fees?.pix_fixed_fee || 0)
                 }
               </span>
             </div>
@@ -383,21 +390,21 @@ export default function FeesPage() {
           </div>
           <div className="flex justify-between items-center pb-3 border-b border-border">
             <span className="text-muted-foreground">
-              Taxa ({fees?.gateway_name || 'Rota Black'})
+              Taxa ({fees?.gateway_name || 'Rota'})
             </span>
             <span className="font-semibold text-red-400">
-              {fees?.route_type === 'black' 
-                ? `- R$ ${(100 * (fees?.pix_percentage_fee || 4) / 100 + (fees?.pix_fixed_fee || 0)).toFixed(2).replace('.', ',')}`
-                : `- ${formatCurrency(fees?.pix_fixed_fee || 1.50)}`
+              {fees?.has_percentage_fee 
+                ? `- R$ ${(100 * (fees?.pix_percentage_fee || 0) / 100 + (fees?.pix_fixed_fee || 0)).toFixed(2).replace('.', ',')}`
+                : `- ${formatCurrency(fees?.pix_fixed_fee || 0)}`
               }
             </span>
           </div>
           <div className="flex justify-between items-center pt-1">
             <span className="font-semibold text-foreground">Valor liquido</span>
             <span className="font-bold text-green-400 text-lg">
-              {fees?.route_type === 'black'
-                ? formatCurrency(100 - (100 * (fees?.pix_percentage_fee || 4) / 100) - (fees?.pix_fixed_fee || 0))
-                : formatCurrency(100 - (fees?.pix_fixed_fee || 1.50))
+              {fees?.has_percentage_fee
+                ? formatCurrency(100 - (100 * (fees?.pix_percentage_fee || 0) / 100) - (fees?.pix_fixed_fee || 0))
+                : formatCurrency(100 - (fees?.pix_fixed_fee || 0))
               }
             </span>
           </div>
