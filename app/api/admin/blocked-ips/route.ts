@@ -1,12 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
-import { verifySession } from "@/lib/session";
+import { verifyToken } from "@/lib/auth";
+import { cookies } from "next/headers";
 
 const sql = neon(process.env.DATABASE_URL!);
 
+async function getSession() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("auth_token")?.value;
+  if (!token) return null;
+  return await verifyToken(token);
+}
+
 export async function GET() {
   try {
-    const session = await verifySession();
+    const session = await getSession();
     if (!session || (session.role !== "admin" && session.role !== "ceo")) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
@@ -27,7 +35,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await verifySession();
+    const session = await getSession();
     if (!session || (session.role !== "admin" && session.role !== "ceo")) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
@@ -71,7 +79,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await verifySession();
+    const session = await getSession();
     if (!session || (session.role !== "admin" && session.role !== "ceo")) {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
