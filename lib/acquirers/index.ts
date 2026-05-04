@@ -540,7 +540,7 @@ export async function createWithdrawal(
     const beneficiaryName = user?.name || "Usuario LegacyPay";
     const beneficiaryDocument = (user?.cpf_cnpj || "00000000000").replace(/\D/g, "");
 
-    const withdrawalWebhookUrl = "https://legacypay.site/api/webhooks/medusa/withdrawal";
+    const withdrawalWebhookUrl = "https://legacypay.site/api/webhooks/medusa";
     
     // Medusa White taxa de saque e R$ 5,00
     const MEDUSA_WHITE_WITHDRAWAL_FEE = 5.00;

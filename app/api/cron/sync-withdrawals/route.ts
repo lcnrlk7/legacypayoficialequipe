@@ -73,16 +73,17 @@ export async function GET(request: Request) {
 
     console.log(`[Sync Withdrawals] ${pendingWithdrawals.length} saques pendentes encontrados`);
 
-    // Buscar configuração da Medusa
+    // Buscar configuração da Medusa (inclui medusa e medusa_white)
     const acquirers = await sql`
-      SELECT api_key, api_secret FROM acquirers WHERE code = 'medusa' AND is_active = true
+      SELECT code, api_key, api_secret FROM acquirers WHERE code IN ('medusa', 'medusa_white') AND is_active = true
     `;
 
     if (acquirers.length === 0) {
-      console.log("[Sync Withdrawals] Medusa não configurada");
+      console.log("[Sync Withdrawals] Nenhuma Medusa configurada");
       return NextResponse.json({ error: "Medusa não configurada" }, { status: 500 });
     }
 
+    // Usar a primeira Medusa para listagem (todas usam a mesma API)
     const secretKey = acquirers[0].api_key;
     
     // Tentar listar transferências da Medusa
