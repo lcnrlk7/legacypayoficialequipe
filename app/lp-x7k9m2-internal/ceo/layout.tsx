@@ -68,6 +68,7 @@ const menuCategories = [
     items: [
       { label: "Webhooks", href: "/lp-x7k9m2-internal/ceo/webhooks", icon: Webhook },
       { label: "Logs", href: "/lp-x7k9m2-internal/ceo/logs", icon: Activity },
+      { label: "Ataques", href: "/lp-x7k9m2-internal/ceo/attacks", icon: Shield },
       { label: "Adquirentes", href: "/lp-x7k9m2-internal/ceo/acquirers", icon: Server },
       { label: "Configuracoes", href: "/lp-x7k9m2-internal/ceo/settings", icon: Settings },
     ],

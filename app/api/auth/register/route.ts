@@ -5,6 +5,7 @@ import { sendWelcomeEmail } from "@/lib/email";
 import { rateLimit, getClientIP, logSuspiciousActivity } from "@/lib/security";
 import { logNewUser } from "@/lib/discord-webhook";
 import { containsXSS, sanitizeName, isValidName, isValidEmailStrict, isValidPhone, isValidCPFStrict } from "@/lib/sanitize";
+import { logAttack } from "@/lib/attack-logger";
 
 const COOKIE_NAME = "auth-token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -31,7 +32,17 @@ export async function POST(request: NextRequest) {
     if (!nameValidation.valid) {
       // Verificar se e tentativa de XSS
       if (containsXSS(name)) {
-        await logSuspiciousActivity(null, "XSS_ATTEMPT", `Nome: ${name.substring(0, 50)}`, ip);
+        // Registrar ataque com webhook Discord
+        await logAttack({
+          attackType: "XSS_ATTEMPT",
+          ipAddress: ip,
+          userEmail: email,
+          payload: name,
+          endpoint: "/api/auth/register",
+          severity: "critical",
+          blocked: true,
+        });
+        
         try {
           await sql`
             INSERT INTO blocked_ips (ip_address, reason)
@@ -53,7 +64,15 @@ export async function POST(request: NextRequest) {
     const emailValidation = isValidEmailStrict(email);
     if (!emailValidation.valid) {
       if (containsXSS(email)) {
-        await logSuspiciousActivity(null, "XSS_ATTEMPT", `Email: ${email.substring(0, 50)}`, ip);
+        await logAttack({
+          attackType: "XSS_ATTEMPT",
+          ipAddress: ip,
+          userEmail: email,
+          payload: email,
+          endpoint: "/api/auth/register",
+          severity: "high",
+          blocked: true,
+        });
       }
       return NextResponse.json(
         { error: emailValidation.error || "Email inválido" },
@@ -66,7 +85,15 @@ export async function POST(request: NextRequest) {
       const phoneValidation = isValidPhone(phone);
       if (!phoneValidation.valid) {
         if (containsXSS(phone)) {
-          await logSuspiciousActivity(null, "XSS_ATTEMPT", `Phone: ${phone.substring(0, 50)}`, ip);
+          await logAttack({
+            attackType: "XSS_ATTEMPT",
+            ipAddress: ip,
+            userEmail: email,
+            payload: phone,
+            endpoint: "/api/auth/register",
+            severity: "high",
+            blocked: true,
+          });
         }
         return NextResponse.json(
           { error: phoneValidation.error || "Telefone inválido" },
@@ -80,7 +107,15 @@ export async function POST(request: NextRequest) {
       const cpfValidation = isValidCPFStrict(cpf);
       if (!cpfValidation.valid) {
         if (containsXSS(cpf)) {
-          await logSuspiciousActivity(null, "XSS_ATTEMPT", `CPF: ${cpf.substring(0, 50)}`, ip);
+          await logAttack({
+            attackType: "XSS_ATTEMPT",
+            ipAddress: ip,
+            userEmail: email,
+            payload: cpf,
+            endpoint: "/api/auth/register",
+            severity: "high",
+            blocked: true,
+          });
         }
         return NextResponse.json(
           { error: cpfValidation.error || "CPF inválido" },
