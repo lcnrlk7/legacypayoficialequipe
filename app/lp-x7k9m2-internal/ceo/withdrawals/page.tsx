@@ -11,6 +11,9 @@ import {
   DollarSign,
   X,
   CreditCard,
+  RefreshCw,
+  Edit3,
+  Loader2,
 } from "lucide-react";
 
 interface Withdrawal {
@@ -40,6 +43,8 @@ export default function WithdrawalsPage() {
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<Withdrawal | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [changingStatus, setChangingStatus] = useState(false);
 
   useEffect(() => {
     loadWithdrawals();
@@ -137,6 +142,37 @@ export default function WithdrawalsPage() {
       alert("Erro ao marcar como pago");
     } finally {
       setIsProcessing(false);
+    }
+  }
+
+  async function changeWithdrawalStatus(withdrawal: Withdrawal, newStatus: string) {
+    if (!confirm(`Tem certeza que deseja alterar o status para "${newStatus}"?\n\nEsta acao e manual e deve ser usada apenas em ultimo caso.`)) {
+      return;
+    }
+    
+    setChangingStatus(true);
+    try {
+      const response = await fetch(`/api/admin/withdrawals/${withdrawal.id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        alert(`Status alterado para: ${newStatus}`);
+        loadWithdrawals();
+        setShowModal(false);
+        setShowStatusModal(false);
+      } else {
+        alert(data.error || "Erro ao alterar status");
+      }
+    } catch (error) {
+      console.error("Erro ao alterar status:", error);
+      alert("Erro ao alterar status");
+    } finally {
+      setChangingStatus(false);
     }
   }
 
@@ -251,26 +287,35 @@ export default function WithdrawalsPage() {
             <option value="pending" className="bg-card">
               Pendentes
             </option>
-            <option value="approved" className="bg-card">
-              Aprovados
+            <option value="processing" className="bg-card">
+              Processando
             </option>
-            <option value="paid" className="bg-card">
-              Pagos
+            <option value="completed" className="bg-card">
+              Concluidos
             </option>
-            <option value="rejected" className="bg-card">
-              Rejeitados
+            <option value="cancelled" className="bg-card">
+              Cancelados
+            </option>
+            <option value="failed" className="bg-card">
+              Falhou
             </option>
           </select>
         </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="glass rounded-xl p-4">
           <p className="text-2xl font-bold text-yellow-400">
             {withdrawals.filter((w) => w.status === "pending").length}
           </p>
           <p className="text-sm text-muted-foreground">Pendentes</p>
+        </div>
+        <div className="glass rounded-xl p-4">
+          <p className="text-2xl font-bold text-blue-400">
+            {withdrawals.filter((w) => w.status === "processing").length}
+          </p>
+          <p className="text-sm text-muted-foreground">Processando</p>
         </div>
         <div className="glass rounded-xl p-4">
           <p className="text-2xl font-bold text-primary">
@@ -280,15 +325,15 @@ export default function WithdrawalsPage() {
         </div>
         <div className="glass rounded-xl p-4">
           <p className="text-2xl font-bold text-green-400">
-            {withdrawals.filter((w) => w.status === "paid").length}
+            {withdrawals.filter((w) => w.status === "completed").length}
           </p>
-          <p className="text-sm text-muted-foreground">Pagos</p>
+          <p className="text-sm text-muted-foreground">Concluidos</p>
         </div>
         <div className="glass rounded-xl p-4">
           <p className="text-2xl font-bold text-red-400">
-            {withdrawals.filter((w) => w.status === "rejected").length}
+            {withdrawals.filter((w) => w.status === "cancelled" || w.status === "failed").length}
           </p>
-          <p className="text-sm text-muted-foreground">Rejeitados</p>
+          <p className="text-sm text-muted-foreground">Cancelados</p>
         </div>
       </div>
 
@@ -336,23 +381,30 @@ export default function WithdrawalsPage() {
                     </p>
                   </div>
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${
-                      withdrawal.status === "paid"
+                    className={`px-3 py-1 rounded-full text-xs font-medium flex items-center gap-1 ${
+                      withdrawal.status === "completed"
                         ? "bg-green-400/10 text-green-400"
+                        : withdrawal.status === "processing"
+                        ? "bg-blue-400/10 text-blue-400"
                         : withdrawal.status === "pending"
                         ? "bg-yellow-400/10 text-yellow-400"
-                        : withdrawal.status === "approved"
-                        ? "bg-blue-400/10 text-blue-400"
                         : "bg-red-400/10 text-red-400"
                     }`}
                   >
-                    {withdrawal.status === "paid"
-                      ? "Pago"
+                    {withdrawal.status === "processing" && (
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                    )}
+                    {withdrawal.status === "completed"
+                      ? "Concluido"
+                      : withdrawal.status === "processing"
+                      ? "Processando"
                       : withdrawal.status === "pending"
                       ? "Pendente"
-                      : withdrawal.status === "approved"
-                      ? "Aprovado"
-                      : "Rejeitado"}
+                      : withdrawal.status === "cancelled"
+                      ? "Cancelado"
+                      : withdrawal.status === "failed"
+                      ? "Falhou"
+                      : withdrawal.status}
                   </span>
                 </div>
               </div>
@@ -474,14 +526,85 @@ export default function WithdrawalsPage() {
                 selectedWithdrawal.rejection_reason && (
                   <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20">
                     <p className="text-sm text-red-400 font-medium mb-1">
-                      Motivo da Rejeição:
+                      Motivo da Rejeicao:
                     </p>
                     <p className="text-red-300">
                       {selectedWithdrawal.rejection_reason}
                     </p>
                   </div>
                 )}
+
+              {/* Botao para alterar status manualmente */}
+              <div className="pt-4 border-t border-border">
+                <button
+                  onClick={() => setShowStatusModal(true)}
+                  className="w-full px-4 py-2 rounded-xl bg-orange-500/10 text-orange-400 hover:bg-orange-500/20 transition-colors flex items-center justify-center gap-2 text-sm"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  Alterar Status Manualmente (Ultimo Caso)
+                </button>
+              </div>
             </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Modal para alterar status manualmente */}
+      {showStatusModal && selectedWithdrawal && (
+        <div className="fixed inset-0 bg-overlay flex items-center justify-center z-[60] p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="glass rounded-2xl p-6 w-full max-w-sm"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-lg font-semibold text-white">
+                Alterar Status
+              </h2>
+              <button
+                onClick={() => setShowStatusModal(false)}
+                className="p-2 rounded-lg hover:bg-secondary transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mb-4 p-3 rounded-xl bg-orange-500/10 border border-orange-500/20">
+              <p className="text-xs text-orange-400">
+                Use apenas em ultimo caso quando o status nao foi atualizado automaticamente.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <button
+                onClick={() => changeWithdrawalStatus(selectedWithdrawal, "processing")}
+                disabled={changingStatus || selectedWithdrawal.status === "processing"}
+                className="w-full px-4 py-3 rounded-xl bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {changingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                Processando
+              </button>
+              <button
+                onClick={() => changeWithdrawalStatus(selectedWithdrawal, "completed")}
+                disabled={changingStatus || selectedWithdrawal.status === "completed"}
+                className="w-full px-4 py-3 rounded-xl bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {changingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
+                Concluido
+              </button>
+              <button
+                onClick={() => changeWithdrawalStatus(selectedWithdrawal, "cancelled")}
+                disabled={changingStatus || selectedWithdrawal.status === "cancelled"}
+                className="w-full px-4 py-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {changingStatus ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                Cancelado (Devolve Saldo)
+              </button>
+            </div>
+
+            <p className="mt-4 text-xs text-center text-muted-foreground">
+              Status atual: <span className="font-medium">{selectedWithdrawal.status}</span>
+            </p>
           </motion.div>
         </div>
       )}
