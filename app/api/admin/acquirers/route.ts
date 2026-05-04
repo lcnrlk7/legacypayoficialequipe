@@ -42,6 +42,10 @@ export async function PUT(request: Request) {
             api_key = COALESCE(${data.api_key}, api_key),
             api_secret = COALESCE(${data.api_secret}, api_secret),
             fee_percentage = COALESCE(${data.fee_percentage}, fee_percentage),
+            withdrawal_fee = COALESCE(${data.withdrawal_fee}, withdrawal_fee),
+            min_deposit = COALESCE(${data.min_deposit}, min_deposit),
+            min_withdrawal = COALESCE(${data.min_withdrawal}, min_withdrawal),
+            route_type = COALESCE(${data.route_type}, route_type),
             priority = COALESCE(${data.priority}, priority),
             updated_at = NOW()
         WHERE id = ${id}
@@ -66,7 +70,7 @@ export async function POST(request: Request) {
     const code = body.code || body.name.toLowerCase().replace(/[^a-z0-9]/g, "_");
 
     const result = await sql`
-      INSERT INTO acquirers (id, name, code, api_url, api_key, api_secret, fee_percentage, is_active, priority, created_at, updated_at)
+      INSERT INTO acquirers (id, name, code, api_url, api_key, api_secret, fee_percentage, withdrawal_fee, min_deposit, min_withdrawal, route_type, is_active, priority, created_at, updated_at)
       VALUES (
         ${id},
         ${body.name},
@@ -75,6 +79,10 @@ export async function POST(request: Request) {
         ${body.api_key},
         ${body.api_secret},
         ${body.fee_percentage || 2.5},
+        ${body.withdrawal_fee || 0},
+        ${body.min_deposit || 1},
+        ${body.min_withdrawal || 1},
+        ${body.route_type || 'white'},
         ${body.is_active ?? true},
         ${body.priority || 0},
         NOW(),

@@ -28,11 +28,23 @@ interface UserProfile {
   is_active: boolean;
   role: string;
   route_type: string;
+  acquirer_id: string | null;
   daily_limit: number;
   fee_percentage: number | null;
   fixed_fee: number | null;
   withdrawal_fee: number | null;
   created_at: string;
+}
+
+interface Acquirer {
+  id: string;
+  name: string;
+  code: string;
+  route_type: string;
+  fee_percentage: number;
+  withdrawal_fee: number;
+  min_deposit: number;
+  min_withdrawal: number;
 }
 
 interface Filters {
@@ -43,6 +55,7 @@ interface Filters {
 
 export default function UsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [acquirers, setAcquirers] = useState<Acquirer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
@@ -58,6 +71,7 @@ export default function UsersPage() {
     fixed_fee: "",
     withdrawal_fee: "",
     route_type: "white",
+    acquirer_id: "",
     is_active: true,
   });
   
@@ -71,7 +85,20 @@ export default function UsersPage() {
 
   useEffect(() => {
     loadUsers();
+    loadAcquirers();
   }, []);
+  
+  async function loadAcquirers() {
+    try {
+      const response = await fetch("/api/admin/acquirers");
+      const data = await response.json();
+      if (data.acquirers) {
+        setAcquirers(data.acquirers);
+      }
+    } catch (error) {
+      console.error("Error loading acquirers:", error);
+    }
+  }
 
   // Filtrar e ordenar usuários
   const filteredUsers = useMemo(() => {
@@ -183,14 +210,15 @@ export default function UsersPage() {
         body: JSON.stringify({
           userId: selectedUser.id,
           action: "update",
-          data: {
-            daily_limit: limitValue,
-            fee_percentage: feeValue,
-            fixed_fee: fixedFeeValue,
-            withdrawal_fee: withdrawalFeeValue,
-            route_type: editForm.route_type,
-            is_active: editForm.is_active,
-          },
+  data: {
+  daily_limit: limitValue,
+  fee_percentage: feeValue,
+  fixed_fee: fixedFeeValue,
+  withdrawal_fee: withdrawalFeeValue,
+  route_type: editForm.route_type,
+  acquirer_id: editForm.acquirer_id || null,
+  is_active: editForm.is_active,
+  },
         }),
       });
 
@@ -290,14 +318,15 @@ export default function UsersPage() {
     setSelectedUser(user);
     const defaultWithdrawalFee = user.route_type === "white" ? 2 : 5;
     const defaultFixedFee = user.route_type === "white" ? 1.50 : 1.00;
-    setEditForm({
-      daily_limit: user.daily_limit || 10000,
-      fee_percentage: user.fee_percentage?.toString() || "2.5",
-      fixed_fee: user.fixed_fee?.toString() || defaultFixedFee.toString(),
-      withdrawal_fee: user.withdrawal_fee?.toString() || defaultWithdrawalFee.toString(),
-      route_type: user.route_type || "white",
-      is_active: user.is_active,
-    });
+  setEditForm({
+  daily_limit: user.daily_limit || 10000,
+  fee_percentage: user.fee_percentage?.toString() || "2.5",
+  fixed_fee: user.fixed_fee?.toString() || defaultFixedFee.toString(),
+  withdrawal_fee: user.withdrawal_fee?.toString() || defaultWithdrawalFee.toString(),
+  route_type: user.route_type || "white",
+  acquirer_id: user.acquirer_id || "",
+  is_active: user.is_active,
+  });
     setShowModal(true);
   };
 
@@ -799,13 +828,51 @@ export default function UsersPage() {
                     Rota Black (Medusa) - Taxa: 4% | Saque: R$ 5,00
                   </option>
                 </select>
-                <p className="text-xs text-muted-foreground mt-2">
-                  {editForm.route_type === "white" 
-                    ? "Rota White (MisticPay): Taxa fixa de R$ 1,50 por transacao + R$ 2,00 por saque" 
-                    : "Rota Black (Medusa): Taxa de 4% por transacao + R$ 5,00 por saque"}
-                </p>
-              </div>
-              <div className="flex items-center gap-3">
+  <p className="text-xs text-muted-foreground mt-2">
+  Selecione a rota do usuario (White ou Black)
+  </p>
+  </div>
+  
+  <div>
+  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+  Adquirente Especifica
+  </label>
+  <select
+  value={editForm.acquirer_id}
+  onChange={(e) => {
+    const selectedAcquirer = acquirers.find(a => a.id === e.target.value);
+    if (selectedAcquirer) {
+      setEditForm({
+        ...editForm,
+        acquirer_id: e.target.value,
+        route_type: selectedAcquirer.route_type,
+        fee_percentage: selectedAcquirer.fee_percentage.toString(),
+        withdrawal_fee: selectedAcquirer.withdrawal_fee.toString(),
+      });
+    } else {
+      setEditForm({
+        ...editForm,
+        acquirer_id: "",
+      });
+    }
+  }}
+  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
+  >
+  <option value="" className="bg-card">
+  Automatico (baseado na rota)
+  </option>
+  {acquirers.filter(a => a.route_type === editForm.route_type).map(acq => (
+    <option key={acq.id} value={acq.id} className="bg-card">
+      {acq.name} - Taxa: {acq.fee_percentage}% | Saque: R$ {Number(acq.withdrawal_fee).toFixed(2)} | Min Dep: R$ {Number(acq.min_deposit).toFixed(2)}
+    </option>
+  ))}
+  </select>
+  <p className="text-xs text-muted-foreground mt-2">
+  Selecione uma adquirente especifica ou deixe automatico
+  </p>
+  </div>
+  
+  <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
                   id="is_active"

@@ -28,6 +28,10 @@ interface Acquirer {
   total_transactions: number;
   total_volume: number;
   fee_percentage: number;
+  withdrawal_fee: number;
+  min_deposit: number;
+  min_withdrawal: number;
+  route_type: "white" | "black";
   min_amount: number;
   max_amount: number;
   created_at: string;
@@ -45,6 +49,10 @@ export default function AcquirersPage() {
     api_key: "",
     api_secret: "",
     fee_percentage: 2.5,
+    withdrawal_fee: 0,
+    min_deposit: 1,
+    min_withdrawal: 1,
+    route_type: "white" as "white" | "black",
     priority: 0,
   });
   const [isSaving, setIsSaving] = useState(false);
@@ -84,6 +92,10 @@ export default function AcquirersPage() {
               api_key: form.api_key,
               api_secret: form.api_secret,
               fee_percentage: form.fee_percentage,
+              withdrawal_fee: form.withdrawal_fee,
+              min_deposit: form.min_deposit,
+              min_withdrawal: form.min_withdrawal,
+              route_type: form.route_type,
               priority: form.priority,
             },
           }),
@@ -142,6 +154,10 @@ export default function AcquirersPage() {
       api_key: "",
       api_secret: "",
       fee_percentage: 2.5,
+      withdrawal_fee: 0,
+      min_deposit: 1,
+      min_withdrawal: 1,
+      route_type: "white",
       priority: acquirers.length,
     });
     setShowModal(true);
@@ -156,6 +172,10 @@ export default function AcquirersPage() {
       api_key: acquirer.api_key || "",
       api_secret: acquirer.api_secret || "",
       fee_percentage: acquirer.fee_percentage || 2.5,
+      withdrawal_fee: acquirer.withdrawal_fee || 0,
+      min_deposit: acquirer.min_deposit || 1,
+      min_withdrawal: acquirer.min_withdrawal || 1,
+      route_type: acquirer.route_type || "white",
       priority: acquirer.priority,
     });
     setShowModal(true);
@@ -171,6 +191,10 @@ export default function AcquirersPage() {
       api_key: "",
       api_secret: "",
       fee_percentage: 2.5,
+      withdrawal_fee: 0,
+      min_deposit: 1,
+      min_withdrawal: 1,
+      route_type: "white",
       priority: 0,
     });
   }
@@ -282,11 +306,27 @@ export default function AcquirersPage() {
                       <span className="text-muted-foreground">
                         Código: <span className="text-white font-mono">{acquirer.code}</span>
                       </span>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        acquirer.route_type === "white" 
+                          ? "bg-blue-500/10 text-blue-400" 
+                          : "bg-purple-500/10 text-purple-400"
+                      }`}>
+                        {acquirer.route_type === "white" ? "WHITE" : "BLACK"}
+                      </span>
                       <span className="text-muted-foreground">
                         Prioridade: <span className="text-white">{acquirer.priority}</span>
                       </span>
                       <span className="text-muted-foreground">
-                        Taxa: <span className="text-primary">{acquirer.fee_percentage || 2.5}%</span>
+                        Taxa Entrada: <span className="text-primary">{acquirer.fee_percentage || 2.5}%</span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        Taxa Saque: <span className="text-green-400">R$ {Number(acquirer.withdrawal_fee || 0).toFixed(2)}</span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        Min. Dep: <span className="text-white">R$ {Number(acquirer.min_deposit || 1).toFixed(2)}</span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        Min. Saque: <span className="text-white">R$ {Number(acquirer.min_withdrawal || 1).toFixed(2)}</span>
                       </span>
                     </div>
                   </div>
@@ -414,10 +454,23 @@ export default function AcquirersPage() {
                   className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                 />
               </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  Tipo de Rota
+                </label>
+                <select
+                  value={form.route_type}
+                  onChange={(e) => setForm({ ...form, route_type: e.target.value as "white" | "black" })}
+                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
+                >
+                  <option value="white">WHITE - Gateway Premium</option>
+                  <option value="black">BLACK - Gateway Express</option>
+                </select>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                    Taxa (%)
+                    Taxa Entrada (%)
                   </label>
                   <input
                     type="number"
@@ -433,22 +486,72 @@ export default function AcquirersPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                    Prioridade
+                    Taxa Saque (R$)
                   </label>
                   <input
                     type="number"
-                    value={form.priority}
+                    value={form.withdrawal_fee}
                     onChange={(e) =>
-                      setForm({ ...form, priority: Number(e.target.value) })
+                      setForm({ ...form, withdrawal_fee: Number(e.target.value) })
                     }
                     placeholder="0"
                     min="0"
+                    step="0.5"
                     className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Menor número = maior prioridade
-                  </p>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Min. Depósito (R$)
+                  </label>
+                  <input
+                    type="number"
+                    value={form.min_deposit}
+                    onChange={(e) =>
+                      setForm({ ...form, min_deposit: Number(e.target.value) })
+                    }
+                    placeholder="1"
+                    min="0"
+                    step="1"
+                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Min. Saque (R$)
+                  </label>
+                  <input
+                    type="number"
+                    value={form.min_withdrawal}
+                    onChange={(e) =>
+                      setForm({ ...form, min_withdrawal: Number(e.target.value) })
+                    }
+                    placeholder="1"
+                    min="0"
+                    step="1"
+                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  Prioridade
+                </label>
+                <input
+                  type="number"
+                  value={form.priority}
+                  onChange={(e) =>
+                    setForm({ ...form, priority: Number(e.target.value) })
+                  }
+                  placeholder="0"
+                  min="0"
+                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Menor número = maior prioridade
+                </p>
               </div>
             </div>
 

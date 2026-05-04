@@ -137,10 +137,44 @@ export async function getUserRouteType(userId: string): Promise<'white' | 'black
 
 /**
  * Busca a adquirente correta para um usuário específico
+ * Primeiro verifica se o usuario tem uma adquirente especifica configurada (acquirer_id)
+ * Caso contrario, busca pela rota (white/black)
  */
 export async function getAcquirerForUser(userId: string): Promise<AcquirerConfig | null> {
-  const routeType = await getUserRouteType(userId);
-  return getAcquirerByRoute(routeType);
+  try {
+    // Buscar dados do usuario incluindo acquirer_id
+    const userResult = await sql`
+      SELECT route_type, acquirer_id FROM profiles WHERE id = ${userId}
+    `;
+
+    if (userResult.length === 0) {
+      console.error("[Acquirer] Usuário não encontrado:", userId);
+      return getActiveAcquirer();
+    }
+
+    const user = userResult[0];
+
+    // Se usuario tem adquirente especifica, usar ela
+    if (user.acquirer_id) {
+      const acquirerResult = await sql`
+        SELECT * FROM acquirers WHERE id = ${user.acquirer_id} AND is_active = true
+      `;
+      
+      if (acquirerResult.length > 0) {
+        console.log(`[Acquirer] Usando adquirente especifica para usuario ${userId}:`, acquirerResult[0].name);
+        return acquirerResult[0] as AcquirerConfig;
+      }
+      // Se adquirente especifica nao esta ativa, fallback para rota
+      console.log(`[Acquirer] Adquirente especifica inativa, usando rota`);
+    }
+
+    // Fallback: buscar por rota
+    const routeType = user.route_type || 'black';
+    return getAcquirerByRoute(routeType);
+  } catch (error) {
+    console.error("[Acquirer] Erro ao buscar adquirente do usuário:", error);
+    return getActiveAcquirer();
+  }
 }
 
 /**
@@ -252,6 +286,40 @@ export async function createPixPayment(
         // IMPORTANTE: insertId é o ID numerico usado nos webhooks da Medusa
         const medusaId = result.insertId || result.id;
         console.log("[Medusa createPixPayment] insertId:", result.insertId, "id:", result.id, "usando:", medusaId);
+
+        return {
+          success: true,
+          transactionId: String(medusaId),
+          qrCode: result.pix?.qrcode,
+          copyPaste: result.pix?.qrcode,
+          expiresAt: result.pix?.expirationDate,
+          amount: (result.amount || amount * 100) / 100,
+        };
+      }
+
+      case "medusa_white": {
+        // Medusa White usa a mesma API da Medusa, mas com credenciais diferentes
+        const client = new MedusaPayments({
+          secretKey: config.api_key,
+          licenseKey: config.api_secret
+        });
+
+        const webhookUrl = "https://legacypay.site/api/webhooks/medusa";
+        const safePayerName = (payerName && payerName.trim()) ? payerName.trim() : "Cliente LegacyPay";
+        const safePayerDocument = "36009722004";
+        const safeDescription = (description && description.trim()) ? description.trim() : "Deposito PIX - LegacyPay";
+
+        const result = await client.createSimplePixPayment(
+          Math.round(amount * 100),
+          safePayerName,
+          safePayerDocument,
+          "cliente@legacypay.com",
+          safeDescription,
+          webhookUrl
+        );
+
+        const medusaId = result.insertId || result.id;
+        console.log("[Medusa White createPixPayment] insertId:", result.insertId, "id:", result.id, "usando:", medusaId);
 
         return {
           success: true,
@@ -452,14 +520,58 @@ export async function createWithdrawal(
             withdrawalId: result.id,
             status: result.status,
           };
-        } catch (withdrawError) {
-          const errorMessage = withdrawError instanceof Error ? withdrawError.message : "Erro desconhecido ao processar saque";
-          console.error("[Medusa] Erro ao criar saque:", errorMessage);
-          return { success: false, error: errorMessage };
-        }
-      }
+  } catch (withdrawError) {
+  const errorMessage = withdrawError instanceof Error ? withdrawError.message : "Erro desconhecido ao processar saque";
+  console.error("[Medusa] Erro ao criar saque:", errorMessage);
+  return { success: false, error: errorMessage };
+  }
+  }
+  
+  case "medusa_white": {
+    // Medusa White usa a mesma API da Medusa, mas com credenciais diferentes
+    const client = new MedusaPayments({
+      secretKey: config.api_key,
+      licenseKey: config.api_secret
+    });
 
-      default:
+    // Buscar dados do usuario para o saque
+    const userResult = await sql`SELECT name, cpf_cnpj FROM profiles WHERE id = ${userId}`;
+    const user = userResult[0];
+    const beneficiaryName = user?.name || "Usuario LegacyPay";
+    const beneficiaryDocument = (user?.cpf_cnpj || "00000000000").replace(/\D/g, "");
+
+    const withdrawalWebhookUrl = "https://legacypay.site/api/webhooks/medusa/withdrawal";
+    
+    // Medusa White taxa de saque e R$ 5,00
+    const MEDUSA_WHITE_WITHDRAWAL_FEE = 5.00;
+    const amountToSend = amount + MEDUSA_WHITE_WITHDRAWAL_FEE;
+
+    console.log(`[Medusa White] Iniciando saque: valor=${amount}, comTaxa=${amountToSend}, pixKey=${pixKey}`);
+
+    try {
+      const result = await client.requestSimpleWithdrawal(
+        amountToSend * 100,
+        pixKey,
+        beneficiaryName,
+        beneficiaryDocument,
+        withdrawalWebhookUrl
+      );
+
+      console.log("[Medusa White] Saque criado com sucesso:", result);
+
+      return {
+        success: true,
+        withdrawalId: result.id,
+        status: result.status,
+      };
+    } catch (withdrawError) {
+      const errorMessage = withdrawError instanceof Error ? withdrawError.message : "Erro desconhecido ao processar saque";
+      console.error("[Medusa White] Erro ao criar saque:", errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  }
+  
+  default:
         return { success: false, error: `Adquirente ${config.code} não suportada` };
     }
   } catch (error) {
@@ -525,6 +637,20 @@ export async function getTransactionStatus(
         };
       }
 
+      case "medusa_white": {
+        const client = new MedusaPayments({
+          secretKey: config.api_key,
+          licenseKey: config.api_secret
+        });
+        const result = await client.getTransaction(transactionId);
+
+        return {
+          success: true,
+          status: MEDUSA_STATUS_MAP[result.status] || result.status,
+          paidAt: result.paidAt,
+        };
+      }
+
       default:
         return { success: false, error: `Adquirente ${config.code} não suportada` };
     }
@@ -572,6 +698,20 @@ export async function checkAcquirerBalance(acquirerCode?: string): Promise<Balan
         const client = new MedusaPayments({
           secretKey: config.api_key,
           licenseKey: config.api_secret // lic_6ed30e4bb4b87b4daa17bc9b6a19cdc5
+        });
+        const result = await client.checkBalance();
+
+        return {
+          success: true,
+          balance: result.balance / 100,
+          available: result.available / 100,
+        };
+      }
+
+      case "medusa_white": {
+        const client = new MedusaPayments({
+          secretKey: config.api_key,
+          licenseKey: config.api_secret
         });
         const result = await client.checkBalance();
 
@@ -668,16 +808,36 @@ export async function getSystemFeesByRoute(routeType: 'white' | 'black'): Promis
  */
 export async function getSystemFeesForUser(userId: string): Promise<FeeConfig> {
   try {
-    // Buscar rota e taxas personalizadas do usuário
-    const userResult = await sql`
-      SELECT route_type, fee_percentage, fixed_fee, withdrawal_fee FROM profiles WHERE id = ${userId}
+  // Buscar rota, taxas personalizadas e adquirente especifica do usuário
+  const userResult = await sql`
+  SELECT route_type, fee_percentage, fixed_fee, withdrawal_fee, acquirer_id FROM profiles WHERE id = ${userId}
+  `;
+  
+  const user = userResult[0];
+  const routeType = (user?.route_type || 'black') as 'white' | 'black';
+  
+  // Se usuario tem adquirente especifica, usar taxas dela como base
+  let routeFees: FeeConfig;
+  if (user?.acquirer_id) {
+    const acquirerResult = await sql`
+      SELECT fee_percentage, fixed_fee, withdrawal_fee, min_deposit, min_withdrawal 
+      FROM acquirers WHERE id = ${user.acquirer_id} AND is_active = true
     `;
-    
-    const user = userResult[0];
-    const routeType = (user?.route_type || 'black') as 'white' | 'black';
-    
+    if (acquirerResult.length > 0) {
+      const acq = acquirerResult[0];
+      routeFees = {
+        pixFixedFee: Number(acq.fixed_fee) || 0,
+        pixPercentageFee: Number(acq.fee_percentage) || 0,
+        withdrawalFee: Number(acq.withdrawal_fee) || 0,
+      };
+      console.log(`[Acquirer] Usando taxas da adquirente especifica para usuario ${userId}`);
+    } else {
+      routeFees = await getSystemFeesByRoute(routeType);
+    }
+  } else {
     // Buscar taxas padrão da rota
-    const routeFees = await getSystemFeesByRoute(routeType);
+    routeFees = await getSystemFeesByRoute(routeType);
+  }
     
     // Criar objeto de taxas com valores personalizados se existirem
     const fees: FeeConfig = {

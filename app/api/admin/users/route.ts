@@ -144,6 +144,9 @@ export async function PUT(request: Request) {
       if (data.is_active !== undefined) {
         await sql`UPDATE profiles SET is_active = ${data.is_active}, updated_at = NOW() WHERE id = ${userId}`;
       }
+      if (data.acquirer_id !== undefined) {
+        await sql`UPDATE profiles SET acquirer_id = ${data.acquirer_id}, updated_at = NOW() WHERE id = ${userId}`;
+      }
 
       return NextResponse.json({ success: true });
     }

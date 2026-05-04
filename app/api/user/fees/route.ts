@@ -11,15 +11,29 @@ export async function GET() {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
-    // Buscar perfil do usuário com taxas e rota
+    // Buscar perfil do usuário com taxas, rota e adquirente especifica
     const profileResult = await sql`
-      SELECT fee_percentage, fixed_fee, withdrawal_fee, daily_limit, route_type
+      SELECT fee_percentage, fixed_fee, withdrawal_fee, daily_limit, route_type, acquirer_id
       FROM profiles
       WHERE id = ${user.id}
     `;
 
     const profile = profileResult[0];
     const routeType = profile?.route_type || 'black';
+    
+    // Buscar limites da adquirente especifica se existir
+    let acquirerLimits = { min_deposit: 10, min_withdrawal: 10 };
+    if (profile?.acquirer_id) {
+      const acquirerResult = await sql`
+        SELECT min_deposit, min_withdrawal FROM acquirers WHERE id = ${profile.acquirer_id} AND is_active = true
+      `;
+      if (acquirerResult.length > 0) {
+        acquirerLimits = {
+          min_deposit: Number(acquirerResult[0].min_deposit) || 10,
+          min_withdrawal: Number(acquirerResult[0].min_withdrawal) || 10,
+        };
+      }
+    }
 
     // Buscar taxas do sistema baseado na rota do usuário (considera taxas personalizadas)
     const systemFees = await getSystemFeesForUser(user.id);
@@ -69,9 +83,9 @@ export async function GET() {
       // Limites - garantir que são números
       daily_limit: Number(profile?.daily_limit) || 50000,
       monthly_limit: Number(settings.monthly_limit) || 500000,
-      min_deposit: Number(settings.min_deposit) || 10,
+      min_deposit: acquirerLimits.min_deposit,
       max_deposit: Number(settings.max_deposit) || 50000,
-      min_withdrawal: Number(settings.min_withdrawal) || 10,
+      min_withdrawal: acquirerLimits.min_withdrawal,
       max_withdrawal: Number(settings.max_withdrawal) || 50000,
       auto_withdrawal_limit: Number(settings.auto_withdrawal_limit) || 500,
       
