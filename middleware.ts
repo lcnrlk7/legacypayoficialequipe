@@ -65,7 +65,12 @@ export async function middleware(request: NextRequest) {
   
   // Ignorar a pagina de bloqueado para evitar loop
   if (pathname === '/blocked') {
-    return NextResponse.next()
+    const response = NextResponse.next()
+    // Adicionar headers de seguranca
+    response.headers.set('X-Content-Type-Options', 'nosniff')
+    response.headers.set('X-Frame-Options', 'DENY')
+    response.headers.set('X-XSS-Protection', '1; mode=block')
+    return response
   }
   
   // Verificar se IP esta bloqueado

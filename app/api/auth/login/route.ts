@@ -103,11 +103,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Definir cookie NÃO httpOnly para funcionar no ambiente de preview do v0
+    // Cookie HTTPOnly em producao para proteger contra XSS (roubo de cookies)
+    const isProduction = process.env.NODE_ENV === "production" && !process.env.VERCEL_URL?.includes('v0.dev');
     response.cookies.set(COOKIE_NAME, token, {
-      httpOnly: false, // IMPORTANTE: false para funcionar no v0
-      secure: false,
-      sameSite: "lax",
+      httpOnly: isProduction, // HTTPOnly em producao para seguranca contra XSS
+      secure: isProduction,
+      sameSite: "strict", // Strict para maior seguranca
       maxAge: COOKIE_MAX_AGE,
       path: "/",
     });
