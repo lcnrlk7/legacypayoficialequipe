@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { registerUser, createToken } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { sendWelcomeEmail } from "@/lib/email";
-import { rateLimit, getClientIP, logSuspiciousActivity, isValidEmail, isValidCPF } from "@/lib/security";
+import { rateLimit, getClientIP, logSuspiciousActivity } from "@/lib/security";
 import { logNewUser } from "@/lib/discord-webhook";
-import { containsXSS, sanitizeName } from "@/lib/sanitize";
+import { containsXSS, sanitizeName, isValidName, isValidEmailStrict, isValidPhone, isValidCPFStrict } from "@/lib/sanitize";
 
 const COOKIE_NAME = "auth-token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -26,59 +26,75 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, email, password, cpf, phone, referralCode } = body;
 
-    // SEGURANCA: Validar formato do email
-    if (!email || !isValidEmail(email)) {
+    // SEGURANCA: Validar nome (apenas letras, espacos e hifens)
+    const nameValidation = isValidName(name);
+    if (!nameValidation.valid) {
+      // Verificar se e tentativa de XSS
+      if (containsXSS(name)) {
+        await logSuspiciousActivity(null, "XSS_ATTEMPT", `Nome: ${name.substring(0, 50)}`, ip);
+        try {
+          await sql`
+            INSERT INTO blocked_ips (ip_address, reason)
+            VALUES (${ip}, 'Tentativa de XSS no registro')
+            ON CONFLICT (ip_address) DO NOTHING
+          `;
+        } catch {
+          // Ignora erro se tabela nao existir
+        }
+      }
       return NextResponse.json(
-        { error: "Email invalido" },
+        { error: nameValidation.error || "Nome inválido" },
         { status: 400 }
       );
     }
-    
-    // SEGURANCA: Validar CPF se fornecido
-    if (cpf && !isValidCPF(cpf)) {
+    const sanitizedName = sanitizeName(name);
+
+    // SEGURANCA: Validar email (sem caracteres perigosos)
+    const emailValidation = isValidEmailStrict(email);
+    if (!emailValidation.valid) {
+      if (containsXSS(email)) {
+        await logSuspiciousActivity(null, "XSS_ATTEMPT", `Email: ${email.substring(0, 50)}`, ip);
+      }
       return NextResponse.json(
-        { error: "CPF invalido" },
+        { error: emailValidation.error || "Email inválido" },
         { status: 400 }
       );
+    }
+
+    // SEGURANCA: Validar telefone (apenas numeros)
+    if (phone) {
+      const phoneValidation = isValidPhone(phone);
+      if (!phoneValidation.valid) {
+        if (containsXSS(phone)) {
+          await logSuspiciousActivity(null, "XSS_ATTEMPT", `Phone: ${phone.substring(0, 50)}`, ip);
+        }
+        return NextResponse.json(
+          { error: phoneValidation.error || "Telefone inválido" },
+          { status: 400 }
+        );
+      }
+    }
+    
+    // SEGURANCA: Validar CPF (apenas numeros)
+    if (cpf) {
+      const cpfValidation = isValidCPFStrict(cpf);
+      if (!cpfValidation.valid) {
+        if (containsXSS(cpf)) {
+          await logSuspiciousActivity(null, "XSS_ATTEMPT", `CPF: ${cpf.substring(0, 50)}`, ip);
+        }
+        return NextResponse.json(
+          { error: cpfValidation.error || "CPF inválido" },
+          { status: 400 }
+        );
+      }
     }
 
     if (!password) {
       return NextResponse.json(
-        { error: "Senha e obrigatoria" },
+        { error: "Senha é obrigatória" },
         { status: 400 }
       );
     }
-
-    if (!name) {
-      return NextResponse.json(
-        { error: "Nome é obrigatório" },
-        { status: 400 }
-      );
-    }
-
-    // SEGURANCA: Verificar XSS no nome
-    if (containsXSS(name)) {
-      await logSuspiciousActivity(null, "XSS_ATTEMPT", `Nome: ${name.substring(0, 50)}`, ip);
-      
-      // Bloquear IP automaticamente
-      try {
-        await sql`
-          INSERT INTO blocked_ips (ip_address, reason)
-          VALUES (${ip}, 'Tentativa de XSS no registro')
-          ON CONFLICT (ip_address) DO NOTHING
-        `;
-      } catch {
-        // Ignora erro se tabela nao existir
-      }
-      
-      return NextResponse.json(
-        { error: "Conteúdo não permitido detectado" },
-        { status: 400 }
-      );
-    }
-
-    // Sanitizar nome
-    const sanitizedName = sanitizeName(name);
 
     if (password.length < 6) {
       return NextResponse.json(
@@ -87,7 +103,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verificar se CPF já existe
+    // Verificar se CPF ja existe no banco
     if (cpf) {
       const cleanCpf = cpf.replace(/\D/g, "");
       const existingCpf = await sql`
@@ -102,7 +118,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Register user (usando nome sanitizado)
+    // Registrar usuario (usando nome sanitizado)
     const { user, error } = await registerUser(
       email, 
       password, 
