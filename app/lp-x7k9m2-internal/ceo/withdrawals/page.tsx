@@ -27,11 +27,10 @@ interface Withdrawal {
   status: string;
   rejection_reason: string | null;
   created_at: string;
-  profiles: {
-    email: string;
-    name: string;
-    balance: number;
-  } | null;
+  processed_at: string | null;
+  user_email: string;
+  user_name: string;
+  user_balance: number;
 }
 
 export default function WithdrawalsPage() {
@@ -39,7 +38,7 @@ export default function WithdrawalsPage() {
   const [filteredWithdrawals, setFilteredWithdrawals] = useState<Withdrawal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [filter, setFilter] = useState("pending");
+  const [filter, setFilter] = useState("all");
   const [selectedWithdrawal, setSelectedWithdrawal] = useState<Withdrawal | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -60,9 +59,9 @@ export default function WithdrawalsPage() {
     if (searchTerm) {
       filtered = filtered.filter(
         (w) =>
-          w.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          w.profiles?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          w.pix_key.includes(searchTerm)
+          w.user_email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          w.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          w.pix_key?.includes(searchTerm)
       );
     }
 
@@ -71,12 +70,13 @@ export default function WithdrawalsPage() {
 
   async function loadWithdrawals() {
     try {
+      setIsLoading(true);
       const response = await fetch("/api/admin/withdrawals");
       const data = await response.json();
 
       if (data.withdrawals) {
         setWithdrawals(data.withdrawals);
-        setFilteredWithdrawals(data.withdrawals.filter((w: Withdrawal) => w.status === "pending"));
+        setFilteredWithdrawals(data.withdrawals);
       }
     } catch (error) {
       console.error("Error loading withdrawals:", error);
@@ -360,7 +360,7 @@ export default function WithdrawalsPage() {
                   </div>
                   <div>
                     <p className="font-medium text-white">
-                      {withdrawal.profiles?.name || withdrawal.profiles?.email}
+                      {withdrawal.user_name || withdrawal.user_email || "Usuario"}
                     </p>
                     <p className="text-sm text-muted-foreground">
                       {getPixKeyTypeLabel(withdrawal.pix_key_type)}:{" "}
@@ -447,9 +447,12 @@ export default function WithdrawalsPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Usuário</p>
+                  <p className="text-sm text-muted-foreground mb-1">Usuario</p>
                   <p className="text-white">
-                    {selectedWithdrawal.profiles?.name || "Sem nome"}
+                    {selectedWithdrawal.user_name || "Sem nome"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedWithdrawal.user_email}
                   </p>
                 </div>
                 <div>
@@ -457,7 +460,43 @@ export default function WithdrawalsPage() {
                     Saldo Atual
                   </p>
                   <p className="text-white">
-                    {formatCurrency(selectedWithdrawal.profiles?.balance || 0)}
+                    {formatCurrency(selectedWithdrawal.user_balance || 0)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Status</p>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-medium inline-flex items-center gap-1 ${
+                      selectedWithdrawal.status === "completed"
+                        ? "bg-green-400/10 text-green-400"
+                        : selectedWithdrawal.status === "processing"
+                        ? "bg-blue-400/10 text-blue-400"
+                        : selectedWithdrawal.status === "pending"
+                        ? "bg-yellow-400/10 text-yellow-400"
+                        : "bg-red-400/10 text-red-400"
+                    }`}
+                  >
+                    {selectedWithdrawal.status === "processing" && (
+                      <RefreshCw className="w-3 h-3 animate-spin" />
+                    )}
+                    {selectedWithdrawal.status === "completed"
+                      ? "Concluido"
+                      : selectedWithdrawal.status === "processing"
+                      ? "Processando"
+                      : selectedWithdrawal.status === "pending"
+                      ? "Pendente"
+                      : selectedWithdrawal.status === "cancelled"
+                      ? "Cancelado"
+                      : selectedWithdrawal.status}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Data</p>
+                  <p className="text-white text-sm">
+                    {formatDate(selectedWithdrawal.created_at)}
                   </p>
                 </div>
               </div>
