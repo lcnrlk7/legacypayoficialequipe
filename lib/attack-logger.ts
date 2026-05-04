@@ -85,7 +85,7 @@ const ATTACK_DESCRIPTIONS: Record<string, string> = {
  * Registra um ataque no banco de dados e envia webhook para Discord
  */
 export async function logAttack(data: AttackLogData): Promise<void> {
-  const severity = data.severity || "medium";
+  const severityValue = (data.severity || "medium") as Severity;
   const blocked = data.blocked ?? true;
   
   try {
@@ -102,13 +102,13 @@ export async function logAttack(data: AttackLogData): Promise<void> {
         ${data.payload?.substring(0, 1000) || null},
         ${data.userAgent?.substring(0, 500) || null},
         ${data.endpoint || null},
-        ${severity},
+        ${severityValue},
         ${blocked}
       )
     `;
     
     // Enviar webhook para Discord
-    await sendDiscordAlert(data, severity, blocked);
+    await sendDiscordAlert(data, severityValue, blocked);
     
   } catch (error) {
     console.error("[Attack Logger] Erro ao registrar ataque:", error);
