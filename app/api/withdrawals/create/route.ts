@@ -10,6 +10,8 @@ import {
 import { mapPixKeyType } from "@/lib/acquirers/misticpay";
 import { validateWithdrawal, getClientIP, logSuspiciousActivity, rateLimit, isValidPixKey } from "@/lib/security";
 import { logWithdrawalRequest } from "@/lib/discord-webhook";
+import { detectAttack } from "@/lib/sanitize";
+import { logAttack } from "@/lib/attack-logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,6 +38,37 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { amount, pixKey, pixKeyType } = body;
+
+    // SEGURANCA: Verificar ataques na chave PIX
+    const attack = detectAttack(pixKey || "");
+    if (attack.detected) {
+      await logAttack({
+        attackType: attack.attackType!,
+        ipAddress: ip,
+        userId: sessionUser.id,
+        userEmail: sessionUser.email,
+        payload: pixKey?.substring(0, 100),
+        endpoint: "/api/withdrawals/create",
+        severity: attack.severity || "high",
+        blocked: true,
+      });
+      
+      // Bloquear IP
+      try {
+        await sql`
+          INSERT INTO blocked_ips (ip_address, reason, user_id)
+          VALUES (${ip}, ${`${attack.attackType} em saque`}, ${sessionUser.id})
+          ON CONFLICT (ip_address) DO NOTHING
+        `;
+      } catch {
+        // Ignora
+      }
+      
+      return NextResponse.json(
+        { error: "Conteúdo não permitido" },
+        { status: 400 }
+      );
+    }
     
     // SEGURANCA: Validar chave PIX
     if (!isValidPixKey(pixKey)) {

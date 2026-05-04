@@ -7,6 +7,14 @@ const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/150069329264653113
 export type AttackType = 
   | "XSS_ATTEMPT"
   | "SQL_INJECTION"
+  | "COMMAND_INJECTION"
+  | "PATH_TRAVERSAL"
+  | "LDAP_INJECTION"
+  | "XML_INJECTION"
+  | "HEADER_INJECTION"
+  | "NOSQL_INJECTION"
+  | "TEMPLATE_INJECTION"
+  | "LOG_INJECTION"
   | "BRUTE_FORCE"
   | "RATE_LIMIT"
   | "INVALID_INPUT"
@@ -16,19 +24,19 @@ export type AttackType =
 export type Severity = "low" | "medium" | "high" | "critical";
 
 interface AttackLogData {
-  attackType: AttackType;
+  attackType: AttackType | string;
   ipAddress: string;
   userId?: string;
   userEmail?: string;
   payload?: string;
   userAgent?: string;
   endpoint?: string;
-  severity?: Severity;
+  severity?: Severity | string;
   blocked?: boolean;
 }
 
 // Cores do embed por severidade
-const SEVERITY_COLORS: Record<Severity, number> = {
+const SEVERITY_COLORS: Record<string, number> = {
   low: 0x3498db,      // Azul
   medium: 0xf39c12,   // Amarelo
   high: 0xe74c3c,     // Vermelho
@@ -36,9 +44,17 @@ const SEVERITY_COLORS: Record<Severity, number> = {
 };
 
 // Emojis por tipo de ataque
-const ATTACK_EMOJIS: Record<AttackType, string> = {
+const ATTACK_EMOJIS: Record<string, string> = {
   XSS_ATTEMPT: "🔴",
   SQL_INJECTION: "💉",
+  COMMAND_INJECTION: "💀",
+  PATH_TRAVERSAL: "📂",
+  LDAP_INJECTION: "🔓",
+  XML_INJECTION: "📄",
+  HEADER_INJECTION: "📨",
+  NOSQL_INJECTION: "🗄️",
+  TEMPLATE_INJECTION: "📝",
+  LOG_INJECTION: "📋",
   BRUTE_FORCE: "🔨",
   RATE_LIMIT: "⚡",
   INVALID_INPUT: "⚠️",
@@ -47,9 +63,17 @@ const ATTACK_EMOJIS: Record<AttackType, string> = {
 };
 
 // Descricoes amigaveis
-const ATTACK_DESCRIPTIONS: Record<AttackType, string> = {
+const ATTACK_DESCRIPTIONS: Record<string, string> = {
   XSS_ATTEMPT: "Tentativa de Cross-Site Scripting (XSS)",
   SQL_INJECTION: "Tentativa de SQL Injection",
+  COMMAND_INJECTION: "Tentativa de Command Injection",
+  PATH_TRAVERSAL: "Tentativa de Path Traversal",
+  LDAP_INJECTION: "Tentativa de LDAP Injection",
+  XML_INJECTION: "Tentativa de XML/XXE Injection",
+  HEADER_INJECTION: "Tentativa de Header Injection",
+  NOSQL_INJECTION: "Tentativa de NoSQL Injection",
+  TEMPLATE_INJECTION: "Tentativa de Template Injection (SSTI)",
+  LOG_INJECTION: "Tentativa de Log Injection",
   BRUTE_FORCE: "Ataque de Forca Bruta",
   RATE_LIMIT: "Limite de Requisicoes Excedido",
   INVALID_INPUT: "Input Malicioso Detectado",

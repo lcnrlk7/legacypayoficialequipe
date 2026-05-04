@@ -3,6 +3,8 @@ import { loginUser, createToken } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { checkLoginAttempts, getClientIP, logSuspiciousActivity } from "@/lib/security";
 import { logLogin } from "@/lib/discord-webhook";
+import { detectAttack } from "@/lib/sanitize";
+import { logAttack } from "@/lib/attack-logger";
 
 const COOKIE_NAME = "auth-token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -21,6 +23,42 @@ export async function POST(request: NextRequest) {
 
     // SEGURANCA: Rate limiting de login
     const ip = await getClientIP();
+    
+    // SEGURANCA: Verificar ataques nos campos
+    for (const [field, value] of Object.entries({ email, password })) {
+      if (typeof value === "string") {
+        const attack = detectAttack(value);
+        if (attack.detected) {
+          await logAttack({
+            attackType: attack.attackType!,
+            ipAddress: ip,
+            userEmail: email,
+            payload: value.substring(0, 100),
+            endpoint: "/api/auth/login",
+            severity: attack.severity || "high",
+            blocked: true,
+          });
+          
+          // Bloquear IP para ataques criticos
+          if (attack.severity === "critical" || attack.severity === "high") {
+            try {
+              await sql`
+                INSERT INTO blocked_ips (ip_address, reason)
+                VALUES (${ip}, ${`${attack.attackType} no login - campo ${field}`})
+                ON CONFLICT (ip_address) DO NOTHING
+              `;
+            } catch {
+              // Ignora
+            }
+          }
+          
+          return NextResponse.json(
+            { error: "Conteúdo não permitido" },
+            { status: 400 }
+          );
+        }
+      }
+    }
     
     // Verificar se IP esta bloqueado
     const blockedIp = await sql`SELECT id FROM blocked_ips WHERE ip_address = ${ip}`;

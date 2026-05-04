@@ -4,11 +4,52 @@ import { sql } from "@/lib/db";
 import { sendWelcomeEmail } from "@/lib/email";
 import { rateLimit, getClientIP, logSuspiciousActivity } from "@/lib/security";
 import { logNewUser } from "@/lib/discord-webhook";
-import { containsXSS, sanitizeName, isValidName, isValidEmailStrict, isValidPhone, isValidCPFStrict } from "@/lib/sanitize";
+import { detectAttack, sanitizeName, isValidName, isValidEmailStrict, isValidPhone, isValidCPFStrict } from "@/lib/sanitize";
 import { logAttack } from "@/lib/attack-logger";
 
 const COOKIE_NAME = "auth-token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+
+// Funcao auxiliar para verificar e bloquear ataques
+async function checkAndBlockAttack(
+  field: string,
+  value: string,
+  ip: string,
+  email: string,
+  sqlClient: typeof sql
+): Promise<{ blocked: boolean; error?: string }> {
+  const attack = detectAttack(value);
+  
+  if (attack.detected) {
+    // Registrar ataque com webhook Discord
+    await logAttack({
+      attackType: attack.attackType!,
+      ipAddress: ip,
+      userEmail: email,
+      payload: value.substring(0, 200),
+      endpoint: "/api/auth/register",
+      severity: attack.severity || "high",
+      blocked: true,
+    });
+    
+    // Bloquear IP para ataques criticos
+    if (attack.severity === "critical" || attack.severity === "high") {
+      try {
+        await sqlClient`
+          INSERT INTO blocked_ips (ip_address, reason)
+          VALUES (${ip}, ${`Tentativa de ${attack.attackType} no campo ${field}`})
+          ON CONFLICT (ip_address) DO NOTHING
+        `;
+      } catch {
+        // Ignora erro se tabela nao existir
+      }
+    }
+    
+    return { blocked: true, error: "Conteúdo não permitido detectado" };
+  }
+  
+  return { blocked: false };
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,32 +68,31 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { name, email, password, cpf, phone, referralCode } = body;
 
+    // SEGURANCA: Verificar ataques em todos os campos
+    const fieldsToCheck = [
+      { field: "nome", value: name },
+      { field: "email", value: email },
+      { field: "telefone", value: phone },
+      { field: "cpf", value: cpf },
+      { field: "senha", value: password },
+      { field: "referralCode", value: referralCode },
+    ];
+
+    for (const { field, value } of fieldsToCheck) {
+      if (value) {
+        const attackCheck = await checkAndBlockAttack(field, value, ip, email || "unknown", sql);
+        if (attackCheck.blocked) {
+          return NextResponse.json(
+            { error: attackCheck.error },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     // SEGURANCA: Validar nome (apenas letras, espacos e hifens)
     const nameValidation = isValidName(name);
     if (!nameValidation.valid) {
-      // Verificar se e tentativa de XSS
-      if (containsXSS(name)) {
-        // Registrar ataque com webhook Discord
-        await logAttack({
-          attackType: "XSS_ATTEMPT",
-          ipAddress: ip,
-          userEmail: email,
-          payload: name,
-          endpoint: "/api/auth/register",
-          severity: "critical",
-          blocked: true,
-        });
-        
-        try {
-          await sql`
-            INSERT INTO blocked_ips (ip_address, reason)
-            VALUES (${ip}, 'Tentativa de XSS no registro')
-            ON CONFLICT (ip_address) DO NOTHING
-          `;
-        } catch {
-          // Ignora erro se tabela nao existir
-        }
-      }
       return NextResponse.json(
         { error: nameValidation.error || "Nome inválido" },
         { status: 400 }
@@ -63,17 +103,6 @@ export async function POST(request: NextRequest) {
     // SEGURANCA: Validar email (sem caracteres perigosos)
     const emailValidation = isValidEmailStrict(email);
     if (!emailValidation.valid) {
-      if (containsXSS(email)) {
-        await logAttack({
-          attackType: "XSS_ATTEMPT",
-          ipAddress: ip,
-          userEmail: email,
-          payload: email,
-          endpoint: "/api/auth/register",
-          severity: "high",
-          blocked: true,
-        });
-      }
       return NextResponse.json(
         { error: emailValidation.error || "Email inválido" },
         { status: 400 }
@@ -84,17 +113,6 @@ export async function POST(request: NextRequest) {
     if (phone) {
       const phoneValidation = isValidPhone(phone);
       if (!phoneValidation.valid) {
-        if (containsXSS(phone)) {
-          await logAttack({
-            attackType: "XSS_ATTEMPT",
-            ipAddress: ip,
-            userEmail: email,
-            payload: phone,
-            endpoint: "/api/auth/register",
-            severity: "high",
-            blocked: true,
-          });
-        }
         return NextResponse.json(
           { error: phoneValidation.error || "Telefone inválido" },
           { status: 400 }
@@ -106,17 +124,6 @@ export async function POST(request: NextRequest) {
     if (cpf) {
       const cpfValidation = isValidCPFStrict(cpf);
       if (!cpfValidation.valid) {
-        if (containsXSS(cpf)) {
-          await logAttack({
-            attackType: "XSS_ATTEMPT",
-            ipAddress: ip,
-            userEmail: email,
-            payload: cpf,
-            endpoint: "/api/auth/register",
-            severity: "high",
-            blocked: true,
-          });
-        }
         return NextResponse.json(
           { error: cpfValidation.error || "CPF inválido" },
           { status: 400 }

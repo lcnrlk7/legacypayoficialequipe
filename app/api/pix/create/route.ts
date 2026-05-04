@@ -5,11 +5,41 @@ import { createMisticPayClient } from "@/lib/acquirers/misticpay";
 import { MedusaPayments } from "@/lib/acquirers/medusa";
 import { getSystemFeesForUser } from "@/lib/acquirers";
 import { logNewTransaction } from "@/lib/discord-webhook";
+import { detectAttack } from "@/lib/sanitize";
+import { logAttack } from "@/lib/attack-logger";
+
+function getClientIp(request: NextRequest): string {
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+         request.headers.get("x-real-ip") || "unknown";
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { amount, description, externalId, payerName, payerDocument, apiKey } = body;
+    const ip = getClientIp(request);
+
+    // SEGURANCA: Verificar ataques em campos de texto
+    const textFields = { description, externalId, payerName, payerDocument };
+    for (const [field, value] of Object.entries(textFields)) {
+      if (typeof value === "string" && value.length > 0) {
+        const attack = detectAttack(value);
+        if (attack.detected) {
+          await logAttack({
+            attackType: attack.attackType!,
+            ipAddress: ip,
+            payload: value.substring(0, 100),
+            endpoint: "/api/pix/create",
+            severity: attack.severity || "high",
+            blocked: true,
+          });
+          return NextResponse.json(
+            { error: "Conteúdo não permitido" },
+            { status: 400 }
+          );
+        }
+      }
+    }
 
     if (!amount || amount <= 0) {
       return NextResponse.json(

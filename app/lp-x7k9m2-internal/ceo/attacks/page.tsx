@@ -36,8 +36,16 @@ const SEVERITY_COLORS: Record<string, string> = {
 };
 
 const ATTACK_TYPE_LABELS: Record<string, string> = {
-  XSS_ATTEMPT: "XSS",
+  XSS_ATTEMPT: "Cross-Site Scripting (XSS)",
   SQL_INJECTION: "SQL Injection",
+  COMMAND_INJECTION: "Command Injection",
+  PATH_TRAVERSAL: "Path Traversal",
+  LDAP_INJECTION: "LDAP Injection",
+  XML_INJECTION: "XML/XXE Injection",
+  HEADER_INJECTION: "Header Injection",
+  NOSQL_INJECTION: "NoSQL Injection",
+  TEMPLATE_INJECTION: "Template Injection (SSTI)",
+  LOG_INJECTION: "Log Injection",
   BRUTE_FORCE: "Forca Bruta",
   RATE_LIMIT: "Rate Limit",
   INVALID_INPUT: "Input Invalido",
