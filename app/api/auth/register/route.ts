@@ -4,6 +4,7 @@ import { sql } from "@/lib/db";
 import { sendWelcomeEmail } from "@/lib/email";
 import { rateLimit, getClientIP, logSuspiciousActivity, isValidEmail, isValidCPF } from "@/lib/security";
 import { logNewUser } from "@/lib/discord-webhook";
+import { containsXSS, sanitizeName } from "@/lib/sanitize";
 
 const COOKIE_NAME = "auth-token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -55,6 +56,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // SEGURANCA: Verificar XSS no nome
+    if (containsXSS(name)) {
+      await logSuspiciousActivity(null, "XSS_ATTEMPT", `Nome: ${name.substring(0, 50)}`, ip);
+      
+      // Bloquear IP automaticamente
+      try {
+        await sql`
+          INSERT INTO blocked_ips (ip_address, reason)
+          VALUES (${ip}, 'Tentativa de XSS no registro')
+          ON CONFLICT (ip_address) DO NOTHING
+        `;
+      } catch {
+        // Ignora erro se tabela nao existir
+      }
+      
+      return NextResponse.json(
+        { error: "Conteúdo não permitido detectado" },
+        { status: 400 }
+      );
+    }
+
+    // Sanitizar nome
+    const sanitizedName = sanitizeName(name);
+
     if (password.length < 6) {
       return NextResponse.json(
         { error: "A senha deve ter pelo menos 6 caracteres" },
@@ -77,11 +102,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Register user
+    // Register user (usando nome sanitizado)
     const { user, error } = await registerUser(
       email, 
       password, 
-      name,
+      sanitizedName,
       phone?.replace(/\D/g, ""),
       cpf?.replace(/\D/g, ""),
       cpf ? 'cpf' : undefined

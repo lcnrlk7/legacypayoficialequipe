@@ -21,6 +21,16 @@ export async function POST(request: NextRequest) {
 
     // SEGURANCA: Rate limiting de login
     const ip = await getClientIP();
+    
+    // Verificar se IP esta bloqueado
+    const blockedIp = await sql`SELECT id FROM blocked_ips WHERE ip_address = ${ip}`;
+    if (blockedIp.length > 0) {
+      return NextResponse.json(
+        { error: "Acesso negado" },
+        { status: 403 }
+      );
+    }
+    
     const loginCheck = await checkLoginAttempts(email, ip);
     
     if (!loginCheck.allowed) {
@@ -73,9 +83,9 @@ export async function POST(request: NextRequest) {
       console.error("[v0] Error logging successful login:", logError);
     }
 
-    // Atualizar updated_at (sem bloquear)
+    // Atualizar updated_at e last_ip (sem bloquear)
     try {
-      await sql`UPDATE profiles SET updated_at = NOW() WHERE id = ${user.id}`;
+      await sql`UPDATE profiles SET updated_at = NOW(), last_ip = ${ip} WHERE id = ${user.id}`;
     } catch (updateError) {
       console.error("[v0] Error updating profile:", updateError);
     }

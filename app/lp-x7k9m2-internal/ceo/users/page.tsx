@@ -15,6 +15,7 @@ import {
   ArrowUpDown,
   Plus,
   Minus,
+  ShieldX,
 } from "lucide-react";
 
 interface UserProfile {
@@ -33,6 +34,7 @@ interface UserProfile {
   fee_percentage: number | null;
   fixed_fee: number | null;
   withdrawal_fee: number | null;
+  last_ip: string | null;
   created_at: string;
 }
 
@@ -65,6 +67,7 @@ export default function UsersPage() {
   const [balanceAmount, setBalanceAmount] = useState("");
   const [balanceReason, setBalanceReason] = useState("");
   const [isUpdatingBalance, setIsUpdatingBalance] = useState(false);
+  const [blockingIp, setBlockingIp] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     daily_limit: 0,
     fee_percentage: "",
@@ -237,6 +240,43 @@ export default function UsersPage() {
       alert("Erro ao atualizar usuário");
     } finally {
       setIsUpdatingUser(false);
+    }
+  }
+
+  async function blockUserIp(user: UserProfile) {
+    if (!user.last_ip) {
+      alert("Este usuario nao tem IP registrado");
+      return;
+    }
+    
+    if (!confirm(`Tem certeza que deseja bloquear o IP ${user.last_ip}?\n\nO usuario sera bloqueado permanentemente e vera uma tela de acesso negado.`)) {
+      return;
+    }
+    
+    setBlockingIp(user.id);
+    try {
+      const response = await fetch("/api/admin/blocked-ips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ip_address: user.last_ip,
+          reason: "Bloqueio manual pelo painel CEO",
+          user_id: user.id,
+        }),
+      });
+      
+      if (response.ok) {
+        alert(`IP ${user.last_ip} bloqueado com sucesso!`);
+        loadUsers();
+      } else {
+        const data = await response.json();
+        alert(data.error || "Erro ao bloquear IP");
+      }
+    } catch (error) {
+      console.error("Erro ao bloquear IP:", error);
+      alert("Erro ao bloquear IP");
+    } finally {
+      setBlockingIp(null);
     }
   }
 
@@ -670,15 +710,29 @@ export default function UsersPage() {
                         }`}
                         title={user.is_active ? "Bloquear" : "Desbloquear"}
                       >
-                        {user.is_active ? (
-                          <Ban className="w-4 h-4" />
-                        ) : (
-                          <CheckCircle className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+  {user.is_active ? (
+  <Ban className="w-4 h-4" />
+  ) : (
+  <CheckCircle className="w-4 h-4" />
+  )}
+  </button>
+  {user.last_ip && (
+    <button
+      onClick={() => blockUserIp(user)}
+      disabled={blockingIp === user.id}
+      className="p-2 rounded-lg transition-colors hover:bg-red-500/10 text-muted-foreground hover:text-red-400 disabled:opacity-50"
+      title={`Bloquear IP: ${user.last_ip}`}
+    >
+      {blockingIp === user.id ? (
+        <Loader2 className="w-4 h-4 animate-spin" />
+      ) : (
+        <ShieldX className="w-4 h-4" />
+      )}
+    </button>
+  )}
+  </div>
+  </td>
+  </tr>
               ))}
             </tbody>
           </table>
