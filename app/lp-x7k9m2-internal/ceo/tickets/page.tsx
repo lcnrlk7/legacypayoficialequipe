@@ -457,18 +457,24 @@ export default function AdminTicketsPage() {
                       </>
                     )}
                   </div>
-                  <div className="p-4 border-t border-border">
-                    <div className="flex gap-2">
-                      <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,.pdf,.doc,.docx,.txt" />
-                      <Button variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
-                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
-                      </Button>
-                      <Input placeholder="Digite sua resposta..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()} className="flex-1" />
-                      <Button onClick={handleSendMessage} disabled={sending || !newMessage.trim()}>
-                        {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                      </Button>
+                  {selectedTicket.status !== "closed" && selectedTicket.status !== "resolved" ? (
+                    <div className="p-4 border-t border-border">
+                      <div className="flex gap-2">
+                        <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,.pdf,.doc,.docx,.txt" />
+                        <Button variant="outline" size="icon" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+                          {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Paperclip className="w-4 h-4" />}
+                        </Button>
+                        <Input placeholder="Digite sua resposta..." value={newMessage} onChange={(e) => setNewMessage(e.target.value)} onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()} className="flex-1" />
+                        <Button onClick={handleSendMessage} disabled={sending || !newMessage.trim()}>
+                          {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        </Button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <div className="p-4 border-t border-border bg-secondary/50">
+                      <p className="text-sm text-muted-foreground text-center">Este ticket foi encerrado</p>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground">

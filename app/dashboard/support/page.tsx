@@ -394,7 +394,7 @@ export default function SupportPage() {
                     </>
                   )}
                 </div>
-                {selectedTicket.status !== "closed" && (
+                {selectedTicket.status !== "closed" && selectedTicket.status !== "resolved" ? (
                   <div className="p-4 border-t border-border">
                     <div className="flex gap-2">
                       <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,.pdf,.doc,.docx,.txt" />
@@ -406,6 +406,10 @@ export default function SupportPage() {
                         {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                       </Button>
                     </div>
+                  </div>
+                ) : (
+                  <div className="p-4 border-t border-border bg-secondary/50">
+                    <p className="text-sm text-muted-foreground text-center">Este chamado foi encerrado</p>
                   </div>
                 )}
               </>
