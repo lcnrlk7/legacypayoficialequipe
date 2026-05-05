@@ -39,6 +39,7 @@ interface Profile {
   balance: number
   api_key?: string
   kyc_status?: string
+  avatar_url?: string | null
 }
 
 interface User {
@@ -310,14 +311,24 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
       {/* User Section */}
       <div className="p-4 border-t border-border">
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-secondary/50 mb-3">
-          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-            <span className="text-primary font-bold">
-              {(profile?.name || user.email)?.[0]?.toUpperCase()}
-            </span>
+          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden">
+            {profile?.avatar_url ? (
+              <Image
+                src={profile.avatar_url}
+                alt={profile.name || "Avatar"}
+                width={40}
+                height={40}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className="text-primary font-bold">
+                {(profile?.name || user.email)?.[0]?.toUpperCase()}
+              </span>
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-medium text-foreground truncate">
-              {profile?.name || "Usuário"}
+              {profile?.name || "Usuario"}
             </p>
             <p className="text-xs text-muted-foreground truncate">
               {user.email}

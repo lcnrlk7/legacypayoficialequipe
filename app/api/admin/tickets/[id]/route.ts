@@ -15,9 +15,9 @@ export async function GET(
 
     // Verificar se e admin
     const admin = await sql`
-      SELECT role, name, avatar_url FROM profiles WHERE id = ${session.userId}
+      SELECT is_admin, name, avatar_url FROM profiles WHERE id = ${session.userId}
     `;
-    if (admin.length === 0 || !['admin', 'ceo'].includes(admin[0].role)) {
+    if (admin.length === 0 || !admin[0].is_admin) {
       return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
     }
 
@@ -50,7 +50,7 @@ export async function GET(
         m.*,
         p.name as sender_name,
         p.avatar_url as sender_avatar,
-        p.role as sender_role
+        p.is_admin as sender_is_admin
       FROM ticket_messages m
       LEFT JOIN profiles p ON m.sender_id = p.id
       WHERE m.ticket_id = ${id}
@@ -66,7 +66,7 @@ export async function GET(
 
     // Lista de admins
     const admins = await sql`
-      SELECT id, name, email, avatar_url FROM profiles WHERE role IN ('admin', 'ceo') ORDER BY name
+      SELECT id, name, email, avatar_url FROM profiles WHERE is_admin = true ORDER BY name
     `;
 
     return NextResponse.json({ 
@@ -94,9 +94,9 @@ export async function POST(
 
     // Verificar se e admin
     const admin = await sql`
-      SELECT role, name, avatar_url FROM profiles WHERE id = ${session.userId}
+      SELECT is_admin, name, avatar_url FROM profiles WHERE id = ${session.userId}
     `;
-    if (admin.length === 0 || !['admin', 'ceo'].includes(admin[0].role)) {
+    if (admin.length === 0 || !admin[0].is_admin) {
       return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
     }
 
@@ -141,7 +141,7 @@ export async function POST(
         ...newMessage[0], 
         sender_name: admin[0].name,
         sender_avatar: admin[0].avatar_url,
-        sender_role: admin[0].role
+        sender_is_admin: admin[0].is_admin
       } 
     });
   } catch (error) {
@@ -163,9 +163,9 @@ export async function PATCH(
 
     // Verificar se e admin
     const admin = await sql`
-      SELECT role FROM profiles WHERE id = ${session.userId}
+      SELECT is_admin, name, avatar_url FROM profiles WHERE id = ${session.userId}
     `;
-    if (admin.length === 0 || !['admin', 'ceo'].includes(admin[0].role)) {
+    if (admin.length === 0 || !admin[0].is_admin) {
       return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
     }
 

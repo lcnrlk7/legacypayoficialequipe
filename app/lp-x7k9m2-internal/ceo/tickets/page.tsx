@@ -381,9 +381,12 @@ export default function AdminTicketsPage() {
                           )}
                         </div>
                         <p className="font-medium text-foreground truncate">{ticket.subject}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{ticket.user_name || ticket.user_email}</p>
+                        <div className="mt-1">
+                          <p className="text-xs text-white font-medium">{ticket.user_name || "Sem nome"}</p>
+                          <p className="text-xs text-muted-foreground">{ticket.user_email}</p>
+                        </div>
                         <div className="flex items-center gap-2 mt-1">
-                          <span className="text-xs text-muted-foreground">{CATEGORIES.find((c) => c.value === ticket.category)?.label}</span>
+                          <span className="text-xs text-muted-foreground">{CATEGORIES.find((c) => c.value === ticket.category)?.label || ticket.category}</span>
                           {ticket.admin_name && (<><span className="text-xs text-muted-foreground">•</span><span className="text-xs text-primary">{ticket.admin_name}</span></>)}
                         </div>
                       </div>
@@ -409,7 +412,8 @@ export default function AdminTicketsPage() {
                       </div>
                       <div>
                         <h2 className="font-semibold text-foreground">{selectedTicket.subject}</h2>
-                        <p className="text-xs text-muted-foreground">{selectedTicket.user_name || selectedTicket.user_email}</p>
+                        <p className="text-xs text-white">{selectedTicket.user_name || "Sem nome"}</p>
+                        <p className="text-xs text-muted-foreground">{selectedTicket.user_email}</p>
                       </div>
                     </div>
                   </div>

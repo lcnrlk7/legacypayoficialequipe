@@ -12,9 +12,9 @@ export async function GET(request: NextRequest) {
 
     // Verificar se e admin
     const admin = await sql`
-      SELECT role FROM profiles WHERE id = ${session.userId}
+      SELECT is_admin FROM profiles WHERE id = ${session.userId}
     `;
-    if (admin.length === 0 || !['admin', 'ceo'].includes(admin[0].role)) {
+    if (admin.length === 0 || !admin[0].is_admin) {
       return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
     }
 
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
 
     // Lista de admins para atribuicao
     const admins = await sql`
-      SELECT id, name, email, avatar_url FROM profiles WHERE role IN ('admin', 'ceo') ORDER BY name
+      SELECT id, name, email, avatar_url FROM profiles WHERE is_admin = true ORDER BY name
     `;
 
     return NextResponse.json({ 
