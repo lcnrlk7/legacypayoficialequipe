@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@/lib/db";
+import { neon } from "@neondatabase/serverless";
 import { getSession } from "@/lib/auth";
+
+const sql = neon(process.env.DATABASE_URL!);
 
 // GET - Listar todos os tickets (admin)
 export async function GET(request: NextRequest) {
@@ -23,7 +25,8 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get("category");
     const assignedTo = searchParams.get("assignedTo");
 
-    let query = `
+    // Buscar todos os tickets
+    let tickets = await sql`
       SELECT 
         t.*,
         p.name as user_name,
@@ -34,38 +37,29 @@ export async function GET(request: NextRequest) {
       FROM support_tickets t
       LEFT JOIN profiles p ON t.user_id = p.id
       LEFT JOIN profiles a ON t.assigned_admin_id = a.id
-      WHERE 1=1
+      ORDER BY 
+        CASE WHEN t.status = 'open' THEN 0 
+             WHEN t.status = 'in_progress' THEN 1 
+             ELSE 2 END,
+        CASE WHEN t.priority = 'urgent' THEN 0 
+             WHEN t.priority = 'high' THEN 1 
+             WHEN t.priority = 'normal' THEN 2 
+             ELSE 3 END,
+        t.last_message_at DESC
     `;
 
-    const conditions: string[] = [];
-    
-    if (status && status !== "all") {
-      conditions.push(`t.status = '${status}'`);
+    // Filtrar no servidor
+    if (status && status !== 'all') {
+      tickets = tickets.filter((t: { status: string }) => t.status === status);
     }
-    if (category && category !== "all") {
-      conditions.push(`t.category = '${category}'`);
+    if (category && category !== 'all') {
+      tickets = tickets.filter((t: { category: string }) => t.category === category);
     }
-    if (assignedTo === "me") {
-      conditions.push(`t.assigned_admin_id = '${session.userId}'`);
-    } else if (assignedTo === "unassigned") {
-      conditions.push(`t.assigned_admin_id IS NULL`);
+    if (assignedTo === 'me') {
+      tickets = tickets.filter((t: { assigned_admin_id: string | null }) => t.assigned_admin_id === session.userId);
+    } else if (assignedTo === 'unassigned') {
+      tickets = tickets.filter((t: { assigned_admin_id: string | null }) => !t.assigned_admin_id);
     }
-
-    if (conditions.length > 0) {
-      query += ` AND ${conditions.join(' AND ')}`;
-    }
-
-    query += ` ORDER BY 
-      CASE WHEN t.status = 'open' THEN 0 
-           WHEN t.status = 'in_progress' THEN 1 
-           ELSE 2 END,
-      CASE WHEN t.priority = 'urgent' THEN 0 
-           WHEN t.priority = 'high' THEN 1 
-           WHEN t.priority = 'normal' THEN 2 
-           ELSE 3 END,
-      t.last_message_at DESC`;
-
-    const tickets = await sql.unsafe(query);
 
     // Stats
     const stats = await sql`
