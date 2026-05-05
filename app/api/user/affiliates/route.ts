@@ -20,7 +20,15 @@ export async function GET() {
       return NextResponse.json({ error: "Usuario nao encontrado" }, { status: 404 });
     }
 
-    const referralCode = userResult[0].referral_code;
+    let referralCode = userResult[0].referral_code;
+
+    // Se o usuario nao tem codigo de referencia, gerar um
+    if (!referralCode) {
+      referralCode = `REF${session.userId.slice(0, 8).toUpperCase()}`;
+      await sql`
+        UPDATE profiles SET referral_code = ${referralCode} WHERE id = ${session.userId}
+      `;
+    }
 
     // Get affiliates (users referred by this user)
     const affiliates = await sql`
@@ -68,7 +76,7 @@ export async function GET() {
 
     return NextResponse.json({
       referralCode,
-      referralLink: `${process.env.NEXT_PUBLIC_APP_URL || 'https://legacypay.com.br'}/register?ref=${referralCode}`,
+      referralLink: `${process.env.NEXT_PUBLIC_APP_URL || 'https://legacypay.site'}/register?ref=${referralCode}`,
       affiliates,
       summary: commissionsSummary[0] || {
         total_commissions: 0,

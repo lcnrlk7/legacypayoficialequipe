@@ -268,7 +268,7 @@ export async function testUtmifyConnection(apiToken: string): Promise<{ success:
     refundedAt: null,
     customer: {
       name: "Teste LegacyPay",
-      email: "teste@legacypay.com.br",
+      email: "teste@legacypay.site",
       phone: null,
       document: null,
       country: "BR",
