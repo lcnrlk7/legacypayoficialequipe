@@ -37,7 +37,7 @@ export async function verifyAdmin(): Promise<AdminSession | null> {
         
         // Verificar se o membro ainda esta ativo no banco - busca em admin_team + profiles
         const teamCheck = await sql`
-          SELECT at.id, p.email, p.name, at.role, at.is_active
+          SELECT at.id as team_id, at.user_id, p.email, p.name, at.role, at.is_active
           FROM admin_team at
           INNER JOIN profiles p ON p.id = at.user_id
           WHERE at.id = ${payload.id as string} AND at.is_active = true
@@ -46,7 +46,7 @@ export async function verifyAdmin(): Promise<AdminSession | null> {
         
         if (teamCheck.length > 0) {
           return {
-            userId: teamCheck[0].id,
+            userId: teamCheck[0].user_id,
             email: teamCheck[0].email,
             name: teamCheck[0].name,
             isAdmin: true,
