@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
-import { verifySession } from "@/lib/session";
+import { getSession } from "@/lib/auth";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -21,7 +21,7 @@ const GOALS = [
 
 export async function GET() {
   try {
-    const session = await verifySession();
+    const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
     }
@@ -38,11 +38,12 @@ export async function GET() {
     const volume = Number(userVolume[0]?.total_volume || 0);
 
     // Buscar recompensas ja entregues
-    let deliveredRewards: { goal_value: number }[] = [];
+    let deliveredRewards: Array<{ goal_value: number }> = [];
     try {
-      deliveredRewards = await sql`
+      const result = await sql`
         SELECT goal_value FROM user_rewards WHERE user_id = ${session.userId}
       `;
+      deliveredRewards = result as Array<{ goal_value: number }>;
     } catch {
       // Tabela pode nao existir
     }

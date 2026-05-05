@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
-import { verifySession } from "@/lib/session";
+import { getSession } from "@/lib/auth";
 
 const sql = neon(process.env.DATABASE_URL!);
 
 export async function GET() {
   try {
-    const session = await verifySession();
+    const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
     }

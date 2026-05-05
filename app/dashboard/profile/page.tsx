@@ -94,9 +94,9 @@ export default function ProfilePage() {
   useEffect(() => {
     if (profile) {
       setForm({
-        name: profile.name || "",
+        name: (profile.name as string) || "",
         bio: (profile.bio as string) || "",
-        phone: profile.phone || "",
+        phone: (profile.phone as string) || "",
       });
     }
   }, [profile]);
@@ -376,7 +376,7 @@ export default function ProfilePage() {
                     <div>
                       <p className="text-xs text-muted-foreground">Telefone</p>
                       <p className="text-sm text-foreground">
-                        {profile?.phone || "Nao informado"}
+                        {(profile?.phone as string) || "Nao informado"}
                       </p>
                     </div>
                   </div>
@@ -385,7 +385,7 @@ export default function ProfilePage() {
                     <div>
                       <p className="text-xs text-muted-foreground">CPF</p>
                       <p className="text-sm text-foreground">
-                        {profile?.cpf ? `***.***.${profile.cpf.slice(-6)}` : "Nao informado"}
+                        {profile?.cpf ? `***.***.${String(profile.cpf).slice(-6)}` : "Nao informado"}
                       </p>
                     </div>
                   </div>
@@ -559,11 +559,7 @@ export default function ProfilePage() {
                         </div>
                       )}
 
-                      {reward.expires_at && !isClaimed && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Expira em {formatDate(reward.expires_at)}
-                        </p>
-                      )}
+
                     </div>
                   );
                 })}
