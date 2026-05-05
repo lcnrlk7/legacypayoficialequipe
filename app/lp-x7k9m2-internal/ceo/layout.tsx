@@ -28,6 +28,7 @@ import {
   Webhook,
   Clock,
   DollarSign,
+  Database,
 } from "lucide-react";
 
 // Menu organizado em categorias
@@ -72,6 +73,7 @@ const menuCategories = [
       { label: "Logs", href: "/lp-x7k9m2-internal/ceo/logs", icon: Activity },
       { label: "Ataques", href: "/lp-x7k9m2-internal/ceo/attacks", icon: Shield },
       { label: "Adquirentes", href: "/lp-x7k9m2-internal/ceo/acquirers", icon: Server },
+      { label: "Backup", href: "/lp-x7k9m2-internal/ceo/backup", icon: Database },
       { label: "Configuracoes", href: "/lp-x7k9m2-internal/ceo/settings", icon: Settings },
     ],
   },
