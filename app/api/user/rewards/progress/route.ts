@@ -4,6 +4,21 @@ import { verifySession } from "@/lib/session";
 
 const sql = neon(process.env.DATABASE_URL!);
 
+// Metas de faturamento com recompensas (igual ao admin)
+const GOALS = [
+  { value: 1000, label: "R$ 1K", reward: null, icon: "target" },
+  { value: 10000, label: "R$ 10K", reward: null, icon: "trending" },
+  { value: 20000, label: "R$ 20K", reward: "Pulseira", icon: "gift" },
+  { value: 50000, label: "R$ 50K", reward: null, icon: "star" },
+  { value: 75000, label: "R$ 75K", reward: null, icon: "zap" },
+  { value: 100000, label: "R$ 100K", reward: "Placa de 100K", icon: "trophy" },
+  { value: 250000, label: "R$ 250K", reward: null, icon: "crown" },
+  { value: 375000, label: "R$ 375K", reward: null, icon: "award" },
+  { value: 500000, label: "R$ 500K", reward: "Placa de 500K", icon: "trophy" },
+  { value: 750000, label: "R$ 750K", reward: null, icon: "crown" },
+  { value: 1000000, label: "R$ 1M", reward: "Placa de 1M", icon: "crown" },
+];
+
 export async function GET() {
   try {
     const session = await verifySession();
@@ -11,150 +26,115 @@ export async function GET() {
       return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
     }
 
-    // Buscar premiacoes ativas
-    const activeRewards = await sql`
-      SELECT * FROM rewards 
-      WHERE is_active = true 
-      AND (expires_at IS NULL OR expires_at > NOW())
-      ORDER BY target_amount ASC
-    `.catch(() => []);
+    // Buscar volume total do usuario
+    const userVolume = await sql`
+      SELECT COALESCE(SUM(amount), 0) as total_volume
+      FROM transactions 
+      WHERE user_id = ${session.userId} 
+      AND type IN ('deposit', 'transfer_in', 'pix_in') 
+      AND status = 'completed'
+    `;
 
-    // Se nao tem tabela de rewards, criar premiacoes padrao dinamicas
-    if (activeRewards.length === 0) {
-      // Buscar volume do usuario para calcular progresso
-      const userVolume = await sql`
-        SELECT COALESCE(SUM(amount), 0) as total_volume
-        FROM transactions 
-        WHERE user_id = ${session.userId} AND status IN ('completed', 'paid')
+    const volume = Number(userVolume[0]?.total_volume || 0);
+
+    // Buscar recompensas ja entregues
+    let deliveredRewards: { goal_value: number }[] = [];
+    try {
+      deliveredRewards = await sql`
+        SELECT goal_value FROM user_rewards WHERE user_id = ${session.userId}
       `;
-
-      const volume = Number(userVolume[0]?.total_volume || 0);
-
-      // Premiacoes padrao baseadas em volume
-      const defaultRewards = [
-        {
-          id: "default-1",
-          name: "Primeiros Passos",
-          description: "Processe R$ 1.000 em transacoes",
-          target_amount: 1000,
-          current_progress: Math.min(volume, 1000),
-          reward_type: "cash",
-          reward_value: 10,
-          status: volume >= 1000 ? "completed" : "in_progress",
-          icon: "star",
-        },
-        {
-          id: "default-2",
-          name: "Trader Bronze",
-          description: "Processe R$ 5.000 em transacoes",
-          target_amount: 5000,
-          current_progress: Math.min(volume, 5000),
-          reward_type: "cash",
-          reward_value: 25,
-          status: volume >= 5000 ? "completed" : "in_progress",
-          icon: "trophy",
-        },
-        {
-          id: "default-3",
-          name: "Trader Prata",
-          description: "Processe R$ 10.000 em transacoes",
-          target_amount: 10000,
-          current_progress: Math.min(volume, 10000),
-          reward_type: "cash",
-          reward_value: 50,
-          status: volume >= 10000 ? "completed" : "in_progress",
-          icon: "gift",
-        },
-        {
-          id: "default-4",
-          name: "Trader Ouro",
-          description: "Processe R$ 50.000 em transacoes",
-          target_amount: 50000,
-          current_progress: Math.min(volume, 50000),
-          reward_type: "cash",
-          reward_value: 150,
-          status: volume >= 50000 ? "completed" : "in_progress",
-          icon: "crown",
-        },
-        {
-          id: "default-5",
-          name: "Trader Diamante",
-          description: "Processe R$ 100.000 em transacoes",
-          target_amount: 100000,
-          current_progress: Math.min(volume, 100000),
-          reward_type: "cash",
-          reward_value: 500,
-          status: volume >= 100000 ? "completed" : "in_progress",
-          icon: "zap",
-        },
-      ];
-
-      return NextResponse.json({ rewards: defaultRewards });
+    } catch {
+      // Tabela pode nao existir
     }
 
-    // Buscar progresso do usuario em cada premiacao
-    const rewards = await Promise.all(
-      activeRewards.map(async (reward) => {
-        // Calcular progresso baseado no tipo de meta
-        let currentProgress = 0;
+    const deliveredSet = new Set(deliveredRewards.map(r => r.goal_value));
 
-        if (reward.goal_type === "volume") {
-          const result = await sql`
-            SELECT COALESCE(SUM(amount), 0) as progress
-            FROM transactions 
-            WHERE user_id = ${session.userId} 
-            AND status IN ('completed', 'paid')
-            AND created_at >= COALESCE(${reward.start_date}, '1970-01-01')
-          `;
-          currentProgress = Number(result[0]?.progress || 0);
-        } else if (reward.goal_type === "transactions") {
-          const result = await sql`
-            SELECT COUNT(*) as progress
-            FROM transactions 
-            WHERE user_id = ${session.userId} 
-            AND status IN ('completed', 'paid')
-            AND created_at >= COALESCE(${reward.start_date}, '1970-01-01')
-          `;
-          currentProgress = Number(result[0]?.progress || 0);
-        } else if (reward.goal_type === "referrals") {
-          const result = await sql`
-            SELECT COUNT(*) as progress
-            FROM profiles 
-            WHERE referred_by = ${session.userId}
-            AND created_at >= COALESCE(${reward.start_date}, '1970-01-01')
-          `;
-          currentProgress = Number(result[0]?.progress || 0);
-        }
+    // Encontrar meta atual e proxima
+    let currentGoalIndex = -1;
+    for (let i = GOALS.length - 1; i >= 0; i--) {
+      if (volume >= GOALS[i].value) {
+        currentGoalIndex = i;
+        break;
+      }
+    }
 
-        // Verificar se ja foi resgatado
-        const claimed = await sql`
-          SELECT status FROM user_rewards 
-          WHERE user_id = ${session.userId} AND reward_id = ${reward.id}
-        `.catch(() => []);
+    const currentGoal = currentGoalIndex >= 0 ? GOALS[currentGoalIndex] : null;
+    const nextGoal = currentGoalIndex < GOALS.length - 1 ? GOALS[currentGoalIndex + 1] : null;
 
-        let status = "in_progress";
-        if (claimed.length > 0 && claimed[0].status === "claimed") {
-          status = "claimed";
-        } else if (currentProgress >= reward.target_amount) {
-          status = "completed";
-        }
+    // Calcular progresso para proxima meta
+    let progressPercent = 0;
+    if (nextGoal) {
+      const baseValue = currentGoal ? currentGoal.value : 0;
+      progressPercent = ((volume - baseValue) / (nextGoal.value - baseValue)) * 100;
+      progressPercent = Math.min(Math.max(progressPercent, 0), 100);
+    } else {
+      progressPercent = 100; // Atingiu todas as metas
+    }
 
-        return {
-          id: reward.id,
-          name: reward.name,
-          description: reward.description,
-          target_amount: reward.target_amount,
-          current_progress: currentProgress,
-          reward_type: reward.reward_type,
-          reward_value: reward.reward_value,
-          status,
-          icon: reward.icon || "trophy",
-          expires_at: reward.expires_at,
-        };
-      })
-    );
+    // Construir lista de metas com status
+    const rewards = GOALS.map((goal, index) => {
+      const isAchieved = volume >= goal.value;
+      const isDelivered = deliveredSet.has(goal.value);
+      
+      let status: "locked" | "in_progress" | "completed" | "claimed" = "locked";
+      if (isDelivered && goal.reward) {
+        status = "claimed";
+      } else if (isAchieved) {
+        status = "completed";
+      } else if (index === currentGoalIndex + 1) {
+        status = "in_progress";
+      }
 
-    return NextResponse.json({ rewards });
+      // Calcular progresso individual
+      let goalProgress = 0;
+      if (isAchieved) {
+        goalProgress = 100;
+      } else if (index === currentGoalIndex + 1) {
+        const baseValue = currentGoal ? currentGoal.value : 0;
+        goalProgress = ((volume - baseValue) / (goal.value - baseValue)) * 100;
+        goalProgress = Math.min(Math.max(goalProgress, 0), 100);
+      }
+
+      return {
+        id: `goal-${index}`,
+        name: goal.label,
+        description: goal.reward 
+          ? `Atinja ${goal.label} em faturamento e ganhe: ${goal.reward}`
+          : `Meta de faturamento: ${goal.label}`,
+        target_amount: goal.value,
+        current_progress: Math.min(volume, goal.value),
+        progress_percent: goalProgress,
+        reward_type: goal.reward ? "physical" : "milestone",
+        reward_name: goal.reward,
+        status,
+        icon: goal.icon,
+        has_reward: !!goal.reward,
+        is_delivered: isDelivered,
+      };
+    });
+
+    // Separar metas com e sem premio
+    const rewardsWithPrize = rewards.filter(r => r.has_reward);
+    const milestonesOnly = rewards.filter(r => !r.has_reward);
+
+    // Stats do usuario
+    const stats = {
+      total_volume: volume,
+      current_goal: currentGoal,
+      next_goal: nextGoal,
+      progress_percent: progressPercent,
+      goals_achieved: rewards.filter(r => r.status === "completed" || r.status === "claimed").length,
+      total_goals: GOALS.length,
+      rewards_available: rewardsWithPrize.filter(r => r.status === "completed").length,
+      rewards_claimed: rewardsWithPrize.filter(r => r.status === "claimed").length,
+    };
+
+    return NextResponse.json({ 
+      rewards: rewardsWithPrize,
+      milestones: milestonesOnly,
+      all_goals: rewards,
+      stats,
+    });
   } catch (error) {
     console.error("Erro ao buscar premiacoes:", error);
     return NextResponse.json(

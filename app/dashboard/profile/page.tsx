@@ -56,11 +56,13 @@ interface Reward {
   description: string;
   target_amount: number;
   current_progress: number;
+  progress_percent: number;
   reward_type: string;
-  reward_value: number;
-  status: "in_progress" | "completed" | "claimed";
+  reward_name: string | null;
+  status: "locked" | "in_progress" | "completed" | "claimed";
   icon: string;
-  expires_at?: string;
+  has_reward: boolean;
+  is_delivered: boolean;
 }
 
 interface ProfileStats {
@@ -469,10 +471,7 @@ export default function ProfilePage() {
             ) : (
               <div className="space-y-4">
                 {rewards.map((reward) => {
-                  const progress = Math.min(
-                    (reward.current_progress / reward.target_amount) * 100,
-                    100
-                  );
+                  const progress = reward.progress_percent;
                   const isCompleted = reward.status === "completed";
                   const isClaimed = reward.status === "claimed";
 
@@ -501,8 +500,13 @@ export default function ProfilePage() {
                             {getRewardIcon(reward.icon)}
                           </div>
                           <div>
-                            <h4 className="font-medium text-foreground">
-                              {reward.name}
+                            <h4 className="font-medium text-foreground flex items-center gap-2">
+                              Meta {reward.name}
+                              {reward.has_reward && (
+                                <span className="px-2 py-0.5 text-xs rounded-full bg-primary/20 text-primary">
+                                  {reward.reward_name}
+                                </span>
+                              )}
                             </h4>
                             <p className="text-xs text-muted-foreground mt-0.5">
                               {reward.description}
@@ -510,18 +514,19 @@ export default function ProfilePage() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-sm font-bold text-primary">
-                            {reward.reward_type === "cash"
-                              ? formatCurrency(reward.reward_value)
-                              : `${reward.reward_value}%`}
-                          </p>
+                          {reward.has_reward && (
+                            <p className="text-sm font-bold text-primary">
+                              {reward.reward_name}
+                            </p>
+                          )}
                           {isClaimed ? (
-                            <span className="text-xs text-green-400">
-                              Resgatado
+                            <span className="text-xs text-green-400 flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3" />
+                              Entregue
                             </span>
                           ) : isCompleted ? (
-                            <span className="text-xs text-primary">
-                              Disponivel!
+                            <span className="text-xs text-primary font-medium">
+                              Conquistado!
                             </span>
                           ) : (
                             <span className="text-xs text-muted-foreground">
