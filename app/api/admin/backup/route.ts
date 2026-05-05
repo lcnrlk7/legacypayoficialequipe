@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
         backup: {
           name: filename,
           url: blob.url,
-          size: blob.size,
+          size: backupData.length,
           created_at: new Date().toISOString(),
         },
       });
