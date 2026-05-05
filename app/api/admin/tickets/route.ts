@@ -1,26 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
-import { getSession } from "@/lib/auth";
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 
 const sql = neon(process.env.DATABASE_URL!);
+
+export const dynamic = "force-dynamic";
 
 // GET - Listar todos os tickets (admin)
 export async function GET(request: NextRequest) {
   try {
-    const session = await getSession();
-    
-    if (!session) {
-      return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
-    }
-
-    // Verificar se e admin
-    const admin = await sql`
-      SELECT is_admin FROM profiles WHERE id = ${session.userId}
-    `;
-    
-    if (admin.length === 0 || !admin[0].is_admin) {
-      return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
-    }
+    // Verificar se e admin usando o sistema correto
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
@@ -47,7 +38,7 @@ export async function GET(request: NextRequest) {
              WHEN t.priority = 'high' THEN 1 
              WHEN t.priority = 'normal' THEN 2 
              ELSE 3 END,
-        t.last_message_at DESC
+        t.last_message_at DESC NULLS LAST
     `;
 
     // Filtrar no servidor
@@ -58,7 +49,7 @@ export async function GET(request: NextRequest) {
       tickets = tickets.filter((t: { category: string }) => t.category === category);
     }
     if (assignedTo === 'me') {
-      tickets = tickets.filter((t: { assigned_admin_id: string | null }) => t.assigned_admin_id === session.userId);
+      tickets = tickets.filter((t: { assigned_admin_id: string | null }) => t.assigned_admin_id === admin.userId);
     } else if (assignedTo === 'unassigned') {
       tickets = tickets.filter((t: { assigned_admin_id: string | null }) => !t.assigned_admin_id);
     }
@@ -84,7 +75,7 @@ export async function GET(request: NextRequest) {
       admins 
     });
   } catch (error) {
-    console.error("[v0] Erro ao buscar tickets:", error);
+    console.error("[Admin Tickets] Erro ao buscar tickets:", error);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

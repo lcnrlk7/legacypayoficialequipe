@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@/lib/db";
-import { getSession } from "@/lib/auth";
+import { neon } from "@neondatabase/serverless";
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
+
+const sql = neon(process.env.DATABASE_URL!);
+
+export const dynamic = "force-dynamic";
 
 // GET - Obter ticket com mensagens (admin)
 export async function GET(
@@ -8,18 +12,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
-    }
-
-    // Verificar se e admin
-    const admin = await sql`
-      SELECT is_admin, name, avatar_url FROM profiles WHERE id = ${session.userId}
-    `;
-    if (admin.length === 0 || !admin[0].is_admin) {
-      return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
-    }
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
 
     const { id } = await params;
 
@@ -69,14 +63,19 @@ export async function GET(
       SELECT id, name, email, avatar_url FROM profiles WHERE is_admin = true ORDER BY name
     `;
 
+    // Buscar info do admin atual
+    const currentAdminInfo = await sql`
+      SELECT name, avatar_url FROM profiles WHERE id = ${admin.userId}
+    `;
+
     return NextResponse.json({ 
       ticket: ticket[0], 
       messages, 
       admins,
-      currentAdmin: admin[0]
+      currentAdmin: currentAdminInfo[0] || { name: admin.name }
     });
   } catch (error) {
-    console.error("Erro ao buscar ticket:", error);
+    console.error("[Admin Tickets] Erro ao buscar ticket:", error);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }
@@ -87,18 +86,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
-    }
-
-    // Verificar se e admin
-    const admin = await sql`
-      SELECT is_admin, name, avatar_url FROM profiles WHERE id = ${session.userId}
-    `;
-    if (admin.length === 0 || !admin[0].is_admin) {
-      return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
-    }
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
 
     const { id } = await params;
     const body = await request.json();
@@ -114,11 +103,17 @@ export async function POST(
       return NextResponse.json({ error: "Ticket nao encontrado" }, { status: 404 });
     }
 
+    // Buscar info do admin
+    const adminInfo = await sql`
+      SELECT id, name, avatar_url FROM profiles WHERE id = ${admin.userId}
+    `;
+    const adminId = adminInfo.length > 0 ? adminInfo[0].id : admin.userId;
+
     // Auto-atribuir se nao tiver admin
     if (!ticket[0].assigned_admin_id) {
       await sql`
         UPDATE support_tickets 
-        SET assigned_admin_id = ${session.userId}, status = 'in_progress', updated_at = NOW()
+        SET assigned_admin_id = ${adminId}, status = 'in_progress', updated_at = NOW()
         WHERE id = ${id}
       `;
     }
@@ -126,7 +121,7 @@ export async function POST(
     // Criar mensagem
     const newMessage = await sql`
       INSERT INTO ticket_messages (ticket_id, sender_id, sender_type, message, attachment_url, attachment_type)
-      VALUES (${id}, ${session.userId}, 'admin', ${message || ''}, ${attachmentUrl || null}, ${attachmentType || null})
+      VALUES (${id}, ${adminId}, 'admin', ${message || ''}, ${attachmentUrl || null}, ${attachmentType || null})
       RETURNING *
     `;
 
@@ -139,13 +134,13 @@ export async function POST(
       success: true, 
       message: { 
         ...newMessage[0], 
-        sender_name: admin[0].name,
-        sender_avatar: admin[0].avatar_url,
-        sender_is_admin: admin[0].is_admin
+        sender_name: adminInfo[0]?.name || admin.name,
+        sender_avatar: adminInfo[0]?.avatar_url,
+        sender_is_admin: true
       } 
     });
   } catch (error) {
-    console.error("Erro ao enviar resposta:", error);
+    console.error("[Admin Tickets] Erro ao enviar resposta:", error);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }
@@ -156,52 +151,71 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
-    }
-
-    // Verificar se e admin
-    const admin = await sql`
-      SELECT is_admin, name, avatar_url FROM profiles WHERE id = ${session.userId}
-    `;
-    if (admin.length === 0 || !admin[0].is_admin) {
-      return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
-    }
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
 
     const { id } = await params;
     const body = await request.json();
     const { status, priority, assignedAdminId } = body;
 
-    const updates: string[] = [];
+    // Construir updates dinamicamente
+    const setClauses: string[] = [];
+    const values: (string | null)[] = [];
     
     if (status) {
-      updates.push(`status = '${status}'`);
+      setClauses.push('status = $' + (values.length + 1));
+      values.push(status);
       if (status === 'closed') {
-        updates.push(`closed_at = NOW()`);
+        setClauses.push('closed_at = NOW()');
       } else {
-        updates.push(`closed_at = NULL`);
+        setClauses.push('closed_at = NULL');
       }
     }
+    
     if (priority) {
-      updates.push(`priority = '${priority}'`);
+      setClauses.push('priority = $' + (values.length + 1));
+      values.push(priority);
     }
+    
     if (assignedAdminId !== undefined) {
-      if (assignedAdminId === null) {
-        updates.push(`assigned_admin_id = NULL`);
-      } else {
-        updates.push(`assigned_admin_id = '${assignedAdminId}'`);
-      }
+      setClauses.push('assigned_admin_id = $' + (values.length + 1));
+      values.push(assignedAdminId);
     }
 
-    if (updates.length > 0) {
-      updates.push(`updated_at = NOW()`);
-      await sql.unsafe(`UPDATE support_tickets SET ${updates.join(', ')} WHERE id = '${id}'`);
+    if (setClauses.length > 0) {
+      setClauses.push('updated_at = NOW()');
+      
+      // Executar update
+      if (status && status === 'closed') {
+        await sql`
+          UPDATE support_tickets 
+          SET status = ${status}, closed_at = NOW(), updated_at = NOW()
+          WHERE id = ${id}
+        `;
+      } else if (status) {
+        await sql`
+          UPDATE support_tickets 
+          SET status = ${status}, closed_at = NULL, updated_at = NOW()
+          WHERE id = ${id}
+        `;
+      }
+      
+      if (priority) {
+        await sql`
+          UPDATE support_tickets SET priority = ${priority}, updated_at = NOW() WHERE id = ${id}
+        `;
+      }
+      
+      if (assignedAdminId !== undefined) {
+        await sql`
+          UPDATE support_tickets SET assigned_admin_id = ${assignedAdminId}, updated_at = NOW() WHERE id = ${id}
+        `;
+      }
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Erro ao atualizar ticket:", error);
+    console.error("[Admin Tickets] Erro ao atualizar ticket:", error);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }
