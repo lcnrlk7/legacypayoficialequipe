@@ -34,7 +34,11 @@ export async function GET(request: NextRequest) {
     }
 
     const users = await sql`
-      SELECT * FROM profiles ORDER BY created_at DESC
+      SELECT p.*, 
+        CASE WHEN tfa.is_enabled = true THEN true ELSE false END as has_2fa
+      FROM profiles p
+      LEFT JOIN two_factor_auth tfa ON tfa.user_id = p.id
+      ORDER BY p.created_at DESC
     `;
 
     return NextResponse.json({ users: users || [] });

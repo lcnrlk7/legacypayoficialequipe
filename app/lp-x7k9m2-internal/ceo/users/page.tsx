@@ -16,6 +16,7 @@ import {
   Plus,
   Minus,
   ShieldX,
+  KeyRound,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -39,6 +40,7 @@ interface UserProfile {
   created_at: string;
   avatar_url: string | null;
   bio: string | null;
+  has_2fa?: boolean;
 }
 
 interface Acquirer {
@@ -71,6 +73,7 @@ export default function UsersPage() {
   const [balanceReason, setBalanceReason] = useState("");
   const [isUpdatingBalance, setIsUpdatingBalance] = useState(false);
   const [blockingIp, setBlockingIp] = useState<string | null>(null);
+  const [disabling2FA, setDisabling2FA] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     daily_limit: 0,
     fee_percentage: "",
@@ -280,6 +283,37 @@ export default function UsersPage() {
       alert("Erro ao bloquear IP");
     } finally {
       setBlockingIp(null);
+    }
+  }
+
+  async function disableUser2FA(user: UserProfile) {
+    if (!user.has_2fa) {
+      alert("Este usuario nao tem 2FA ativado");
+      return;
+    }
+    
+    if (!confirm(`Tem certeza que deseja desativar a autenticacao de dois fatores de ${user.name || user.email}?`)) {
+      return;
+    }
+    
+    setDisabling2FA(user.id);
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}/disable-2fa`, {
+        method: "DELETE",
+      });
+      
+      if (response.ok) {
+        alert("2FA desativado com sucesso!");
+        loadUsers();
+      } else {
+        const data = await response.json();
+        alert(data.error || "Erro ao desativar 2FA");
+      }
+    } catch (error) {
+      console.error("Erro ao desativar 2FA:", error);
+      alert("Erro ao desativar 2FA");
+    } finally {
+      setDisabling2FA(null);
     }
   }
 
@@ -741,12 +775,26 @@ export default function UsersPage() {
       className="p-2 rounded-lg transition-colors hover:bg-red-500/10 text-muted-foreground hover:text-red-400 disabled:opacity-50"
       title={`Bloquear IP: ${user.last_ip}`}
     >
-      {blockingIp === user.id ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
-      ) : (
-        <ShieldX className="w-4 h-4" />
-      )}
-    </button>
+{blockingIp === user.id ? (
+  <Loader2 className="w-4 h-4 animate-spin" />
+  ) : (
+  <ShieldX className="w-4 h-4" />
+  )}
+  </button>
+  )}
+  {user.has_2fa && (
+  <button
+  onClick={() => disableUser2FA(user)}
+  disabled={disabling2FA === user.id}
+  className="p-2 rounded-lg transition-colors hover:bg-orange-500/10 text-muted-foreground hover:text-orange-400 disabled:opacity-50"
+  title="Desativar 2FA"
+  >
+  {disabling2FA === user.id ? (
+  <Loader2 className="w-4 h-4 animate-spin" />
+  ) : (
+  <KeyRound className="w-4 h-4" />
+  )}
+  </button>
   )}
   </div>
   </td>

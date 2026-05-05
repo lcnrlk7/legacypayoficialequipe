@@ -6,6 +6,7 @@ import { logLogin } from "@/lib/discord-webhook";
 import { detectAttack } from "@/lib/sanitize";
 import { logAttack } from "@/lib/attack-logger";
 import { trackLogin, checkNewDevice } from "@/lib/login-tracker";
+import { is2FAEnabled, getUserSecret, verifyTOTP, verifyBackupCode } from "@/lib/two-factor";
 
 const COOKIE_NAME = "auth-token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -13,7 +14,7 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, password } = body;
+    const { email, password, twoFactorCode, isBackupCode } = body;
 
     if (!email || !password) {
       return NextResponse.json(
@@ -100,9 +101,43 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json(
-        { error: error || "Credenciais inválidas" },
+        { error: error || "Credenciais invalidas" },
         { status: 401 }
       );
+    }
+
+    // Verificar se usuario tem 2FA ativado
+    const has2FA = await is2FAEnabled(user.id);
+    
+    if (has2FA) {
+      // Se nao forneceu codigo 2FA, retornar que precisa
+      if (!twoFactorCode) {
+        return NextResponse.json({
+          requires2FA: true,
+          message: "Digite o codigo de autenticacao de dois fatores",
+        });
+      }
+      
+      // Verificar codigo 2FA
+      let isValidCode = false;
+      
+      if (isBackupCode) {
+        // Verificar codigo de backup
+        isValidCode = await verifyBackupCode(user.id, twoFactorCode);
+      } else {
+        // Verificar codigo TOTP
+        const secret = await getUserSecret(user.id);
+        if (secret) {
+          isValidCode = verifyTOTP(secret, twoFactorCode);
+        }
+      }
+      
+      if (!isValidCode) {
+        return NextResponse.json(
+          { error: "Codigo de autenticacao invalido", requires2FA: true },
+          { status: 401 }
+        );
+      }
     }
 
     // Create JWT token
