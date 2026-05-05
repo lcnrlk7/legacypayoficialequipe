@@ -458,7 +458,8 @@ export function logLogin(data: {
   ip?: string;
   userAgent?: string;
   isAdmin?: boolean;
-}): void {
+  isNewDevice?: boolean;
+  }): void {
   const embed: DiscordEmbed = {
     title: data.isAdmin ? "Login Admin" : "Login de Usuario",
     color: data.isAdmin ? COLORS.purple : COLORS.info,

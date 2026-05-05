@@ -1,18 +1,32 @@
-import { authenticator } from "otplib";
+import * as OTPAuth from "otpauth";
 import QRCode from "qrcode";
 import { sql } from "@/lib/db";
 import crypto from "crypto";
 
 const APP_NAME = "LegacyPay";
 
+// Criar objeto TOTP
+function createTOTP(secret: string, email: string): OTPAuth.TOTP {
+  return new OTPAuth.TOTP({
+    issuer: APP_NAME,
+    label: email,
+    algorithm: "SHA1",
+    digits: 6,
+    period: 30,
+    secret: OTPAuth.Secret.fromBase32(secret),
+  });
+}
+
 // Gerar secret para 2FA
 export function generateSecret(): string {
-  return authenticator.generateSecret();
+  const secret = new OTPAuth.Secret({ size: 20 });
+  return secret.base32;
 }
 
 // Gerar URL para QR Code
 export function generateQRCodeURL(email: string, secret: string): string {
-  return authenticator.keyuri(email, APP_NAME, secret);
+  const totp = createTOTP(secret, email);
+  return totp.toString();
 }
 
 // Gerar imagem QR Code em base64
@@ -23,7 +37,19 @@ export async function generateQRCodeImage(email: string, secret: string): Promis
 
 // Verificar codigo TOTP
 export function verifyTOTP(secret: string, token: string): boolean {
-  return authenticator.verify({ token, secret });
+  try {
+    const totp = new OTPAuth.TOTP({
+      issuer: APP_NAME,
+      algorithm: "SHA1",
+      digits: 6,
+      period: 30,
+      secret: OTPAuth.Secret.fromBase32(secret),
+    });
+    const delta = totp.validate({ token, window: 1 });
+    return delta !== null;
+  } catch {
+    return false;
+  }
 }
 
 // Gerar codigos de backup
