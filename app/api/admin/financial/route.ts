@@ -15,14 +15,14 @@ export async function GET() {
     startOfWeek.setDate(now.getDate() - now.getDay());
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    // Volume total processado (PIX pagos)
+    // Volume total processado (PIX pagos) - status pode ser 'completed' ou 'paid'
     const totalVolume = await sql`
       SELECT 
         COALESCE(SUM(amount), 0) as total_volume,
         COALESCE(SUM(fee), 0) as total_fees,
         COUNT(*) as total_transactions
       FROM transactions 
-      WHERE status = 'paid'
+      WHERE status IN ('completed', 'paid') AND type IN ('pix_in', 'deposit')
     `;
 
     // Volume este mes
@@ -32,7 +32,7 @@ export async function GET() {
         COALESCE(SUM(fee), 0) as fees,
         COUNT(*) as count
       FROM transactions 
-      WHERE status = 'paid' AND created_at >= ${startOfMonth.toISOString()}
+      WHERE status IN ('completed', 'paid') AND type IN ('pix_in', 'deposit') AND created_at >= ${startOfMonth.toISOString()}
     `;
 
     // Volume mes passado (para comparativo)
@@ -42,7 +42,7 @@ export async function GET() {
         COALESCE(SUM(fee), 0) as fees,
         COUNT(*) as count
       FROM transactions 
-      WHERE status = 'paid' 
+      WHERE status IN ('completed', 'paid') AND type IN ('pix_in', 'deposit')
         AND created_at >= ${startOfLastMonth.toISOString()}
         AND created_at <= ${endOfLastMonth.toISOString()}
     `;
@@ -54,7 +54,7 @@ export async function GET() {
         COALESCE(SUM(fee), 0) as fees,
         COUNT(*) as count
       FROM transactions 
-      WHERE status = 'paid' AND created_at >= ${startOfWeek.toISOString()}
+      WHERE status IN ('completed', 'paid') AND type IN ('pix_in', 'deposit') AND created_at >= ${startOfWeek.toISOString()}
     `;
 
     // Volume hoje
@@ -64,7 +64,7 @@ export async function GET() {
         COALESCE(SUM(fee), 0) as fees,
         COUNT(*) as count
       FROM transactions 
-      WHERE status = 'paid' AND created_at >= ${startOfDay.toISOString()}
+      WHERE status IN ('completed', 'paid') AND type IN ('pix_in', 'deposit') AND created_at >= ${startOfDay.toISOString()}
     `;
 
     // Total de saques
@@ -92,14 +92,14 @@ export async function GET() {
       SELECT 
         COALESCE(SUM((metadata->>'acquirer_fee')::numeric), 0) as total_acquirer_fees
       FROM transactions 
-      WHERE status = 'paid' AND metadata->>'acquirer_fee' IS NOT NULL
+      WHERE status IN ('completed', 'paid') AND metadata->>'acquirer_fee' IS NOT NULL
     `;
 
     const acquirerCostsThisMonth = await sql`
       SELECT 
         COALESCE(SUM((metadata->>'acquirer_fee')::numeric), 0) as acquirer_fees
       FROM transactions 
-      WHERE status = 'paid' 
+      WHERE status IN ('completed', 'paid')
         AND metadata->>'acquirer_fee' IS NOT NULL
         AND created_at >= ${startOfMonth.toISOString()}
     `;
@@ -112,7 +112,7 @@ export async function GET() {
         COALESCE(SUM(fee), 0) as fees,
         COUNT(*) as count
       FROM transactions 
-      WHERE status = 'paid' AND created_at >= NOW() - INTERVAL '30 days'
+      WHERE status IN ('completed', 'paid') AND type IN ('pix_in', 'deposit') AND created_at >= NOW() - INTERVAL '30 days'
       GROUP BY DATE(created_at)
       ORDER BY date ASC
     `;
@@ -121,16 +121,16 @@ export async function GET() {
     const avgTicket = await sql`
       SELECT COALESCE(AVG(amount), 0) as avg_ticket
       FROM transactions 
-      WHERE status = 'paid' AND created_at >= ${startOfMonth.toISOString()}
+      WHERE status IN ('completed', 'paid') AND type IN ('pix_in', 'deposit') AND created_at >= ${startOfMonth.toISOString()}
     `;
 
     // Taxa de conversao (PIX gerados vs pagos)
     const conversionRate = await sql`
       SELECT 
-        COUNT(*) FILTER (WHERE status = 'paid') as paid_count,
+        COUNT(*) FILTER (WHERE status IN ('completed', 'paid')) as paid_count,
         COUNT(*) as total_count
       FROM transactions 
-      WHERE created_at >= ${startOfMonth.toISOString()}
+      WHERE type IN ('pix_in', 'deposit') AND created_at >= ${startOfMonth.toISOString()}
     `;
 
     // Usuarios ativos este mes
@@ -148,15 +148,16 @@ export async function GET() {
     `;
 
     // Calculos de lucro
-    const totalFeesCollected = Number(totalVolume[0]?.total_fees || 0);
+    // Receita total = taxas de transacoes PIX + taxas de saques
+    const totalFeesCollected = Number(totalVolume[0]?.total_fees || 0) + Number(withdrawals[0]?.total_fees || 0);
     const totalAcquirerCosts = Number(acquirerCosts[0]?.total_acquirer_fees || 0);
     const grossProfit = totalFeesCollected - totalAcquirerCosts;
 
-    const thisMonthFeesCollected = Number(thisMonth[0]?.fees || 0);
+    const thisMonthFeesCollected = Number(thisMonth[0]?.fees || 0) + Number(withdrawalsThisMonth[0]?.fees || 0);
     const thisMonthAcquirerCosts = Number(acquirerCostsThisMonth[0]?.acquirer_fees || 0);
     const thisMonthProfit = thisMonthFeesCollected - thisMonthAcquirerCosts;
 
-    const lastMonthProfit = Number(lastMonth[0]?.fees || 0) * 0.7; // Estimativa 70% margem
+    const lastMonthProfit = Number(lastMonth[0]?.fees || 0) * 0.85; // Estimativa 85% margem (mais realista)
 
     // Projecao mensal baseada nos dias passados
     const daysPassed = now.getDate();
