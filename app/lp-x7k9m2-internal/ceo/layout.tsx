@@ -27,6 +27,7 @@ import {
   UsersRound,
   Webhook,
   Clock,
+  DollarSign,
 } from "lucide-react";
 
 // Menu organizado em categorias
@@ -50,6 +51,7 @@ const menuCategories = [
   {
     title: "Financeiro",
     items: [
+      { label: "Dashboard Financeiro", href: "/lp-x7k9m2-internal/ceo/financial", icon: DollarSign },
       { label: "Transacoes", href: "/lp-x7k9m2-internal/ceo/transactions", icon: ArrowLeftRight },
       { label: "Saques", href: "/lp-x7k9m2-internal/ceo/withdrawals", icon: Wallet },
       { label: "Taxas", href: "/lp-x7k9m2-internal/ceo/fees", icon: Percent },

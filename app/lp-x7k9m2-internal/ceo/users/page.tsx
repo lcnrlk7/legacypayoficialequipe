@@ -17,6 +17,7 @@ import {
   Minus,
   ShieldX,
 } from "lucide-react";
+import Image from "next/image";
 
 interface UserProfile {
   id: string;
@@ -36,6 +37,8 @@ interface UserProfile {
   withdrawal_fee: number | null;
   last_ip: string | null;
   created_at: string;
+  avatar_url: string | null;
+  bio: string | null;
 }
 
 interface Acquirer {
@@ -612,8 +615,18 @@ export default function UsersPage() {
                 <tr key={user.id} className="hover:bg-secondary transition-colors">
                   <td className="p-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="w-5 h-5 text-primary" />
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                        {user.avatar_url ? (
+                          <Image
+                            src={user.avatar_url}
+                            alt={user.name || "Avatar"}
+                            width={40}
+                            height={40}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <User className="w-5 h-5 text-primary" />
+                        )}
                       </div>
                       <div>
                         <p className="font-medium text-white">
@@ -622,6 +635,11 @@ export default function UsersPage() {
                         <p className="text-sm text-muted-foreground">
                           {user.email}
                         </p>
+                        {user.bio && (
+                          <p className="text-xs text-muted-foreground/70 max-w-[200px] truncate" title={user.bio}>
+                            {user.bio}
+                          </p>
+                        )}
                         <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
                           <span>CPF: {formatCPF(user.cpf)}</span>
                           <span>Tel: {formatPhone(user.phone)}</span>

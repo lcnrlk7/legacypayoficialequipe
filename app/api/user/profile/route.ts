@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     }
 
     const result = await sql`
-      SELECT id, name, email, phone, cpf_cnpj as cpf, kyc_status, created_at, route_type, api_key
+      SELECT id, name, email, phone, cpf_cnpj as cpf, kyc_status, created_at, route_type, api_key, avatar_url, bio
       FROM profiles
       WHERE id = ${user.id}
     `;
@@ -51,6 +51,8 @@ export async function GET(request: NextRequest) {
         kyc_status: profile.kyc_status,
         created_at: profile.created_at,
         api_key: profile.api_key,
+        avatar_url: profile.avatar_url,
+        bio: profile.bio,
       },
     });
   } catch (error) {
@@ -86,15 +88,16 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, phone, kyc_approval_notified } = body;
+    const { name, phone, bio } = body;
 
     // Build update query dynamically
-    if (name !== undefined || phone !== undefined || kyc_approval_notified !== undefined) {
+    if (name !== undefined || phone !== undefined || bio !== undefined) {
       await sql`
         UPDATE profiles
         SET 
           name = COALESCE(${name}, name),
           phone = COALESCE(${phone}, phone),
+          bio = COALESCE(${bio}, bio),
           updated_at = NOW()
         WHERE id = ${user.id}
       `;

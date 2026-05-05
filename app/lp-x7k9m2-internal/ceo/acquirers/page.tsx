@@ -12,7 +12,15 @@ import {
   Loader2,
   DollarSign,
   TrendingUp,
-  Trash2
+  Trash2,
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  Zap,
+  Shield,
+  ArrowUpDown,
 } from "lucide-react";
 
 interface Acquirer {
@@ -35,6 +43,20 @@ interface Acquirer {
   min_amount: number;
   max_amount: number;
   created_at: string;
+  // Novos campos para gestao inteligente
+  health_status?: "online" | "degraded" | "offline";
+  last_health_check?: string;
+  avg_response_time?: number;
+  failure_count_today?: number;
+  is_fallback?: boolean;
+}
+
+interface RoutingConfig {
+  auto_routing: boolean;
+  routing_mode: "lowest_fee" | "highest_success" | "round_robin" | "priority";
+  fallback_enabled: boolean;
+  fallback_threshold: number; // % de falha para ativar fallback
+  health_check_interval: number; // segundos
 }
 
 export default function AcquirersPage() {
@@ -42,6 +64,15 @@ export default function AcquirersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingAcquirer, setEditingAcquirer] = useState<Acquirer | null>(null);
+  const [checkingHealth, setCheckingHealth] = useState<string | null>(null);
+  const [routingConfig, setRoutingConfig] = useState<RoutingConfig>({
+    auto_routing: true,
+    routing_mode: "lowest_fee",
+    fallback_enabled: true,
+    fallback_threshold: 30,
+    health_check_interval: 60,
+  });
+  const [savingConfig, setSavingConfig] = useState(false);
   const [form, setForm] = useState({
     name: "",
     code: "",
@@ -68,10 +99,73 @@ export default function AcquirersPage() {
       if (data.acquirers) {
         setAcquirers(data.acquirers);
       }
+      if (data.routingConfig) {
+        setRoutingConfig(data.routingConfig);
+      }
     } catch (error) {
       console.error("Error loading acquirers:", error);
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function checkHealth(acquirerId: string) {
+    setCheckingHealth(acquirerId);
+    try {
+      const response = await fetch("/api/admin/acquirers/health", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ acquirerId }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        loadAcquirers();
+      }
+    } catch (error) {
+      console.error("Error checking health:", error);
+    } finally {
+      setCheckingHealth(null);
+    }
+  }
+
+  async function saveRoutingConfig() {
+    setSavingConfig(true);
+    try {
+      await fetch("/api/admin/acquirers/routing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(routingConfig),
+      });
+    } catch (error) {
+      console.error("Error saving routing config:", error);
+    } finally {
+      setSavingConfig(false);
+    }
+  }
+
+  function getHealthIcon(status?: string) {
+    switch (status) {
+      case "online":
+        return <CheckCircle className="w-4 h-4 text-green-400" />;
+      case "degraded":
+        return <AlertTriangle className="w-4 h-4 text-yellow-400" />;
+      case "offline":
+        return <XCircle className="w-4 h-4 text-red-400" />;
+      default:
+        return <Activity className="w-4 h-4 text-muted-foreground" />;
+    }
+  }
+
+  function getHealthLabel(status?: string) {
+    switch (status) {
+      case "online":
+        return "Online";
+      case "degraded":
+        return "Degradado";
+      case "offline":
+        return "Offline";
+      default:
+        return "Desconhecido";
     }
   }
 
@@ -233,8 +327,83 @@ export default function AcquirersPage() {
         </button>
       </div>
 
+      {/* Painel de Roteamento Inteligente */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass rounded-2xl p-6 border border-primary/20"
+      >
+        <div className="flex items-center gap-2 mb-4">
+          <Zap className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-semibold text-white">Roteamento Inteligente</h2>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="text-sm text-muted-foreground mb-2 block">Modo de Roteamento</label>
+            <select
+              value={routingConfig.routing_mode}
+              onChange={(e) => setRoutingConfig({ ...routingConfig, routing_mode: e.target.value as RoutingConfig["routing_mode"] })}
+              className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-white text-sm focus:outline-none focus:border-primary/50"
+            >
+              <option value="lowest_fee">Menor Taxa</option>
+              <option value="highest_success">Maior Sucesso</option>
+              <option value="round_robin">Round Robin</option>
+              <option value="priority">Por Prioridade</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="text-sm text-muted-foreground mb-2 block">Fallback Automatico</label>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setRoutingConfig({ ...routingConfig, fallback_enabled: !routingConfig.fallback_enabled })}
+                className={`relative w-12 h-6 rounded-full transition-colors ${routingConfig.fallback_enabled ? "bg-primary" : "bg-secondary"}`}
+              >
+                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${routingConfig.fallback_enabled ? "left-7" : "left-1"}`} />
+              </button>
+              <span className="text-sm text-white">{routingConfig.fallback_enabled ? "Ativo" : "Inativo"}</span>
+            </div>
+          </div>
+          
+          <div>
+            <label className="text-sm text-muted-foreground mb-2 block">Limite Fallback (%)</label>
+            <input
+              type="number"
+              value={routingConfig.fallback_threshold}
+              onChange={(e) => setRoutingConfig({ ...routingConfig, fallback_threshold: Number(e.target.value) })}
+              className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-white text-sm focus:outline-none focus:border-primary/50"
+              min={0}
+              max={100}
+            />
+          </div>
+          
+          <div className="flex items-end">
+            <button
+              onClick={saveRoutingConfig}
+              disabled={savingConfig}
+              className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {savingConfig ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
+              Salvar Config
+            </button>
+          </div>
+        </div>
+        
+        <div className="mt-4 p-3 bg-secondary/50 rounded-lg">
+          <p className="text-xs text-muted-foreground">
+            <strong className="text-white">Modo atual:</strong>{" "}
+            {routingConfig.routing_mode === "lowest_fee" && "Roteando para adquirente com menor taxa"}
+            {routingConfig.routing_mode === "highest_success" && "Roteando para adquirente com maior taxa de sucesso"}
+            {routingConfig.routing_mode === "round_robin" && "Distribuindo transacoes igualmente entre adquirentes"}
+            {routingConfig.routing_mode === "priority" && "Seguindo ordem de prioridade definida"}
+            {routingConfig.fallback_enabled && ` | Fallback ativo se taxa de falha > ${routingConfig.fallback_threshold}%`}
+          </p>
+        </div>
+      </motion.div>
+
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="glass rounded-xl p-4">
           <p className="text-2xl font-bold text-white">{acquirers.length}</p>
           <p className="text-sm text-muted-foreground">Total</p>
@@ -298,6 +467,21 @@ export default function AcquirersPage() {
                       >
                         {acquirer.is_active ? "Ativo" : "Inativo"}
                       </span>
+                      {/* Health Status */}
+                      <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        acquirer.health_status === "online" ? "bg-green-400/10 text-green-400" :
+                        acquirer.health_status === "degraded" ? "bg-yellow-400/10 text-yellow-400" :
+                        acquirer.health_status === "offline" ? "bg-red-400/10 text-red-400" :
+                        "bg-muted text-muted-foreground"
+                      }`}>
+                        {getHealthIcon(acquirer.health_status)}
+                        {getHealthLabel(acquirer.health_status)}
+                      </span>
+                      {acquirer.is_fallback && (
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-400/10 text-orange-400">
+                          Fallback
+                        </span>
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">
                       {acquirer.api_url}
@@ -332,6 +516,18 @@ export default function AcquirersPage() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => checkHealth(acquirer.id)}
+                    disabled={checkingHealth === acquirer.id}
+                    className="p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-primary disabled:opacity-50"
+                    title="Verificar Status"
+                  >
+                    {checkingHealth === acquirer.id ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-5 h-5" />
+                    )}
+                  </button>
                   <button
                     onClick={() => toggleAcquirer(acquirer)}
                     className={`p-2 rounded-lg transition-colors ${
