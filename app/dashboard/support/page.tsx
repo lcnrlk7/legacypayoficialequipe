@@ -153,6 +153,8 @@ export default function SupportPage() {
         setNewTicket({ subject: "", category: "technical", priority: "normal", message: "" });
         loadTickets();
         handleSelectTicket(data.ticket);
+      } else if (data.error) {
+        alert(data.error);
       }
     } catch (error) {
       console.error("Erro ao criar ticket:", error);

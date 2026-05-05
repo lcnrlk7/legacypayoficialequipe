@@ -66,6 +66,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Campos obrigatorios faltando" }, { status: 400 });
     }
 
+    // Verificar se ja tem ticket aberto (limite de 1)
+    const openTickets = await sql`
+      SELECT id FROM support_tickets 
+      WHERE user_id = ${session.userId} AND status IN ('open', 'in_progress')
+      LIMIT 1
+    `;
+
+    if (openTickets.length > 0) {
+      return NextResponse.json({ 
+        error: "Voce ja possui um chamado em aberto. Aguarde a resolucao antes de abrir outro." 
+      }, { status: 400 });
+    }
+
     // Criar ticket
     const ticket = await sql`
       INSERT INTO support_tickets (user_id, subject, category, priority)

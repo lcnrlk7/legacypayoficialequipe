@@ -142,9 +142,12 @@ export default function AdminTicketsPage() {
       
       const response = await fetch(`/api/admin/tickets?${params.toString()}`);
       const data = await response.json();
-      if (data.tickets) setTickets(data.tickets);
-      if (data.stats) setStats(data.stats);
-      if (data.admins) setAdmins(data.admins);
+      
+      if (response.ok) {
+        if (data.tickets) setTickets(data.tickets);
+        if (data.stats) setStats(data.stats);
+        if (data.admins) setAdmins(data.admins);
+      }
     } catch (error) {
       console.error("Erro ao carregar tickets:", error);
     } finally {
