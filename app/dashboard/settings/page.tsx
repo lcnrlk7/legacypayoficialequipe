@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, Mail, Phone, Building, Loader2, Save, CheckCircle2, Shield, Lock, Eye, EyeOff, KeyRound, X, Monitor, Smartphone, Globe, Clock, LogOut, Trash2, AlertTriangle, Bell, BellRing, Send, Calendar, Moon, Sun, Palette } from "lucide-react";
+import { User, Mail, Phone, Building, Loader2, Save, CheckCircle2, Shield, Lock, Eye, EyeOff, KeyRound, X, Monitor, Smartphone, Globe, Clock, LogOut, Trash2, AlertTriangle, Bell, BellRing, Send, Calendar, Moon, Sun, Palette, Camera, ImagePlus } from "lucide-react";
+import Image from "next/image";
 import { ThemeToggleWithLabel } from "@/components/theme-toggle";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,8 @@ interface Profile {
   cpf: string;
   email_verified: boolean;
   kyc_status: string;
+  avatar_url: string | null;
+  bio: string | null;
 }
 
 export default function SettingsPage() {
@@ -29,7 +32,13 @@ export default function SettingsPage() {
     cpf: "",
     email_verified: false,
     kyc_status: "pending",
+    avatar_url: null,
+    bio: null,
   });
+
+  // Avatar upload states
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   // Password change states
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -121,7 +130,12 @@ export default function SettingsPage() {
           cpf: formatCPF(data.profile.cpf || ""),
           email_verified: data.profile.email_verified || false,
           kyc_status: data.profile.kyc_status || "pending",
+          avatar_url: data.profile.avatar_url || null,
+          bio: data.profile.bio || null,
         });
+        if (data.profile.avatar_url) {
+          setAvatarPreview(data.profile.avatar_url);
+        }
       }
     } catch (err) {
       console.error("Erro ao carregar perfil:", err);
@@ -146,6 +160,78 @@ export default function SettingsPage() {
     return numbers.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3");
   }
 
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de arquivo
+    if (!file.type.startsWith("image/")) {
+      setError("Selecione uma imagem valida");
+      return;
+    }
+
+    // Validar tamanho (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("A imagem deve ter no maximo 5MB");
+      return;
+    }
+
+    setAvatarUploading(true);
+    setError(null);
+
+    try {
+      // Criar preview local
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setAvatarPreview(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Upload para API
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      const response = await fetch("/api/user/avatar", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || "Erro ao enviar imagem");
+        setAvatarPreview(profile.avatar_url);
+        return;
+      }
+
+      setProfile({ ...profile, avatar_url: data.avatarUrl });
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch {
+      setError("Erro ao enviar imagem");
+      setAvatarPreview(profile.avatar_url);
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  const handleRemoveAvatar = async () => {
+    if (!confirm("Remover foto de perfil?")) return;
+
+    setAvatarUploading(true);
+    try {
+      const response = await fetch("/api/user/avatar", { method: "DELETE" });
+      if (response.ok) {
+        setProfile({ ...profile, avatar_url: null });
+        setAvatarPreview(null);
+      }
+    } catch {
+      setError("Erro ao remover foto");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   const handleSave = async () => {
     setLoading(true);
     setError(null);
@@ -158,6 +244,7 @@ export default function SettingsPage() {
         body: JSON.stringify({
           name: profile.name,
           phone: profile.phone.replace(/\D/g, ""),
+          bio: profile.bio,
         }),
       });
 
@@ -505,6 +592,76 @@ export default function SettingsPage() {
         )}
 
         <div className="grid gap-6 max-w-xl">
+          {/* Avatar Upload */}
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-foreground">Foto de Perfil</label>
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <div className="w-20 h-20 rounded-full bg-secondary border-2 border-border overflow-hidden flex items-center justify-center">
+                  {avatarPreview || profile.avatar_url ? (
+                    <Image
+                      src={avatarPreview || profile.avatar_url || ""}
+                      alt="Avatar"
+                      width={80}
+                      height={80}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-8 h-8 text-muted-foreground" />
+                  )}
+                </div>
+                {avatarUploading && (
+                  <div className="absolute inset-0 bg-background/80 rounded-full flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="hidden"
+                    disabled={avatarUploading}
+                  />
+                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-sm font-medium text-foreground transition-colors">
+                    <Camera className="w-4 h-4" />
+                    {avatarPreview || profile.avatar_url ? "Alterar foto" : "Adicionar foto"}
+                  </span>
+                </label>
+                {(avatarPreview || profile.avatar_url) && (
+                  <button
+                    onClick={handleRemoveAvatar}
+                    disabled={avatarUploading}
+                    className="text-xs text-destructive hover:underline text-left"
+                  >
+                    Remover foto
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              JPG, PNG ou GIF. Maximo 5MB.
+            </p>
+          </div>
+
+          {/* Bio */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">Descricao do Perfil</label>
+            <textarea
+              value={profile.bio || ""}
+              onChange={(e) => setProfile({ ...profile, bio: e.target.value })}
+              placeholder="Conte um pouco sobre voce ou seu negocio..."
+              className="w-full px-4 py-3 rounded-xl bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+              rows={3}
+              maxLength={500}
+            />
+            <p className="text-xs text-muted-foreground text-right">
+              {(profile.bio || "").length}/500 caracteres
+            </p>
+          </div>
+
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">Nome Completo</label>
             <div className="relative">
