@@ -29,6 +29,7 @@ import {
   Clock,
   DollarSign,
   Database,
+  Headphones,
 } from "lucide-react";
 
 // Menu organizado em categorias
@@ -61,6 +62,7 @@ const menuCategories = [
   {
     title: "Engajamento",
     items: [
+      { label: "Tickets Suporte", href: "/lp-x7k9m2-internal/ceo/tickets", icon: Headphones },
       { label: "Premiacoes", href: "/lp-x7k9m2-internal/ceo/rewards", icon: Gift },
       { label: "Notificacoes", href: "/lp-x7k9m2-internal/ceo/notifications", icon: Bell },
       { label: "Push Notifications", href: "/lp-x7k9m2-internal/ceo/push", icon: BellRing },
