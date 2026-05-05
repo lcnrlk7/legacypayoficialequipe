@@ -17,6 +17,7 @@ import {
   ArrowLeftRight,
   Percent,
   User,
+  UserCircle,
   Users,
   Code,
   Settings,
@@ -55,6 +56,7 @@ interface SidebarProps {
 // Gerenciamento
 const managementItems: { href: string; icon: LucideIcon; label: string }[] = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Pagina Inicial" },
+  { href: "/dashboard/profile", icon: UserCircle, label: "Meu Perfil" },
   { href: "/dashboard/wallet", icon: Wallet, label: "Carteira" },
   { href: "/dashboard/transactions", icon: TrendingUp, label: "Transacoes" },
   { href: "/dashboard/reports", icon: FileText, label: "Relatorios" },
