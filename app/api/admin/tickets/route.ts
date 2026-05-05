@@ -8,7 +8,10 @@ const sql = neon(process.env.DATABASE_URL!);
 export async function GET(request: NextRequest) {
   try {
     const session = await getSession();
+    console.log("[v0] Admin tickets - session:", session?.userId);
+    
     if (!session) {
+      console.log("[v0] Admin tickets - no session");
       return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
     }
 
@@ -16,7 +19,10 @@ export async function GET(request: NextRequest) {
     const admin = await sql`
       SELECT is_admin FROM profiles WHERE id = ${session.userId}
     `;
+    console.log("[v0] Admin tickets - is_admin:", admin[0]?.is_admin);
+    
     if (admin.length === 0 || !admin[0].is_admin) {
+      console.log("[v0] Admin tickets - access denied");
       return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
     }
 
@@ -76,13 +82,15 @@ export async function GET(request: NextRequest) {
       SELECT id, name, email, avatar_url FROM profiles WHERE is_admin = true ORDER BY name
     `;
 
+    console.log("[v0] Admin tickets - returning", tickets.length, "tickets");
+    
     return NextResponse.json({ 
       tickets, 
       stats: stats[0],
       admins 
     });
   } catch (error) {
-    console.error("Erro ao buscar tickets:", error);
+    console.error("[v0] Erro ao buscar tickets:", error);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }
