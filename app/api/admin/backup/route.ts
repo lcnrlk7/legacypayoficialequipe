@@ -103,7 +103,8 @@ export async function POST(request: NextRequest) {
       const filename = `backups/backup_${timestamp}.json`;
 
       // Upload para Vercel Blob
-      const blob = await put(filename, JSON.stringify(backupData, null, 2), {
+      const backupJson = JSON.stringify(backupData, null, 2);
+      const blob = await put(filename, backupJson, {
         access: "public",
         addRandomSuffix: false,
       });
@@ -132,7 +133,7 @@ export async function POST(request: NextRequest) {
         backup: {
           name: filename,
           url: blob.url,
-          size: backupData.length,
+          size: backupJson.length,
           created_at: new Date().toISOString(),
         },
       });
