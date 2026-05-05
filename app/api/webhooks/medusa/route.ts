@@ -7,6 +7,7 @@ import {
   notifyDeposit 
 } from "@/lib/notifications";
 import { logTransactionStatusUpdate, logWithdrawalStatusUpdate, logWebhookReceived } from "@/lib/discord-webhook";
+import { sendPixEventToUtmify } from "@/lib/utmify";
 
 /**
  * Webhook para receber notificações da Medusa Payments
@@ -574,6 +575,44 @@ export async function POST(request: NextRequest) {
       `;
 
       // Enviar push notification (ja enviado pelo notifyPixPaid acima)
+
+      // Enviar para UTMify se o usuario tiver a integracao configurada
+      try {
+        // Buscar dados UTM da transacao
+        const transactionData = await sql`
+          SELECT external_id, description, payer_name, payer_email, payer_document, created_at,
+                 utm_source, utm_campaign, utm_medium, utm_content, utm_term, utm_src, utm_sck
+          FROM transactions WHERE id = ${transaction.id}
+        `;
+        
+        if (transactionData.length > 0) {
+          const txData = transactionData[0];
+          await sendPixEventToUtmify(transaction.user_id as string, {
+            id: transaction.id as string,
+            amount: Number(transaction.amount),
+            fee: Number(transaction.fee || 0),
+            status: "paid",
+            payer_name: txData.payer_name as string,
+            payer_email: txData.payer_email as string,
+            payer_document: txData.payer_document as string,
+            description: txData.description as string,
+            external_id: txData.external_id as string,
+            created_at: txData.created_at as string,
+            paid_at: new Date().toISOString(),
+            utm_source: txData.utm_source as string,
+            utm_campaign: txData.utm_campaign as string,
+            utm_medium: txData.utm_medium as string,
+            utm_content: txData.utm_content as string,
+            utm_term: txData.utm_term as string,
+            src: txData.utm_src as string,
+            sck: txData.utm_sck as string,
+          });
+          console.log(`[Medusa Webhook] Enviado evento para UTMify - Transacao ${transaction.id}`);
+        }
+      } catch (utmifyError) {
+        console.error("[Medusa Webhook] Erro ao enviar para UTMify:", utmifyError);
+        // Nao falhar o webhook por causa do UTMify
+      }
 
       // Processar comissao de afiliado
       try {

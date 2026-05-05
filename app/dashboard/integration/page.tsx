@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   Link2,
   Edit3,
+  BarChart3,
 } from "lucide-react";
 
 interface Integration {
@@ -74,9 +75,18 @@ export default function IntegrationPage() {
   const [webhookInputs, setWebhookInputs] = useState<Record<string, string>>({});
   const [savingWebhook, setSavingWebhook] = useState<string | null>(null);
 
+  // UTMify states
+  const [utmifyToken, setUtmifyToken] = useState("");
+  const [utmifyIntegrated, setUtmifyIntegrated] = useState(false);
+  const [utmifyTokenPreview, setUtmifyTokenPreview] = useState<string | null>(null);
+  const [utmifyLoading, setUtmifyLoading] = useState(false);
+  const [utmifyTesting, setUtmifyTesting] = useState(false);
+  const [showUtmifyToken, setShowUtmifyToken] = useState(false);
+
   useEffect(() => {
     loadIntegrations();
     loadProfile();
+    loadUtmifyStatus();
   }, []);
 
   async function loadProfile() {
@@ -88,6 +98,75 @@ export default function IntegrationPage() {
       }
     } catch (error) {
       console.error("Erro ao carregar profile:", error);
+    }
+  }
+
+  async function loadUtmifyStatus() {
+    try {
+      const response = await fetch("/api/integrations/utmify");
+      const data = await response.json();
+      setUtmifyIntegrated(data.integrated);
+      setUtmifyTokenPreview(data.tokenPreview);
+    } catch (error) {
+      console.error("Erro ao carregar status UTMify:", error);
+    }
+  }
+
+  async function saveUtmifyToken(testFirst: boolean = true) {
+    if (!utmifyToken.trim()) {
+      alert("Insira o token da API UTMify");
+      return;
+    }
+    
+    setUtmifyLoading(true);
+    if (testFirst) setUtmifyTesting(true);
+    
+    try {
+      const response = await fetch("/api/integrations/utmify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          apiToken: utmifyToken.trim(),
+          testConnection: testFirst 
+        }),
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        alert("Integracao UTMify configurada com sucesso!");
+        setUtmifyToken("");
+        loadUtmifyStatus();
+      } else {
+        alert(data.error || "Erro ao configurar UTMify");
+      }
+    } catch (error) {
+      console.error("Erro ao salvar UTMify:", error);
+      alert("Erro ao configurar UTMify");
+    } finally {
+      setUtmifyLoading(false);
+      setUtmifyTesting(false);
+    }
+  }
+
+  async function removeUtmify() {
+    if (!confirm("Tem certeza que deseja remover a integracao com UTMify?")) return;
+    
+    setUtmifyLoading(true);
+    try {
+      const response = await fetch("/api/integrations/utmify", { method: "DELETE" });
+      const data = await response.json();
+      
+      if (data.success) {
+        alert("Integracao UTMify removida");
+        loadUtmifyStatus();
+      } else {
+        alert(data.error || "Erro ao remover integracao");
+      }
+    } catch (error) {
+      console.error("Erro ao remover UTMify:", error);
+      alert("Erro ao remover integracao");
+    } finally {
+      setUtmifyLoading(false);
     }
   }
 
@@ -392,6 +471,120 @@ export default function IntegrationPage() {
         >
           Ver documentacao da API
         </button>
+      </motion.div>
+
+      {/* UTMify Integration */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="bg-card border border-border rounded-2xl p-4 sm:p-6"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+            <BarChart3 className="w-5 h-5 text-blue-500" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-semibold text-foreground">
+                UTMify
+              </h2>
+              {utmifyIntegrated && (
+                <span className="text-xs bg-green-500/20 text-green-500 px-2 py-0.5 rounded-full">
+                  Conectado
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Rastreie suas conversoes e campanhas de marketing
+            </p>
+          </div>
+          {utmifyIntegrated && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={removeUtmify}
+              disabled={utmifyLoading}
+              className="text-destructive hover:bg-destructive/10"
+            >
+              {utmifyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            </Button>
+          )}
+        </div>
+
+        {utmifyIntegrated ? (
+          <div className="bg-secondary/30 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-muted-foreground">Token Configurado</span>
+              <code className="text-xs font-mono text-foreground bg-background px-2 py-1 rounded">
+                {utmifyTokenPreview || "Configurado"}
+              </code>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Suas transacoes PIX serao enviadas automaticamente para o UTMify. 
+              Certifique-se de enviar os parametros UTM na criacao do pagamento.
+            </p>
+            <div className="mt-3 p-3 bg-background rounded-lg">
+              <p className="text-xs text-muted-foreground mb-2">Parametros suportados na API de criacao PIX:</p>
+              <code className="text-xs font-mono text-primary block">
+                utm_source, utm_campaign, utm_medium, utm_content, utm_term, src, sck
+              </code>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="bg-secondary/30 rounded-xl p-4">
+              <p className="text-sm text-muted-foreground mb-3">
+                Conecte sua conta UTMify para rastrear a origem das suas vendas e 
+                medir o desempenho das suas campanhas de marketing.
+              </p>
+              <ol className="text-xs text-muted-foreground space-y-2 list-decimal list-inside">
+                <li>Acesse sua conta no <a href="https://utmify.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">UTMify</a></li>
+                <li>Va em Integracoes &gt; Webhooks &gt; Credenciais de API</li>
+                <li>Clique em &quot;Adicionar Credencial&quot; e copie o token gerado</li>
+                <li>Cole o token no campo abaixo</li>
+              </ol>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex-1 relative">
+                <Input
+                  type={showUtmifyToken ? "text" : "password"}
+                  placeholder="Cole seu token da API UTMify"
+                  value={utmifyToken}
+                  onChange={(e) => setUtmifyToken(e.target.value)}
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowUtmifyToken(!showUtmifyToken)}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+                >
+                  {showUtmifyToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </Button>
+              </div>
+              <Button
+                onClick={() => saveUtmifyToken(true)}
+                disabled={utmifyLoading || !utmifyToken.trim()}
+                className="bg-blue-500 hover:bg-blue-600"
+              >
+                {utmifyLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {utmifyTesting ? "Testando..." : "Salvando..."}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Conectar UTMify
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* Integrations List */}

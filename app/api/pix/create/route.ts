@@ -16,7 +16,24 @@ function getClientIp(request: NextRequest): string {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { amount, description, externalId, payerName, payerDocument, apiKey } = body;
+    const { 
+      amount, 
+      description, 
+      externalId, 
+      payerName, 
+      payerDocument, 
+      payerEmail,
+      payerPhone,
+      apiKey,
+      // Parametros UTM para tracking
+      utm_source,
+      utm_campaign,
+      utm_medium,
+      utm_content,
+      utm_term,
+      src,
+      sck,
+    } = body;
     const ip = getClientIp(request);
 
     // SEGURANCA: Verificar ataques em campos de texto
@@ -292,18 +309,22 @@ export async function POST(request: NextRequest) {
     const txId = crypto.randomUUID();
     const acquirerTxId = pixResult.data.transactionId || transactionId;
     
-    // Inserir transação (fee_percentage guardado no metadata)
+    // Inserir transação (fee_percentage guardado no metadata) com parametros UTM para tracking
     const txResult = await sql`
       INSERT INTO transactions (
         id, user_id, external_id, acquirer_transaction_id, type,
         amount, fee, net_amount, status,
-        payer_name, payer_document, description, metadata, created_at
+        payer_name, payer_document, payer_email, description, metadata,
+        utm_source, utm_campaign, utm_medium, utm_content, utm_term, utm_src, utm_sck,
+        created_at
       )
       VALUES (
         ${txId}, ${profile.id}, ${transactionId}, ${acquirerTxId},
         ${'pix_in'}, ${amount}, ${fee}, ${netAmount}, ${'pending'},
-        ${payerName || profile.name || ''}, ${payerDocument || ''}, ${description || 'Depósito via PIX'},
-        ${JSON.stringify({ qr_code: pixResult.data.qrCode || '', qr_code_base64: pixResult.data.qrCodeBase64 || '', copy_paste: pixResult.data.copyPaste || '', acquirer_id: acquirer.id, acquirer_code: acquirer.code, acquirer_fee: pixResult.data.fee || 0, fee_percentage: feePercentage })}, NOW()
+        ${payerName || profile.name || ''}, ${payerDocument || ''}, ${payerEmail || ''}, ${description || 'Depósito via PIX'},
+        ${JSON.stringify({ qr_code: pixResult.data.qrCode || '', qr_code_base64: pixResult.data.qrCodeBase64 || '', copy_paste: pixResult.data.copyPaste || '', acquirer_id: acquirer.id, acquirer_code: acquirer.code, acquirer_fee: pixResult.data.fee || 0, fee_percentage: feePercentage })},
+        ${utm_source || null}, ${utm_campaign || null}, ${utm_medium || null}, ${utm_content || null}, ${utm_term || null}, ${src || null}, ${sck || null},
+        NOW()
       )
       RETURNING *
     `;
