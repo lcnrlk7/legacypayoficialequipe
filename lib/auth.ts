@@ -168,9 +168,12 @@ export async function registerUser(
     `;
     const defaultFeePercentage = acquirerResult.length > 0 ? Number(acquirerResult[0].fee_percentage) : 4.00;
 
+    // Avatar padrao aleatorio (1-8)
+    const randomAvatar = `/avatars/avatar-${Math.floor(Math.random() * 8) + 1}.jpg`;
+
     const result = await sql`
-      INSERT INTO profiles (id, email, password_hash, name, phone, cpf_cnpj, kyc_status, api_key, client_id, client_secret, is_admin, is_active, balance, route_type, fee_percentage, created_at, updated_at)
-      VALUES (${id}, ${email}, ${hashedPassword}, ${name}, ${phone || null}, ${document || null}, 'pending', ${clientId}, ${clientId}, ${clientSecret}, false, true, 0, 'black', ${defaultFeePercentage}, NOW(), NOW())
+      INSERT INTO profiles (id, email, password_hash, name, phone, cpf_cnpj, kyc_status, api_key, client_id, client_secret, is_admin, is_active, balance, route_type, fee_percentage, avatar_url, created_at, updated_at)
+      VALUES (${id}, ${email}, ${hashedPassword}, ${name}, ${phone || null}, ${document || null}, 'pending', ${clientId}, ${clientId}, ${clientSecret}, false, true, 0, 'black', ${defaultFeePercentage}, ${randomAvatar}, NOW(), NOW())
       RETURNING id, email, name, phone, cpf_cnpj as document, 'cpf' as document_type, 'user' as role, kyc_status, created_at, api_key, client_secret as api_secret, webhook_url
     `
 
