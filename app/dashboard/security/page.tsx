@@ -50,8 +50,10 @@ export default function SecurityPage() {
   const [is2FAEnabled, setIs2FAEnabled] = useState(false);
   const [setupStep, setSetupStep] = useState<"idle" | "setup" | "verify">("idle");
   const [qrCode, setQrCode] = useState<string | null>(null);
+  const [secretKey, setSecretKey] = useState<string | null>(null);
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [verifyCode, setVerifyCode] = useState("");
+  const [copiedSecret, setCopiedSecret] = useState(false);
   const [showBackupCodes, setShowBackupCodes] = useState(false);
   const [disablePassword, setDisablePassword] = useState("");
   const [showDisableModal, setShowDisableModal] = useState(false);
@@ -115,11 +117,12 @@ export default function SecurityPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "setup" }),
       });
-      const data = await res.json();
-      if (data.success) {
-        setQrCode(data.qrCode);
-        setBackupCodes(data.backupCodes);
-        setSetupStep("setup");
+  const data = await res.json();
+  if (data.success) {
+  setQrCode(data.qrCode);
+  setSecretKey(data.secret);
+  setBackupCodes(data.backupCodes);
+  setSetupStep("setup");
       }
     } catch (error) {
       console.error("Erro ao iniciar setup:", error);
@@ -304,6 +307,30 @@ export default function SecurityPage() {
                     <Image src={qrCode} alt="QR Code" width={200} height={200} />
                   </div>
                 </div>
+
+                {secretKey && (
+                  <div className="bg-secondary/50 rounded-lg p-4">
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Ou adicione manualmente usando o codigo:
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 bg-background px-3 py-2 rounded text-sm font-mono text-foreground break-all">
+                        {secretKey}
+                      </code>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          navigator.clipboard.writeText(secretKey);
+                          setCopiedSecret(true);
+                          setTimeout(() => setCopiedSecret(false), 2000);
+                        }}
+                      >
+                        {copiedSecret ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-foreground">

@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         qrCode: result.qrCode,
+        secret: result.secret,
         backupCodes: result.backupCodes,
       });
     }
