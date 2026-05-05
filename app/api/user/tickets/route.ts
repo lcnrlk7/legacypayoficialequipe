@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { logNewTicket } from "@/lib/discord-webhook";
 
 // GET - Listar tickets do usuario
 export async function GET(request: NextRequest) {
@@ -79,6 +80,11 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Buscar dados do usuario
+    const userInfo = await sql`
+      SELECT name, email FROM profiles WHERE id = ${session.userId}
+    `;
+
     // Criar ticket
     const ticket = await sql`
       INSERT INTO support_tickets (user_id, subject, category, priority)
@@ -91,6 +97,17 @@ export async function POST(request: NextRequest) {
       INSERT INTO ticket_messages (ticket_id, sender_id, sender_type, message, attachment_url, attachment_type)
       VALUES (${ticket[0].id}, ${session.userId}, 'user', ${message}, ${attachmentUrl || null}, ${attachmentType || null})
     `;
+
+    // Enviar notificacao para Discord
+    logNewTicket({
+      ticketId: ticket[0].id,
+      subject,
+      category,
+      priority: priority || 'normal',
+      message,
+      userName: userInfo[0]?.name || "Usuario",
+      userEmail: userInfo[0]?.email || "",
+    });
 
     return NextResponse.json({ success: true, ticket: ticket[0] });
   } catch (error) {

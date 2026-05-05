@@ -17,6 +17,7 @@ const DISCORD_WEBHOOKS = {
   saques: "https://discord.com/api/webhooks/1499837361440161886/qD-d03QN8WqTglC0SmUFB0BAJCakSoaQGDVyvydLnYl9Vp9yAAjwrCjkLWPtCX3Kd-ZI",
   geral: "https://discord.com/api/webhooks/1499837482303492320/llq0EYn-DH_qI8QaXiKSyvvrPNqiZX3z9oB2SqoYjAQMgDhMd2Rvw1Wrz7r7zyLUXhK_",
   cadastros: "https://discord.com/api/webhooks/1499837621147406498/NEwuwrhItxr6qRU-fB1speAwDbm2IYosFGhqevTrDbzv-8h74zssSdrMngX94KucoDkk",
+  suporte: "https://discord.com/api/webhooks/1501311387664912596/rnzOo0UspOYuwOAwhEh0HJsBtZneYwYQGsidN8kUxD-a1-KjyLLiRslB_4C2YAOoPq1t",
 };
 
 // Cores para os embeds
@@ -596,4 +597,134 @@ export function logWebhookReceived(data: {
   }
 
   sendDiscordWebhook(DISCORD_WEBHOOKS.sistema, { embeds: [embed] });
+}
+
+// ==================== LOGS DE SUPORTE/TICKETS ====================
+
+const TICKET_CATEGORY_LABELS: Record<string, string> = {
+  technical: "Tecnico",
+  financial: "Financeiro",
+  account: "Conta",
+  integration: "Integracao",
+  other: "Outro",
+};
+
+const TICKET_PRIORITY_LABELS: Record<string, string> = {
+  low: "Baixa",
+  normal: "Normal",
+  high: "Alta",
+  urgent: "Urgente",
+};
+
+const TICKET_PRIORITY_EMOJIS: Record<string, string> = {
+  low: "🟢",
+  normal: "🟡",
+  high: "🟠",
+  urgent: "🔴",
+};
+
+export function logNewTicket(data: {
+  ticketId: string;
+  subject: string;
+  category: string;
+  priority: string;
+  message: string;
+  userName: string;
+  userEmail: string;
+}): void {
+  const priorityEmoji = TICKET_PRIORITY_EMOJIS[data.priority] || "🟡";
+  const isUrgent = data.priority === "urgent" || data.priority === "high";
+
+  const embed: DiscordEmbed = {
+    title: "🎫 Novo Ticket de Suporte",
+    description: `**${data.subject}**`,
+    color: isUrgent ? COLORS.error : COLORS.primary,
+    fields: [
+      { name: "👤 Usuario", value: data.userName || "N/A", inline: true },
+      { name: "📧 Email", value: data.userEmail, inline: true },
+      { name: "📂 Categoria", value: TICKET_CATEGORY_LABELS[data.category] || data.category, inline: true },
+      { name: `${priorityEmoji} Prioridade`, value: TICKET_PRIORITY_LABELS[data.priority] || data.priority, inline: true },
+      { name: "🔗 ID", value: `\`${data.ticketId.slice(0, 8)}...\``, inline: true },
+      { name: "📊 Status", value: "`ABERTO`", inline: true },
+      { 
+        name: "💬 Mensagem", 
+        value: data.message.length > 500 ? data.message.substring(0, 500) + "..." : data.message, 
+        inline: false 
+      },
+    ],
+    footer: { text: `LegacyPay Suporte • ${formatDateTime()}` },
+    timestamp: new Date().toISOString(),
+    thumbnail: { url: "https://cdn-icons-png.flaticon.com/512/3062/3062634.png" },
+    author: { name: "Central de Suporte", icon_url: "https://cdn-icons-png.flaticon.com/512/1067/1067566.png" },
+  };
+
+  sendDiscordWebhook(DISCORD_WEBHOOKS.suporte, { embeds: [embed] });
+}
+
+export function logTicketClosed(data: {
+  ticketId: string;
+  subject: string;
+  status: string;
+  userName: string;
+  userEmail: string;
+  closedBy: "user" | "admin";
+  adminName?: string;
+}): void {
+  const isResolved = data.status === "resolved";
+  const statusEmoji = isResolved ? "✅" : "🔒";
+  const statusText = isResolved ? "RESOLVIDO" : "ENCERRADO";
+  const closedByText = data.closedBy === "user" 
+    ? "Encerrado pelo usuario" 
+    : `Encerrado por ${data.adminName || "Admin"}`;
+
+  const embed: DiscordEmbed = {
+    title: `${statusEmoji} Ticket ${isResolved ? "Resolvido" : "Encerrado"}`,
+    description: `**${data.subject}**`,
+    color: isResolved ? COLORS.info : COLORS.success,
+    fields: [
+      { name: "👤 Usuario", value: data.userName || "N/A", inline: true },
+      { name: "📧 Email", value: data.userEmail, inline: true },
+      { name: "🔗 ID", value: `\`${data.ticketId.slice(0, 8)}...\``, inline: true },
+      { name: "📊 Status", value: `\`${statusText}\``, inline: true },
+      { name: "🔐 Acao", value: closedByText, inline: true },
+    ],
+    footer: { text: `LegacyPay Suporte • ${formatDateTime()}` },
+    timestamp: new Date().toISOString(),
+    thumbnail: { url: isResolved 
+      ? "https://cdn-icons-png.flaticon.com/512/5610/5610944.png" 
+      : "https://cdn-icons-png.flaticon.com/512/4436/4436481.png" 
+    },
+    author: { name: "Central de Suporte", icon_url: "https://cdn-icons-png.flaticon.com/512/1067/1067566.png" },
+  };
+
+  sendDiscordWebhook(DISCORD_WEBHOOKS.suporte, { embeds: [embed] });
+}
+
+export function logTicketAdminReply(data: {
+  ticketId: string;
+  subject: string;
+  userName: string;
+  adminName: string;
+  message: string;
+}): void {
+  const embed: DiscordEmbed = {
+    title: "💬 Nova Resposta do Suporte",
+    description: `**${data.subject}**`,
+    color: COLORS.purple,
+    fields: [
+      { name: "👤 Usuario", value: data.userName || "N/A", inline: true },
+      { name: "🛡️ Atendente", value: data.adminName, inline: true },
+      { name: "🔗 ID", value: `\`${data.ticketId.slice(0, 8)}...\``, inline: true },
+      { 
+        name: "💬 Resposta", 
+        value: data.message.length > 500 ? data.message.substring(0, 500) + "..." : data.message, 
+        inline: false 
+      },
+    ],
+    footer: { text: `LegacyPay Suporte • ${formatDateTime()}` },
+    timestamp: new Date().toISOString(),
+    author: { name: "Central de Suporte", icon_url: "https://cdn-icons-png.flaticon.com/512/1067/1067566.png" },
+  };
+
+  sendDiscordWebhook(DISCORD_WEBHOOKS.suporte, { embeds: [embed] });
 }

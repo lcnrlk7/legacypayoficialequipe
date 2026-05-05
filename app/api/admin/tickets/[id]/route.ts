@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
 import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
+import { logTicketClosed, logTicketAdminReply } from "@/lib/discord-webhook";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -130,6 +131,22 @@ export async function POST(
       UPDATE support_tickets SET last_message_at = NOW(), updated_at = NOW() WHERE id = ${id}
     `;
 
+    // Buscar info do usuario do ticket
+    const userInfo = await sql`
+      SELECT p.name FROM support_tickets t
+      JOIN profiles p ON t.user_id = p.id
+      WHERE t.id = ${id}
+    `;
+
+    // Enviar notificacao para Discord
+    logTicketAdminReply({
+      ticketId: id,
+      subject: ticket[0].subject,
+      userName: userInfo[0]?.name || "Usuario",
+      adminName: adminInfo[0]?.name || admin.name || "Admin",
+      message: message || "Anexo enviado",
+    });
+
     return NextResponse.json({ 
       success: true, 
       message: { 
@@ -158,58 +175,65 @@ export async function PATCH(
     const body = await request.json();
     const { status, priority, assignedAdminId } = body;
 
-    // Construir updates dinamicamente
-    const setClauses: string[] = [];
-    const values: (string | null)[] = [];
+    // Buscar dados do ticket antes de atualizar
+    const ticketInfo = await sql`
+      SELECT t.subject, p.name as user_name, p.email as user_email
+      FROM support_tickets t
+      JOIN profiles p ON t.user_id = p.id
+      WHERE t.id = ${id}
+    `;
+
+    // Buscar nome do admin
+    const adminInfo = await sql`
+      SELECT name FROM profiles WHERE id = ${admin.userId}
+    `;
+    const adminName = adminInfo[0]?.name || admin.name || "Admin";
     
-    if (status) {
-      setClauses.push('status = $' + (values.length + 1));
-      values.push(status);
-      if (status === 'closed') {
-        setClauses.push('closed_at = NOW()');
-      } else {
-        setClauses.push('closed_at = NULL');
-      }
+    // Executar updates
+    if (status && status === 'closed') {
+      await sql`
+        UPDATE support_tickets 
+        SET status = ${status}, closed_at = NOW(), updated_at = NOW()
+        WHERE id = ${id}
+      `;
+    } else if (status && status === 'resolved') {
+      await sql`
+        UPDATE support_tickets 
+        SET status = ${status}, closed_at = NOW(), updated_at = NOW()
+        WHERE id = ${id}
+      `;
+    } else if (status) {
+      await sql`
+        UPDATE support_tickets 
+        SET status = ${status}, closed_at = NULL, updated_at = NOW()
+        WHERE id = ${id}
+      `;
     }
     
     if (priority) {
-      setClauses.push('priority = $' + (values.length + 1));
-      values.push(priority);
+      await sql`
+        UPDATE support_tickets SET priority = ${priority}, updated_at = NOW() WHERE id = ${id}
+      `;
     }
     
     if (assignedAdminId !== undefined) {
-      setClauses.push('assigned_admin_id = $' + (values.length + 1));
-      values.push(assignedAdminId);
+      await sql`
+        UPDATE support_tickets SET assigned_admin_id = ${assignedAdminId}, updated_at = NOW() WHERE id = ${id}
+      `;
     }
 
-    if (setClauses.length > 0) {
-      setClauses.push('updated_at = NOW()');
-      
-      // Executar update
-      if (status && status === 'closed') {
-        await sql`
-          UPDATE support_tickets 
-          SET status = ${status}, closed_at = NOW(), updated_at = NOW()
-          WHERE id = ${id}
-        `;
-      } else if (status) {
-        await sql`
-          UPDATE support_tickets 
-          SET status = ${status}, closed_at = NULL, updated_at = NOW()
-          WHERE id = ${id}
-        `;
-      }
-      
-      if (priority) {
-        await sql`
-          UPDATE support_tickets SET priority = ${priority}, updated_at = NOW() WHERE id = ${id}
-        `;
-      }
-      
-      if (assignedAdminId !== undefined) {
-        await sql`
-          UPDATE support_tickets SET assigned_admin_id = ${assignedAdminId}, updated_at = NOW() WHERE id = ${id}
-        `;
+    // Enviar notificacao Discord quando fechar/resolver
+    if (status === 'closed' || status === 'resolved') {
+      if (ticketInfo.length > 0) {
+        logTicketClosed({
+          ticketId: id,
+          subject: ticketInfo[0].subject,
+          status: status,
+          userName: ticketInfo[0].user_name,
+          userEmail: ticketInfo[0].user_email,
+          closedBy: "admin",
+          adminName: adminName,
+        });
       }
     }
 

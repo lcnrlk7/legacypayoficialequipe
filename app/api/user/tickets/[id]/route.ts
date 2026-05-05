@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { getSession } from "@/lib/auth";
+import { logTicketClosed } from "@/lib/discord-webhook";
 
 // GET - Obter ticket com mensagens
 export async function GET(
@@ -127,11 +128,33 @@ export async function PATCH(
 
     const { id } = await params;
 
+    // Buscar dados do ticket antes de fechar
+    const ticketInfo = await sql`
+      SELECT t.subject, p.name as user_name, p.email as user_email
+      FROM support_tickets t
+      JOIN profiles p ON t.user_id = p.id
+      WHERE t.id = ${id} AND t.user_id = ${session.userId}
+    `;
+
+    if (ticketInfo.length === 0) {
+      return NextResponse.json({ error: "Ticket nao encontrado" }, { status: 404 });
+    }
+
     await sql`
       UPDATE support_tickets 
       SET status = 'closed', closed_at = NOW(), updated_at = NOW() 
       WHERE id = ${id} AND user_id = ${session.userId}
     `;
+
+    // Enviar notificacao para Discord
+    logTicketClosed({
+      ticketId: id,
+      subject: ticketInfo[0].subject,
+      status: "closed",
+      userName: ticketInfo[0].user_name,
+      userEmail: ticketInfo[0].user_email,
+      closedBy: "user",
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {
