@@ -22,6 +22,7 @@ import {
   Code,
   Settings,
   ShieldCheck,
+  Shield,
   ShoppingCart,
   Package,
   Truck,
@@ -80,6 +81,7 @@ const supportItems: { href: string; icon: LucideIcon; label: string }[] = [
 // Configuracoes
 const configItems: { href: string; icon: LucideIcon; label: string }[] = [
   { href: "/dashboard/integration", icon: Code, label: "Integracao API" },
+  { href: "/dashboard/security", icon: Shield, label: "Seguranca" },
   { href: "/dashboard/settings", icon: Settings, label: "Configuracoes" },
 ]
 

@@ -5,6 +5,7 @@ import { checkLoginAttempts, getClientIP, logSuspiciousActivity } from "@/lib/se
 import { logLogin } from "@/lib/discord-webhook";
 import { detectAttack } from "@/lib/sanitize";
 import { logAttack } from "@/lib/attack-logger";
+import { trackLogin, checkNewDevice } from "@/lib/login-tracker";
 
 const COOKIE_NAME = "auth-token";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
@@ -88,6 +89,12 @@ export async function POST(request: NextRequest) {
           INSERT INTO audit_logs (action, entity_type, new_value, created_at)
           VALUES ('LOGIN_FAILED', 'auth', ${JSON.stringify({ email, error })}, NOW())
         `;
+        
+        // Buscar user_id se existir para registrar tentativa
+        const existingUser = await sql`SELECT id FROM profiles WHERE email = ${email} LIMIT 1`;
+        if (existingUser.length > 0) {
+          trackLogin({ userId: existingUser[0].id, success: false });
+        }
       } catch (logError) {
         console.error("[v0] Error logging failed login:", logError);
       }
@@ -108,6 +115,12 @@ export async function POST(request: NextRequest) {
         VALUES (${user.id}, 'LOGIN', 'auth', ${JSON.stringify({ email: user.email })}, NOW())
       `;
       
+      // Registrar no historico de logins
+      trackLogin({ userId: user.id, success: true });
+      
+      // Verificar se e dispositivo novo
+      const isNewDevice = await checkNewDevice(user.id);
+      
       // Log para Discord
       logLogin({
         userId: user.id,
@@ -116,6 +129,7 @@ export async function POST(request: NextRequest) {
         ip: ip,
         userAgent: request.headers.get("user-agent") || undefined,
         isAdmin: user.role === "admin" || user.role === "ceo",
+        isNewDevice,
       });
     } catch (logError) {
       console.error("[v0] Error logging successful login:", logError);
