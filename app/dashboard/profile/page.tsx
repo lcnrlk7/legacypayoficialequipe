@@ -153,19 +153,24 @@ export default function ProfilePage() {
     setUploadingAvatar(true);
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("avatar", file);
 
       const response = await fetch("/api/user/avatar", {
         method: "POST",
         body: formData,
       });
 
+      const data = await response.json();
+      console.log("[v0] Avatar upload response:", data);
+
       if (response.ok) {
         await refreshProfile();
         setShowAvatarModal(false);
+      } else {
+        console.error("[v0] Avatar upload error:", data.error);
       }
     } catch (error) {
-      console.error("Erro ao fazer upload:", error);
+      console.error("[v0] Erro ao fazer upload:", error);
     } finally {
       setUploadingAvatar(false);
     }
