@@ -9,7 +9,21 @@ export async function PATCH(
   try {
     const user = await getCurrentUser();
     
-    if (!user || (user.role !== "admin" && user.role !== "ceo")) {
+    if (!user) {
+      return NextResponse.json(
+        { error: "Nao autorizado" },
+        { status: 401 }
+      );
+    }
+    
+    // Verificar se e admin no banco de dados
+    const adminCheck = await sql`
+      SELECT is_admin FROM profiles WHERE id = ${user.id}
+    `;
+    
+    const isAdmin = adminCheck.length > 0 && adminCheck[0].is_admin === true;
+    
+    if (!isAdmin && user.role !== "admin" && user.role !== "ceo") {
       return NextResponse.json(
         { error: "Nao autorizado" },
         { status: 401 }
