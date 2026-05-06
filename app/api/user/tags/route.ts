@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifySession } from "@/lib/session";
+import { getSession } from "@/lib/auth";
 import { sql } from "@/lib/db";
 
 // GET - Listar tags do usuario
 export async function GET() {
   try {
-    const session = await verifySession();
+    const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
     }
@@ -26,7 +26,7 @@ export async function GET() {
 // POST - Criar tag
 export async function POST(request: NextRequest) {
   try {
-    const session = await verifySession();
+    const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
     }
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 // DELETE - Deletar tag
 export async function DELETE(request: NextRequest) {
   try {
-    const session = await verifySession();
+    const session = await getSession();
     if (!session) {
       return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });
     }
