@@ -28,6 +28,7 @@ import {
   Truck,
   Tag,
   ChevronDown,
+  FolderKanban,
   type LucideIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -80,6 +81,7 @@ const supportItems: { href: string; icon: LucideIcon; label: string }[] = [
 
 // Configuracoes
 const configItems: { href: string; icon: LucideIcon; label: string }[] = [
+  { href: "/dashboard/management", icon: FolderKanban, label: "Gestao" },
   { href: "/dashboard/integration", icon: Code, label: "Integracao API" },
   { href: "/dashboard/security", icon: Shield, label: "Seguranca" },
   { href: "/dashboard/settings", icon: Settings, label: "Configuracoes" },
