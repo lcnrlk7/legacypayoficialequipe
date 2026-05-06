@@ -222,18 +222,25 @@ export default function SecurityPage() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 p-6 mb-8"
       >
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Shield className="w-6 h-6 text-primary" />
-          Seguranca
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Gerencie a seguranca da sua conta
-        </p>
+        <div className="absolute -top-20 -right-20 w-60 h-60 bg-emerald-500/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-emerald-500/5 rounded-full blur-2xl" />
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 rounded-xl bg-emerald-500/20 ring-1 ring-emerald-500/30">
+              <Shield className="w-6 h-6 text-emerald-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">Seguranca</h1>
+          </div>
+          <p className="text-muted-foreground max-w-lg">
+            Proteja sua conta com autenticacao em duas etapas, monitore acessos recentes e configure suas preferencias de notificacao para manter seu dinheiro seguro.
+          </p>
+        </div>
       </motion.div>
 
       {/* Tabs */}

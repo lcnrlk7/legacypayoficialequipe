@@ -299,9 +299,20 @@ export default function ManagementPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Gestao</h1>
-        <p className="text-muted-foreground">Organize suas transacoes e defina metas</p>
+      {/* Header */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500/10 via-purple-500/5 to-transparent border border-purple-500/20 p-6">
+        <div className="absolute -top-20 -right-20 w-60 h-60 bg-purple-500/10 rounded-full blur-3xl" />
+        <div className="relative z-10">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2.5 rounded-xl bg-purple-500/20 ring-1 ring-purple-500/30">
+              <FolderOpen className="w-6 h-6 text-purple-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-foreground">Gestao</h1>
+          </div>
+          <p className="text-muted-foreground max-w-lg">
+            Organize suas transacoes com categorias e tags, defina metas de faturamento e gerencie seus centros de custo para ter controle total do seu negocio.
+          </p>
+        </div>
       </div>
 
       {/* Tabs */}
