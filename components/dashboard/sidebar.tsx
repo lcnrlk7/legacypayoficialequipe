@@ -55,37 +55,100 @@ interface SidebarProps {
   profile: Profile | null
 }
 
-// Gerenciamento
-const managementItems: { href: string; icon: LucideIcon; label: string }[] = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Pagina Inicial" },
-  { href: "/dashboard/profile", icon: UserCircle, label: "Meu Perfil" },
-  { href: "/dashboard/wallet", icon: Wallet, label: "Carteira" },
-  { href: "/dashboard/transactions", icon: TrendingUp, label: "Transacoes" },
-  { href: "/dashboard/reports", icon: FileText, label: "Relatorios" },
-  { href: "/dashboard/pix-keys", icon: ArrowLeftRight, label: "Chaves PIX" },
-  { href: "/dashboard/affiliates", icon: Users, label: "Afiliados" },
-  { href: "/dashboard/fees", icon: Percent, label: "Taxas" },
+// Menu organizado em categorias com cores
+const menuCategories = [
+  {
+    title: "Visao Geral",
+    color: "primary", // Laranja
+    items: [
+      { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+      { href: "/dashboard/wallet", icon: Wallet, label: "Carteira" },
+      { href: "/dashboard/transactions", icon: TrendingUp, label: "Transacoes" },
+      { href: "/dashboard/reports", icon: FileText, label: "Relatorios" },
+    ],
+  },
+  {
+    title: "Conta",
+    color: "emerald", // Verde
+    items: [
+      { href: "/dashboard/profile", icon: UserCircle, label: "Meu Perfil" },
+      { href: "/dashboard/pix-keys", icon: ArrowLeftRight, label: "Chaves PIX" },
+      { href: "/dashboard/fees", icon: Percent, label: "Taxas" },
+      { href: "/dashboard/affiliates", icon: Users, label: "Afiliados" },
+    ],
+  },
+  {
+    title: "E-commerce",
+    color: "blue", // Azul
+    hasSubmenu: true,
+    items: [
+      { href: "/dashboard/checkout", icon: ShoppingCart, label: "Meus Checkouts" },
+      { href: "/dashboard/checkout/orders", icon: Truck, label: "Entregas" },
+      { href: "/dashboard/checkout/products", icon: Package, label: "Produtos" },
+      { href: "/dashboard/checkout/coupons", icon: Tag, label: "Cupons" },
+    ],
+  },
+  {
+    title: "Suporte",
+    color: "cyan", // Ciano
+    items: [
+      { href: "/dashboard/support", icon: MessageCircle, label: "Tickets" },
+    ],
+  },
+  {
+    title: "Configuracoes",
+    color: "purple", // Roxo
+    items: [
+      { href: "/dashboard/management", icon: FolderKanban, label: "Gestao" },
+      { href: "/dashboard/integration", icon: Code, label: "Integracao API" },
+      { href: "/dashboard/security", icon: Shield, label: "Seguranca" },
+      { href: "/dashboard/settings", icon: Settings, label: "Preferencias" },
+    ],
+  },
 ]
 
-const checkoutMenuItems = [
-  { href: "/dashboard/checkout", icon: ShoppingCart, label: "Meus Checkouts" },
-  { href: "/dashboard/checkout/orders", icon: Truck, label: "Entregas" },
-  { href: "/dashboard/checkout/products", icon: Package, label: "Produtos" },
-  { href: "/dashboard/checkout/coupons", icon: Tag, label: "Cupons" },
-]
-
-// Suporte
-const supportItems: { href: string; icon: LucideIcon; label: string }[] = [
-  { href: "/dashboard/support", icon: MessageCircle, label: "Tickets de Suporte" },
-]
-
-// Configuracoes
-const configItems: { href: string; icon: LucideIcon; label: string }[] = [
-  { href: "/dashboard/management", icon: FolderKanban, label: "Gestao" },
-  { href: "/dashboard/integration", icon: Code, label: "Integracao API" },
-  { href: "/dashboard/security", icon: Shield, label: "Seguranca" },
-  { href: "/dashboard/settings", icon: Settings, label: "Configuracoes" },
-]
+// Funcao para obter classes de cor
+const getColorClasses = (color: string, isActive: boolean) => {
+  const colors: Record<string, { label: string; active: string; hover: string; icon: string }> = {
+    primary: {
+      label: "text-primary/70",
+      active: "bg-gradient-to-r from-primary/20 to-primary/5 text-primary border-l-2 border-primary shadow-sm shadow-primary/10",
+      hover: "hover:bg-primary/5 hover:text-primary",
+      icon: "text-primary",
+    },
+    emerald: {
+      label: "text-emerald-500/70",
+      active: "bg-gradient-to-r from-emerald-500/20 to-emerald-500/5 text-emerald-400 border-l-2 border-emerald-500 shadow-sm shadow-emerald-500/10",
+      hover: "hover:bg-emerald-500/5 hover:text-emerald-400",
+      icon: "text-emerald-400",
+    },
+    blue: {
+      label: "text-blue-500/70",
+      active: "bg-gradient-to-r from-blue-500/20 to-blue-500/5 text-blue-400 border-l-2 border-blue-500 shadow-sm shadow-blue-500/10",
+      hover: "hover:bg-blue-500/5 hover:text-blue-400",
+      icon: "text-blue-400",
+    },
+    cyan: {
+      label: "text-cyan-500/70",
+      active: "bg-gradient-to-r from-cyan-500/20 to-cyan-500/5 text-cyan-400 border-l-2 border-cyan-500 shadow-sm shadow-cyan-500/10",
+      hover: "hover:bg-cyan-500/5 hover:text-cyan-400",
+      icon: "text-cyan-400",
+    },
+    purple: {
+      label: "text-purple-500/70",
+      active: "bg-gradient-to-r from-purple-500/20 to-purple-500/5 text-purple-400 border-l-2 border-purple-500 shadow-sm shadow-purple-500/10",
+      hover: "hover:bg-purple-500/5 hover:text-purple-400",
+      icon: "text-purple-400",
+    },
+    red: {
+      label: "text-red-500/70",
+      active: "bg-gradient-to-r from-red-500/20 to-red-500/5 text-red-400 border-l-2 border-red-500 shadow-sm shadow-red-500/10",
+      hover: "hover:bg-red-500/5 hover:text-red-400",
+      icon: "text-red-400",
+    },
+  }
+  return colors[color] || colors.primary
+}
 
 export function DashboardSidebar({ user, profile }: SidebarProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false)
@@ -126,154 +189,117 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
 
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto scrollbar-hide">
-        {/* Gerenciamento */}
-        <div className="pb-3 pt-2">
-          <span className="px-4 text-[10px] font-semibold text-primary/70 uppercase tracking-widest">
-            Gerenciamento
-          </span>
-        </div>
-        
-        {managementItems.map((item) => {
-          const isActive = pathname === item.href
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setIsMobileOpen(false)}
-              className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${
-                isActive
-                  ? "bg-gradient-to-r from-primary/20 to-primary/5 text-primary border-l-2 border-primary shadow-sm shadow-primary/10"
-                  : "text-muted-foreground hover:bg-white/5 hover:text-foreground hover:pl-5"
-              }`}
-            >
-              <item.icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? "text-primary" : "group-hover:scale-110"}`} />
-              <span className="font-medium">{item.label}</span>
-            </Link>
-          )
-        })}
-
-        {/* Checkout Menu with Submenu */}
-        <div className="space-y-1">
-          <button
-            onClick={() => setCheckoutOpen(!checkoutOpen)}
-            className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl transition-all ${
-              isCheckoutPage
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              <ShoppingCart className="w-5 h-5 opacity-80" />
-              <span className="font-medium">Checkout</span>
-            </div>
-            <ChevronDown className={`w-4 h-4 transition-transform ${checkoutOpen || isCheckoutPage ? "rotate-180" : ""}`} />
-          </button>
+        {menuCategories.map((category, categoryIndex) => {
+          const colorClasses = getColorClasses(category.color, false)
+          const isEcommerce = category.title === "E-commerce"
           
-          <AnimatePresence>
-            {(checkoutOpen || isCheckoutPage) && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden pl-4"
-              >
-                {checkoutMenuItems.map((item) => {
+          return (
+            <div key={category.title} className={categoryIndex > 0 ? "pt-5" : "pt-2"}>
+              {/* Category Title */}
+              <div className="pb-2">
+                <span className={`px-4 text-[10px] font-semibold uppercase tracking-widest ${colorClasses.label}`}>
+                  {category.title}
+                </span>
+              </div>
+              
+              {/* E-commerce with submenu */}
+              {isEcommerce ? (
+                <div className="space-y-1">
+                  <button
+                    onClick={() => setCheckoutOpen(!checkoutOpen)}
+                    className={`w-full group flex items-center justify-between px-4 py-2.5 rounded-xl transition-all duration-200 ${
+                      isCheckoutPage
+                        ? colorClasses.active
+                        : `text-muted-foreground ${colorClasses.hover}`
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <ShoppingCart className={`w-5 h-5 transition-transform duration-200 ${isCheckoutPage ? colorClasses.icon : "group-hover:scale-110"}`} />
+                      <span className="font-medium">Checkout</span>
+                    </div>
+                    <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${checkoutOpen || isCheckoutPage ? "rotate-180" : ""}`} />
+                  </button>
+                  
+                  <AnimatePresence>
+                    {(checkoutOpen || isCheckoutPage) && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pl-4 space-y-0.5 pt-1">
+                          {category.items.map((item) => {
+                            const isActive = pathname === item.href
+                            return (
+                              <Link
+                                key={item.href}
+                                href={item.href}
+                                onClick={() => setIsMobileOpen(false)}
+                                className={`group flex items-center gap-3 px-4 py-2 rounded-lg transition-all duration-200 ${
+                                  isActive
+                                    ? colorClasses.active
+                                    : `text-muted-foreground ${colorClasses.hover}`
+                                }`}
+                              >
+                                <item.icon className={`w-4 h-4 transition-transform duration-200 ${isActive ? colorClasses.icon : "group-hover:scale-110"}`} />
+                                <span className="text-sm font-medium">{item.label}</span>
+                              </Link>
+                            )
+                          })}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ) : (
+                /* Regular menu items */
+                category.items.map((item) => {
                   const isActive = pathname === item.href
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
                       onClick={() => setIsMobileOpen(false)}
-                      className={`flex items-center gap-3 px-4 py-2 rounded-xl transition-all ${
+                      className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${
                         isActive
-                          ? "bg-primary/10 text-primary"
-                          : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                          ? colorClasses.active
+                          : `text-muted-foreground ${colorClasses.hover}`
                       }`}
                     >
-                      <item.icon className="w-4 h-4 opacity-80" />
-                      <span className="text-sm font-medium">{item.label}</span>
+                      <item.icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? colorClasses.icon : "group-hover:scale-110"}`} />
+                      <span className="font-medium">{item.label}</span>
                     </Link>
                   )
-                })}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                })
+              )}
+            </div>
+          )
+        })}
 
-        {/* KYC Link (dentro de Gerenciamento) */}
+        {/* KYC Link */}
         {profile?.kyc_status !== "approved" && (
           <Link
             href="/dashboard/kyc"
             onClick={() => setIsMobileOpen(false)}
-            className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all ${
+            className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 mt-2 ${
               pathname === "/dashboard/kyc"
-                ? "bg-primary/10 text-primary"
-                : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                ? "bg-gradient-to-r from-yellow-500/20 to-yellow-500/5 text-yellow-400 border-l-2 border-yellow-500 shadow-sm shadow-yellow-500/10"
+                : "text-yellow-500/70 hover:bg-yellow-500/5 hover:text-yellow-400"
             }`}
           >
-            <User className="w-5 h-5 opacity-80" />
+            <User className={`w-5 h-5 transition-transform duration-200 ${pathname === "/dashboard/kyc" ? "text-yellow-400" : "group-hover:scale-110"}`} />
             <span className="font-medium">Verificacao KYC</span>
           </Link>
         )}
 
-        {/* Suporte */}
-        <div className="pt-6 pb-3">
-          <span className="px-4 text-[10px] font-semibold text-cyan-500/70 uppercase tracking-widest">
-            Suporte
-          </span>
-        </div>
-        
-        {supportItems.map((item) => {
-          const isActive = pathname === item.href
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setIsMobileOpen(false)}
-              className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${
-                isActive
-                  ? "bg-gradient-to-r from-cyan-500/20 to-cyan-500/5 text-cyan-400 border-l-2 border-cyan-500 shadow-sm shadow-cyan-500/10"
-                  : "text-muted-foreground hover:bg-white/5 hover:text-foreground hover:pl-5"
-              }`}
-            >
-              <item.icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? "text-cyan-400" : "group-hover:scale-110"}`} />
-              <span className="font-medium">{item.label}</span>
-            </Link>
-          )
-        })}
-
-        {/* Configuracoes */}
-        <div className="pt-6 pb-3">
-          <span className="px-4 text-[10px] font-semibold text-purple-500/70 uppercase tracking-widest">
-            Configuracoes
-          </span>
-        </div>
-        
-        {configItems.map((item) => {
-          const isActive = pathname === item.href
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setIsMobileOpen(false)}
-              className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${
-                isActive
-                  ? "bg-gradient-to-r from-purple-500/20 to-purple-500/5 text-purple-400 border-l-2 border-purple-500 shadow-sm shadow-purple-500/10"
-                  : "text-muted-foreground hover:bg-white/5 hover:text-foreground hover:pl-5"
-              }`}
-            >
-              <item.icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? "text-purple-400" : "group-hover:scale-110"}`} />
-              <span className="font-medium">{item.label}</span>
-            </Link>
-          )
-        })}
-
         {/* Admin */}
         {profile?.is_admin && (
-          <>
-            <div className="pt-6 pb-3">
+          <div className="pt-5">
+            <div className="pb-2">
               <span className="px-4 text-[10px] font-semibold text-red-500/70 uppercase tracking-widest">
-                Admin
+                Administracao
               </span>
             </div>
             <Link
@@ -282,13 +308,13 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
               className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${
                 pathname.startsWith("/lp-x7k9m2-internal")
                   ? "bg-gradient-to-r from-red-500/20 to-red-500/5 text-red-400 border-l-2 border-red-500 shadow-sm shadow-red-500/10"
-                  : "text-muted-foreground hover:bg-white/5 hover:text-foreground hover:pl-5"
+                  : "text-muted-foreground hover:bg-red-500/5 hover:text-red-400"
               }`}
             >
               <ShieldCheck className={`w-5 h-5 transition-transform duration-200 ${pathname.startsWith("/lp-x7k9m2-internal") ? "text-red-400" : "group-hover:scale-110"}`} />
-              <span className="font-medium">Painel Admin</span>
+              <span className="font-medium">Painel CEO</span>
             </Link>
-          </>
+          </div>
         )}
       </nav>
 
