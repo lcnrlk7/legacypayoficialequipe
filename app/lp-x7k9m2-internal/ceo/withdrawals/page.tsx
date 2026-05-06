@@ -152,9 +152,13 @@ export default function WithdrawalsPage() {
     
     setChangingStatus(true);
     try {
+      const adminToken = localStorage.getItem("lp_admin_session");
       const response = await fetch(`/api/admin/withdrawals/${withdrawal.id}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-Admin-Token": adminToken || "",
+        },
         body: JSON.stringify({ status: newStatus }),
       });
 
