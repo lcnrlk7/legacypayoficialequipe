@@ -869,17 +869,6 @@ export default function SettingsPage() {
     <Button variant="outline" className="text-xs sm:text-sm">Configurar</Button>
   </Link>
   </div>
-              <div>
-                <p className="font-medium text-foreground text-sm sm:text-base">
-                  Autenticacao de Dois Fatores
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Em breve disponivel
-                </p>
-              </div>
-            </div>
-            <Button variant="outline" disabled className="text-xs sm:text-sm">Em breve</Button>
-          </div>
 
           {/* Sessoes Ativas */}
           <div className="flex items-center justify-between p-3 sm:p-4 bg-secondary/50 rounded-xl">
