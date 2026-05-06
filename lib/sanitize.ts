@@ -477,26 +477,118 @@ export function isValidName(input: string): { valid: boolean; error?: string } {
 /**
  * Valida email - formato basico e sem caracteres perigosos
  */
+// Lista de dominios de email temporario/anonimo bloqueados
+const BLOCKED_EMAIL_DOMAINS = [
+  // Emails temporarios populares
+  "tempmail.com", "temp-mail.org", "tempmail.net", "temp-mail.io",
+  "guerrillamail.com", "guerrillamail.org", "guerrillamail.net", "guerrillamail.biz",
+  "10minutemail.com", "10minutemail.net", "10minmail.com",
+  "mailinator.com", "mailinator.net", "mailinator.org",
+  "throwaway.email", "throwawaymail.com",
+  "fakeinbox.com", "fakemailgenerator.com",
+  "yopmail.com", "yopmail.fr", "yopmail.net",
+  "sharklasers.com", "spam4.me", "grr.la", "guerrillamailblock.com",
+  "pokemail.net", "dispostable.com", "mailcatch.com",
+  "maildrop.cc", "mailnesia.com", "mintemail.com",
+  "mohmal.com", "tempail.com", "tempr.email",
+  "discard.email", "discardmail.com", "spambog.com",
+  "trashmail.com", "trashmail.net", "trashmail.org",
+  "mailexpire.com", "emailondeck.com", "getnada.com",
+  "tempinbox.com", "burnermail.io", "mailsac.com",
+  // Dominios especificos detectados no sistema
+  "xmailhub.xyz", "xmailhub.com",
+  "firemail.com.br", "firemail.cc", "firemail.de",
+  "protonmail.com", // Opcional - remover se quiser permitir
+  // Dominios genericos suspeitos
+  "mailhub.xyz", "tempmail.xyz", "fakemail.xyz",
+  "anonymousemail.com", "anonymbox.com",
+  "dropmail.me", "emailfake.com", "emkei.cz",
+  "fakemailgenerator.net", "getairmail.com",
+  "mailforspam.com", "mytrashmail.com", "nowmymail.com",
+  "spamgourmet.com", "spamherelots.com", "spamobox.com",
+  "tempmailaddress.com", "wegwerfmail.de", "wegwerfmail.net",
+  "crazymailing.com", "deadaddress.com", "despam.it",
+  "einrot.com", "emailisvalid.com", "emailtemporanea.net",
+  "fakeinformation.com", "jetable.org", "kasmail.com",
+  "link2mail.net", "mailcatch.com", "mailmoat.com",
+  "mailnull.com", "mailscrap.com", "mailzilla.org",
+  "nomail.xl.cx", "nobulk.com", "nospamfor.us",
+  "objectmail.com", "obobbo.com", "oneoffemail.com",
+  "pookmail.com", "quickinbox.com", "rcpt.at",
+  "rejectmail.com", "safetymail.info", "shortmail.net",
+  "sneakemail.com", "sofort-mail.de", "sogetthis.com",
+  "spamex.com", "spamfree24.org", "spamspot.com",
+  "supergreatmail.com", "teleworm.us", "tempemail.net",
+  "temporaryemail.net", "thankyou2010.com", "thisisnotmyrealemail.com",
+  "throwawayemailaddress.com", "trbvm.com", "twinmail.de",
+  "tyldd.com", "uggsrock.com", "veryrealemail.com",
+  "viditag.com", "webm4il.info", "wegwerfmail.org",
+  "wh4f.org", "xagloo.co", "xemaps.com",
+  "xents.com", "xmaily.com", "xoxy.net",
+  "yapped.net", "yeah.net", "yep.it",
+  "yogamaven.com", "yuurok.com", "zippymail.info",
+];
+
+// Provedores de email permitidos (lista branca - mais confiaveis)
+const ALLOWED_EMAIL_DOMAINS = [
+  // Gmail e Google
+  "gmail.com", "googlemail.com",
+  // Microsoft
+  "outlook.com", "outlook.com.br", "hotmail.com", "hotmail.com.br", "live.com", "msn.com",
+  // Yahoo
+  "yahoo.com", "yahoo.com.br", "ymail.com",
+  // Apple
+  "icloud.com", "me.com", "mac.com",
+  // Brasileiros
+  "uol.com.br", "bol.com.br", "terra.com.br", "ig.com.br", "globo.com", "globomail.com",
+  "r7.com", "zipmail.com.br", "oi.com.br", "pop.com.br",
+  // Corporativos comuns
+  "zoho.com", "zohomail.com", "fastmail.com", "tutanota.com",
+];
+
 export function isValidEmailStrict(input: string): { valid: boolean; error?: string } {
   if (!input || input.trim().length === 0) {
-    return { valid: false, error: "Email é obrigatório" };
+  return { valid: false, error: "Email e obrigatorio" };
   }
   
   // Verifica XSS
   if (containsXSS(input)) {
-    return { valid: false, error: "Conteúdo não permitido detectado" };
+  return { valid: false, error: "Conteudo nao permitido detectado" };
   }
   
   // Bloqueia caracteres perigosos (exceto @ e . que sao necessarios)
   const dangerousChars = /[<>"'`&;(){}[\]\\=*#!$%^|~\s]/;
   if (dangerousChars.test(input)) {
-    return { valid: false, error: "Email contém caracteres não permitidos" };
+  return { valid: false, error: "Email contem caracteres nao permitidos" };
   }
   
   // Regex para email valido
   const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   if (!emailRegex.test(input)) {
-    return { valid: false, error: "Email inválido" };
+  return { valid: false, error: "Email invalido" };
+  }
+  
+  // Extrair dominio do email
+  const domain = input.toLowerCase().split("@")[1];
+  
+  // Verificar se e dominio bloqueado
+  if (BLOCKED_EMAIL_DOMAINS.includes(domain)) {
+    return { 
+      valid: false, 
+      error: "Use um email real (Gmail, Outlook, Yahoo, etc). Emails temporarios ou anonimos nao sao permitidos." 
+    };
+  }
+  
+  // Verificar dominios suspeitos (muito curtos, extensoes estranhas)
+  const suspiciousTLDs = [".xyz", ".tk", ".ml", ".ga", ".cf", ".gq", ".pw", ".cc", ".ws"];
+  if (suspiciousTLDs.some(tld => domain.endsWith(tld))) {
+    // Se nao esta na lista branca, bloqueia
+    if (!ALLOWED_EMAIL_DOMAINS.includes(domain)) {
+      return { 
+        valid: false, 
+        error: "Use um email de provedor confiavel (Gmail, Outlook, Yahoo, etc). Dominios suspeitos nao sao permitidos." 
+      };
+    }
   }
   
   // Maximo 254 caracteres (RFC 5321)
