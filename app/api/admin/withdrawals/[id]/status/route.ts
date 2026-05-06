@@ -1,40 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { jwtVerify } from "jose";
 import { sql } from "@/lib/db";
+
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'fallback-secret-change-in-production'
+);
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
+    // Pegar token do cookie diretamente
+    const cookieStore = await cookies();
+    const token = cookieStore.get("auth-token")?.value;
     
-    console.log("[v0] Status API - user:", user);
-    
-    if (!user) {
-      console.log("[v0] Status API - Usuario nao encontrado no token");
+    if (!token) {
       return NextResponse.json(
-        { error: "Nao autorizado - sem sessao" },
+        { error: "Sessao expirada. Faca login novamente." },
         { status: 401 }
       );
     }
     
-    // Verificar se e admin no banco de dados
+    // Verificar token
+    let userId: string;
+    try {
+      const { payload } = await jwtVerify(token, JWT_SECRET);
+      userId = payload.id as string;
+    } catch {
+      return NextResponse.json(
+        { error: "Token invalido. Faca login novamente." },
+        { status: 401 }
+      );
+    }
+    
+    // Verificar se e admin DIRETO no banco de dados
     const adminCheck = await sql`
-      SELECT is_admin FROM profiles WHERE id = ${user.id}
+      SELECT id, email, is_admin FROM profiles WHERE id = ${userId}
     `;
     
-    console.log("[v0] Status API - adminCheck:", adminCheck);
-    
-    const isAdmin = adminCheck.length > 0 && adminCheck[0].is_admin === true;
-    
-    console.log("[v0] Status API - isAdmin:", isAdmin, "user.role:", user.role);
-    
-    if (!isAdmin && user.role !== "admin" && user.role !== "ceo") {
-      console.log("[v0] Status API - Usuario nao e admin");
+    if (adminCheck.length === 0) {
       return NextResponse.json(
-        { error: "Nao autorizado - sem permissao admin" },
+        { error: "Usuario nao encontrado." },
         { status: 401 }
+      );
+    }
+    
+    const adminUser = adminCheck[0];
+    
+    if (adminUser.is_admin !== true) {
+      return NextResponse.json(
+        { error: "Voce nao tem permissao de administrador." },
+        { status: 403 }
       );
     }
 
@@ -71,13 +89,11 @@ export async function PATCH(
 
     // Status que devolvem saldo ao usuario
     const refundStatuses = ["cancelled", "failed", "rejected", "nao_autorizado"];
-    const previousRefundStatuses = ["cancelled", "failed", "rejected", "nao_autorizado"];
     
     // Se estiver alterando para um status de devolucao e o status anterior nao era de devolucao
-    // devolver o saldo ao usuario
     if (
       refundStatuses.includes(status) && 
-      !previousRefundStatuses.includes(oldStatus)
+      !refundStatuses.includes(oldStatus)
     ) {
       const newBalance = Number(withdrawal.balance) + Number(withdrawal.amount);
       
@@ -109,7 +125,6 @@ export async function PATCH(
 
       const notification = statusMessages[status] || statusMessages.cancelled;
 
-      // Notificar usuario
       await sql`
         INSERT INTO user_notifications (id, user_id, title, message, type, created_at)
         VALUES (
@@ -121,8 +136,6 @@ export async function PATCH(
           NOW()
         )
       `;
-
-      console.log(`[Admin] Saque ${id} ${status}. Saldo devolvido: R$ ${Number(withdrawal.amount).toFixed(2)}`);
     }
 
     // Status que marcam como processado
@@ -136,18 +149,15 @@ export async function PATCH(
       WHERE id = ${id}
     `;
 
-    // Log da alteracao manual
-    console.log(`[Admin] Status do saque ${id} alterado de "${oldStatus}" para "${status}" por ${user.email}`);
-
     return NextResponse.json({
       success: true,
       message: `Status alterado de "${oldStatus}" para "${status}"`,
-      refunded: refundStatuses.includes(status) && !previousRefundStatuses.includes(oldStatus),
+      refunded: refundStatuses.includes(status) && !refundStatuses.includes(oldStatus),
     });
   } catch (error) {
     console.error("Erro ao alterar status:", error);
     return NextResponse.json(
-      { error: "Erro ao alterar status" },
+      { error: "Erro interno ao alterar status" },
       { status: 500 }
     );
   }
