@@ -9,9 +9,12 @@ export async function PATCH(
   try {
     const user = await getCurrentUser();
     
+    console.log("[v0] Status API - user:", user);
+    
     if (!user) {
+      console.log("[v0] Status API - Usuario nao encontrado no token");
       return NextResponse.json(
-        { error: "Nao autorizado" },
+        { error: "Nao autorizado - sem sessao" },
         { status: 401 }
       );
     }
@@ -21,11 +24,16 @@ export async function PATCH(
       SELECT is_admin FROM profiles WHERE id = ${user.id}
     `;
     
+    console.log("[v0] Status API - adminCheck:", adminCheck);
+    
     const isAdmin = adminCheck.length > 0 && adminCheck[0].is_admin === true;
     
+    console.log("[v0] Status API - isAdmin:", isAdmin, "user.role:", user.role);
+    
     if (!isAdmin && user.role !== "admin" && user.role !== "ceo") {
+      console.log("[v0] Status API - Usuario nao e admin");
       return NextResponse.json(
-        { error: "Nao autorizado" },
+        { error: "Nao autorizado - sem permissao admin" },
         { status: 401 }
       );
     }
