@@ -6,6 +6,7 @@ import { User, Mail, Phone, Building, Loader2, Save, CheckCircle2, Shield, Lock,
 import Image from "next/image";
 import { ThemeToggleWithLabel } from "@/components/theme-toggle";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -852,9 +853,22 @@ export default function SettingsPage() {
 
           <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-xl opacity-60">
             <div className="flex items-center gap-3 sm:gap-4">
-              <div className="p-2.5 sm:p-3 rounded-xl bg-purple-500/10">
-                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
-              </div>
+  <div className="p-2.5 sm:p-3 rounded-xl bg-purple-500/10">
+  <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
+  </div>
+  <div>
+  <p className="font-medium text-foreground text-sm sm:text-base">
+  Autenticacao de Dois Fatores
+  </p>
+  <p className="text-xs sm:text-sm text-muted-foreground">
+  Proteja sua conta com codigo do app
+  </p>
+  </div>
+  </div>
+  <Link href="/dashboard/security">
+    <Button variant="outline" className="text-xs sm:text-sm">Configurar</Button>
+  </Link>
+  </div>
               <div>
                 <p className="font-medium text-foreground text-sm sm:text-base">
                   Autenticacao de Dois Fatores
