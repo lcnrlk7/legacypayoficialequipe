@@ -7,64 +7,57 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'fallback-secret-change-in-production'
 );
 
-// Senha fixa do admin CEO
-const ADMIN_PASSWORD = "legacypay2025ceo";
-
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Verificar token admin do painel CEO (enviado via header)
+    // Verificar token admin do painel CEO (ID do membro da equipe)
     const adminToken = request.headers.get("X-Admin-Token");
     
-    // Se tem token admin valido, permite acesso
-    if (adminToken === ADMIN_PASSWORD) {
-      // Token admin valido - acesso permitido
-    } else {
-      // Fallback: verificar token JWT do cookie
+    let isAuthorized = false;
+    
+    // Verificar se o token e um ID valido de membro da equipe
+    if (adminToken && adminToken.length > 0) {
+      const teamMember = await sql`
+        SELECT id, role FROM team_members WHERE id = ${adminToken} AND is_active = true
+      `;
+      
+      if (teamMember.length > 0) {
+        // Membro da equipe ativo - autorizado
+        isAuthorized = true;
+      }
+    }
+    
+    // Se nao foi autorizado pelo token admin, tentar pelo cookie JWT
+    if (!isAuthorized) {
       const cookieStore = await cookies();
       const token = cookieStore.get("auth-token")?.value;
       
-      if (!token) {
-        return NextResponse.json(
-          { error: "Sessao expirada. Faca login novamente." },
-          { status: 401 }
-        );
+      if (token) {
+        try {
+          const { payload } = await jwtVerify(token, JWT_SECRET);
+          const userId = payload.id as string;
+          
+          // Verificar se e admin no banco de dados
+          const adminCheck = await sql`
+            SELECT id, is_admin FROM profiles WHERE id = ${userId}
+          `;
+          
+          if (adminCheck.length > 0 && adminCheck[0].is_admin === true) {
+            isAuthorized = true;
+          }
+        } catch {
+          // Token JWT invalido - ignorar
+        }
       }
-      
-      // Verificar token
-      let userId: string;
-      try {
-        const { payload } = await jwtVerify(token, JWT_SECRET);
-        userId = payload.id as string;
-      } catch {
-        return NextResponse.json(
-          { error: "Token invalido. Faca login novamente." },
-          { status: 401 }
-        );
-      }
-      
-      // Verificar se e admin DIRETO no banco de dados
-      const adminCheck = await sql`
-        SELECT id, email, is_admin FROM profiles WHERE id = ${userId}
-      `;
-      
-      if (adminCheck.length === 0) {
-        return NextResponse.json(
-          { error: "Usuario nao encontrado." },
-          { status: 401 }
-        );
-      }
-      
-      const adminUser = adminCheck[0];
-      
-      if (adminUser.is_admin !== true) {
-        return NextResponse.json(
-          { error: "Nao autorizado - sem permissao admin" },
-          { status: 403 }
-        );
-      }
+    }
+    
+    if (!isAuthorized) {
+      return NextResponse.json(
+        { error: "Nao autorizado" },
+        { status: 401 }
+      );
     }
 
     const { id } = await params;
