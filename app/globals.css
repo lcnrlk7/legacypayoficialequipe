@@ -43,61 +43,61 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* TEMA ESCURO (padrao) - Estilo DuttyFy */
+/* TEMA ESCURO (padrao) - Estilo LegacyPay/DuttyFy Exato */
 :root {
-  /* Core palette - DuttyFy style dark */
-  --background: #0d1117;
-  --foreground: #e6edf3;
-  --card: #151a21;
-  --card-foreground: #e6edf3;
-  --popover: #151a21;
-  --popover-foreground: #e6edf3;
+  /* Core palette - Neutral grays (from DevTools) */
+  --background: #151515;
+  --foreground: #fafafa;
+  --card: #1a1a1a;
+  --card-foreground: #fafafa;
+  --popover: #1a1a1a;
+  --popover-foreground: #fafafa;
   
   /* Primary - Vibrant orange */
   --primary: #ff6a00;
   --primary-light: #ff8534;
   --primary-dark: #cc5500;
-  --primary-foreground: #000000;
+  --primary-foreground: #ffffff;
   
   /* Secondary */
-  --secondary: #1c2128;
-  --secondary-foreground: #e6edf3;
+  --secondary: #202020;
+  --secondary-foreground: #fafafa;
   
   /* Muted */
-  --muted: #161b22;
-  --muted-foreground: #6b7a8a;
+  --muted: #202020;
+  --muted-foreground: #a1a1aa;
   
-  /* Accent - Matches primary */
-  --accent: #ff6a00;
-  --accent-foreground: #000000;
+  /* Accent */
+  --accent: #202020;
+  --accent-foreground: #fafafa;
   
   /* Destructive */
-  --destructive: #ff4757;
-  --destructive-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #fef2f2;
   
   /* Borders and inputs */
-  --border: #232b36;
-  --input: #1c2128;
+  --border: #252525;
+  --input: #1a1a1a;
   --ring: #ff6a00;
   
   /* Charts - Orange theme */
   --chart-1: #ff6a00;
   --chart-2: #ff8534;
   --chart-3: #ffab00;
-  --chart-4: #22c55e;
-  --chart-5: #00c2ff;
+  --chart-4: #10b981;
+  --chart-5: #3b82f6;
   
   /* Radius */
   --radius: 0.5rem;
   
   /* Sidebar */
-  --sidebar: #0d1117;
-  --sidebar-foreground: #e6edf3;
+  --sidebar: #151515;
+  --sidebar-foreground: #fafafa;
   --sidebar-primary: #ff6a00;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #1c2128;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #202020;
   --sidebar-accent-foreground: #ff6a00;
-  --sidebar-border: #232b36;
+  --sidebar-border: #252525;
   --sidebar-ring: #ff6a00;
 }
 

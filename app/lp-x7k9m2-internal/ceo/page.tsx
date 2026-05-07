@@ -203,13 +203,13 @@ export default function CEODashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-[#151a21] border border-[#232b36] rounded-lg p-5"
+            className="bg-card border border-border rounded-lg p-5"
           >
             <div className="flex items-start justify-between">
               <div>
                 <p className={`text-2xl font-bold mb-1 ${stat.color}`}>{stat.value}</p>
-                <p className="text-sm font-medium text-white">{stat.label}</p>
-                <p className="text-xs text-[#6b7a8a] mt-1">{stat.description}</p>
+                <p className="text-sm font-medium text-foreground">{stat.label}</p>
+                <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
               </div>
               <div className={`p-2.5 rounded-full ${stat.bgColor}`}>
                 <stat.icon className={`w-5 h-5 ${stat.color}`} />
@@ -228,18 +228,18 @@ export default function CEODashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 + index * 0.1 }}
-            className="bg-[#151a21] border border-[#232b36] rounded-lg p-5 flex items-center justify-between group"
+            className="bg-card border border-border rounded-lg p-5 flex items-center justify-between group"
           >
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-full bg-primary/15">
                 <card.icon className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-lg font-semibold text-white">{card.value}</p>
-                <p className="text-sm text-[#6b7a8a]">{card.label}</p>
+                <p className="text-lg font-semibold text-foreground">{card.value}</p>
+                <p className="text-sm text-muted-foreground">{card.label}</p>
               </div>
             </div>
-            <ArrowUpRight className="w-5 h-5 text-[#6b7a8a] group-hover:text-primary transition-colors" />
+            <ArrowUpRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
           </motion.a>
         ))}
       </div>
@@ -249,14 +249,14 @@ export default function CEODashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
-        className="bg-[#151a21] border border-[#232b36] rounded-lg overflow-hidden"
+        className="bg-card border border-border rounded-lg overflow-hidden"
       >
-        <div className="p-5 border-b border-[#232b36]">
-          <h2 className="text-base font-semibold text-white">
+        <div className="p-5 border-b border-border">
+          <h2 className="text-base font-semibold text-foreground">
             Transacoes Recentes
           </h2>
         </div>
-        <div className="divide-y divide-[#232b36]">
+        <div className="divide-y divide-border">
           {recentTransactions.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               Nenhuma transação encontrada
@@ -276,7 +276,7 @@ export default function CEODashboard() {
               return (
                 <div
                   key={transaction.id}
-                  className="p-4 flex items-center justify-between hover:bg-[#1e2630] transition-colors"
+                  className="p-4 flex items-center justify-between hover:bg-secondary transition-colors"
                 >
                   <div className="flex items-center gap-4">
                     <div

@@ -276,15 +276,15 @@ export function StatsCards({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.05 }}
-          className="relative bg-[#151a21] border border-[#232b36] rounded-lg p-4 sm:p-5"
+          className="relative bg-card border border-border rounded-lg p-4 sm:p-5"
         >
           <div className="flex items-start justify-between">
             {/* Content */}
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm text-[#6b7a8a] mb-2 truncate">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-2 truncate">
                 {card.label}
               </p>
-              <div className="text-xl sm:text-2xl font-bold text-white truncate">
+              <div className="text-xl sm:text-2xl font-bold text-foreground truncate">
                 {card.isCurrency ? (
                   <AnimatedCounter 
                     value={card.rawValue} 
