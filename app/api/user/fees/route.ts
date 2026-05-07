@@ -114,7 +114,7 @@ export async function GET() {
       user_withdrawal_fee: Number(effectiveFees.withdrawalFee),
       
       // Flag para saber se usa taxa percentual ou fixa (deposito)
-      has_percentage_fee: acquirerData.has_percentage_fee || Number(effectiveFees.pixPercentageFee) > 0,
+      has_percentage_fee: acquirerData.fee_is_percentage,
       
       // Informações da rota (mostra nome da adquirente se existir)
       gateway_name: acquirerData.name || ROUTE_DISPLAY_NAMES[routeType as 'white' | 'black'] || 'Rota Black',
