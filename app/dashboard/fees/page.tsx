@@ -252,10 +252,7 @@ export default function FeesPage() {
             <span className="text-sm text-muted-foreground">Taxa de Saida</span>
           </div>
           <p className="text-2xl font-bold text-foreground">
-            {fees?.withdrawal_fee_is_percentage 
-              ? formatPercent(fees?.withdrawal_fee || 0)
-              : formatCurrency(fees?.withdrawal_fee || 0)
-            }
+            {formatCurrency(fees?.withdrawal_fee || 0)}
           </p>
         </motion.div>
 
