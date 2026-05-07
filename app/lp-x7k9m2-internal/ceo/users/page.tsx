@@ -178,28 +178,29 @@ export default function UsersPage() {
 
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
 
-  async function updateUser() {
-    if (!selectedUser) return;
-
-    // Validações
-    const feeValue = editForm.fee_percentage ? parseFloat(editForm.fee_percentage) : 2.5;
-    if (feeValue < 0 || feeValue > 100) {
-      alert("A taxa deve estar entre 0% e 100%");
-      return;
-    }
-
-    // Taxa de saque: usar valor informado ou padrão baseado na rota
-    const defaultWithdrawalFee = editForm.route_type === "white" ? 2 : 5;
-    const withdrawalFeeValue = editForm.withdrawal_fee ? parseFloat(editForm.withdrawal_fee) : defaultWithdrawalFee;
-    if (withdrawalFeeValue < 0) {
-      alert("A taxa de saque não pode ser negativa");
-      return;
-    }
-
-    // Taxa fixa: usar valor informado ou padrao baseado na rota
-    // WHITE: R$ 1.50 fixo | BLACK: R$ 0.00 (Medusa cobra 4% sem fixo)
-    const defaultFixedFee = editForm.route_type === "white" ? 1.50 : 0;
-    const fixedFeeValue = editForm.fixed_fee ? parseFloat(editForm.fixed_fee) : defaultFixedFee;
+async function updateUser() {
+  if (!selectedUser) return;
+  
+  // Buscar adquirente selecionada para usar taxas padrao
+  const selectedAcquirer = acquirers.find(a => a.id === editForm.acquirer_id);
+  
+  // Validações
+  const feeValue = editForm.fee_percentage ? parseFloat(editForm.fee_percentage) : (selectedAcquirer?.fee_percentage ?? 2.5);
+  if (feeValue < 0 || feeValue > 100) {
+    alert("A taxa deve estar entre 0% e 100%");
+    return;
+  }
+  
+  // Taxa de saque: usar valor informado ou padrão da adquirente
+  const defaultWithdrawalFee = selectedAcquirer?.withdrawal_fee ?? (editForm.route_type === "white" ? 4 : 5);
+  const withdrawalFeeValue = editForm.withdrawal_fee ? parseFloat(editForm.withdrawal_fee) : defaultWithdrawalFee;
+  if (withdrawalFeeValue < 0) {
+    alert("A taxa de saque não pode ser negativa");
+    return;
+  }
+  
+  // Taxa fixa: usar valor informado ou 0
+  const fixedFeeValue = editForm.fixed_fee ? parseFloat(editForm.fixed_fee) : 0;
     if (fixedFeeValue < 0) {
       alert("A taxa fixa não pode ser negativa");
       return;
@@ -391,27 +392,33 @@ export default function UsersPage() {
     setShowBalanceModal(true);
   };
 
-  const openEditModal = (user: UserProfile) => {
-    setSelectedUser(user);
-    const defaultWithdrawalFee = user.route_type === "white" ? 2 : 5;
-    const defaultFixedFee = user.route_type === "white" ? 1.50 : 1.00;
-    
-    // Se usuario nao tem acquirer_id, buscar a primeira adquirente da rota dele
-    let acquirerId = user.acquirer_id || "";
-    if (!acquirerId && acquirers.length > 0) {
-      const defaultAcquirer = acquirers.find(a => a.route_type === (user.route_type || "white"));
-      if (defaultAcquirer) {
-        acquirerId = defaultAcquirer.id;
-      }
+const openEditModal = (user: UserProfile) => {
+  setSelectedUser(user);
+  
+  // Buscar a adquirente do usuario ou a primeira da rota dele
+  let acquirerId = user.acquirer_id || "";
+  let userAcquirer = acquirers.find(a => a.id === user.acquirer_id);
+  
+  if (!acquirerId && acquirers.length > 0) {
+    const defaultAcquirer = acquirers.find(a => a.route_type === (user.route_type || "white"));
+    if (defaultAcquirer) {
+      acquirerId = defaultAcquirer.id;
+      userAcquirer = defaultAcquirer;
     }
-    
-    setEditForm({
-      daily_limit: user.daily_limit || 10000,
-      fee_percentage: user.fee_percentage?.toString() || "2.5",
-      fixed_fee: user.fixed_fee?.toString() || defaultFixedFee.toString(),
-      withdrawal_fee: user.withdrawal_fee?.toString() || defaultWithdrawalFee.toString(),
-      route_type: user.route_type || "white",
-      acquirer_id: acquirerId,
+  }
+  
+  // Usar taxas da adquirente do usuario ou valores padrao
+  const feePercentage = userAcquirer?.fee_percentage ?? user.fee_percentage ?? 2.5;
+  const withdrawalFee = userAcquirer?.withdrawal_fee ?? user.withdrawal_fee ?? (user.route_type === "white" ? 4 : 5);
+  const fixedFee = user.fixed_fee ?? 0;
+  
+  setEditForm({
+  daily_limit: user.daily_limit || 10000,
+  fee_percentage: feePercentage.toString(),
+  fixed_fee: fixedFee.toString(),
+  withdrawal_fee: withdrawalFee.toString(),
+  route_type: user.route_type || "white",
+  acquirer_id: acquirerId,
       is_active: user.is_active,
     });
     setShowModal(true);
