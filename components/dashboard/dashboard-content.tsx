@@ -21,6 +21,7 @@ import { StatsCards } from "./stats-cards";
 import { GoalsRoadmap } from "./goals-roadmap";
 import { BannerCarousel } from "./banner-carousel";
 import { useProfile } from "@/components/profile-provider";
+import { ActivationChecklist } from "@/components/onboarding/activation-checklist";
 
 export interface Profile {
   id: string;
@@ -249,7 +250,7 @@ export function DashboardContent({
   }, [transactions, periodFilter]);
 
   return (
-    <div className="space-y-4 sm:space-y-6 lg:space-y-8 overflow-x-hidden">
+    <div data-onboarding="dashboard" className="space-y-4 sm:space-y-6 lg:space-y-8 overflow-x-hidden">
       {/* Notifications Banner */}
       {profile && <UserNotificationsBanner userId={profile.id} />}
 
@@ -263,11 +264,23 @@ export function DashboardContent({
         </p>
       </div>
 
+      {/* Activation Checklist */}
+      {profile && (
+        <ActivationChecklist
+          userId={profile.id}
+          hasApiKey={!!profile.api_key}
+          hasPixKey={pixKeys.length > 0}
+          hasTransaction={transactions.length > 0}
+        />
+      )}
+
       {/* Banner Carousel */}
       <BannerCarousel />
       
       {/* Sales Chart */}
-      <SalesChart transactions={transactions} />
+      <div data-onboarding="sales-chart">
+        <SalesChart transactions={transactions} />
+      </div>
 
       {/* Period Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -303,13 +316,15 @@ export function DashboardContent({
       </div>
 
       {/* Stats Cards */}
-      <StatsCards
+      <div data-onboarding="stats-cards">
+        <StatsCards
         balance={profile?.balance || 0}
         blockedBalance={0}
         transactions={filteredTransactions}
         periodFilter={periodLabels[periodFilter]}
         allTransactions={transactions}
-      />
+        />
+      </div>
 
       {/* Goals Roadmap */}
       {profile && (

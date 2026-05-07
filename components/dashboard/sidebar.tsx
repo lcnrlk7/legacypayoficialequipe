@@ -257,11 +257,18 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
                 /* Regular menu items */
                 category.items.map((item) => {
                   const isActive = pathname === item.href
+                  // Definir data-onboarding baseado no link
+                  const onboardingId = 
+                    item.href === "/dashboard/wallet" ? "wallet-link" :
+                    item.href === "/dashboard/integration" ? "api-link" :
+                    item.href === "/dashboard/support" ? "support-link" :
+                    undefined
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
                       onClick={() => setIsMobileOpen(false)}
+                      data-onboarding={onboardingId}
                       className={`group flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 ${
                         isActive
                           ? colorClasses.active
@@ -387,7 +394,10 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex w-64 h-screen bg-card border-r border-border flex-col fixed left-0 top-0">
+      <aside 
+        data-onboarding="sidebar"
+        className="hidden lg:flex w-64 h-screen bg-card border-r border-border flex-col fixed left-0 top-0"
+      >
         <SidebarContent />
       </aside>
 
