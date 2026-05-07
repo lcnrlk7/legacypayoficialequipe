@@ -85,14 +85,16 @@ export async function GET() {
     const txStats = transactionsResult[0] || { total_fees: 0, total_volume: 0, total_transactions: 0 };
 
     // Usar taxas da adquirente especifica se existir, senao usar do sistema
-    // Verificar se a taxa de saque e percentual (rotas white usam taxa percentual)
-    const isWithdrawalPercentage = acquirerData.route_type === 'white' && Number(acquirerData.withdrawal_fee || 0) <= 10;
+    // Usar os novos campos fee_is_percentage e withdrawal_fee_is_percentage
+    const isFeePercentage = acquirerData.fee_is_percentage ?? true;
+    const isWithdrawalPercentage = acquirerData.withdrawal_fee_is_percentage ?? false;
     
     const effectiveFees = acquirerData.name ? {
-      pixFixedFee: acquirerData.fixed_fee,
-      pixPercentageFee: acquirerData.fee_percentage,
+      pixFixedFee: isFeePercentage ? 0 : Number(acquirerData.fixed_fee || 0),
+      pixPercentageFee: isFeePercentage ? Number(acquirerData.fee_percentage || 0) : 0,
       withdrawalFee: acquirerData.withdrawal_fee,
       withdrawalFeeIsPercentage: isWithdrawalPercentage,
+      feeIsPercentage: isFeePercentage,
     } : systemFees;
 
     const fees = {

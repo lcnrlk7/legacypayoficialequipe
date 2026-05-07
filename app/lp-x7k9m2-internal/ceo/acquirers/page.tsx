@@ -33,7 +33,10 @@ interface Acquirer {
   total_transactions: number;
   total_volume: number;
   fee_percentage: number;
+  fixed_fee: number;
+  fee_is_percentage: boolean;
   withdrawal_fee: number;
+  withdrawal_fee_is_percentage: boolean;
   min_deposit: number;
   min_withdrawal: number;
   route_type: "white" | "black";
@@ -419,10 +422,10 @@ export default function AcquirersPage() {
                         {acquirer.route_type === "white" ? "WHITE" : "BLACK"}
                       </span>
                       <span className="text-muted-foreground">
-                        Taxa Entrada: <span className="text-primary">{acquirer.fee_percentage || 2.5}%</span>
+                        Taxa Entrada: <span className="text-primary">{acquirer.fee_is_percentage ? `${acquirer.fee_percentage || 0}%` : `R$ ${Number(acquirer.fixed_fee || 0).toFixed(2)}`}</span>
                       </span>
                       <span className="text-muted-foreground">
-                        Taxa Saque: <span className="text-green-400">{Number(acquirer.withdrawal_fee || 0).toFixed(1)}%</span>
+                        Taxa Saque: <span className="text-green-400">{acquirer.withdrawal_fee_is_percentage ? `${acquirer.withdrawal_fee || 0}%` : `R$ ${Number(acquirer.withdrawal_fee || 0).toFixed(2)}`}</span>
                       </span>
                       <span className="text-muted-foreground">
                         Min. Dep: <span className="text-white">R$ {Number(acquirer.min_deposit || 1).toFixed(2)}</span>

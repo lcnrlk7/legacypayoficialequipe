@@ -49,7 +49,10 @@ interface Acquirer {
   code: string;
   route_type: string;
   fee_percentage: number;
+  fixed_fee: number;
+  fee_is_percentage: boolean;
   withdrawal_fee: number;
+  withdrawal_fee_is_percentage: boolean;
   min_deposit: number;
   min_withdrawal: number;
 }
@@ -959,20 +962,28 @@ const openEditModal = (user: UserProfile) => {
                 >
                   {acquirers.filter(a => a.route_type === "white").length > 0 && (
                     <optgroup label="WHITE" className="bg-card text-muted-foreground">
-                      {acquirers.filter(a => a.route_type === "white").map(acq => (
-                        <option key={acq.id} value={acq.id} className="bg-card text-white">
-                          Rota White ({acq.name}) - Taxa: {acq.fee_percentage}% | Saque: R$ {Number(acq.withdrawal_fee).toFixed(2)}
-                        </option>
-                      ))}
+                      {acquirers.filter(a => a.route_type === "white").map(acq => {
+                        const taxaEntrada = acq.fee_is_percentage ? `${acq.fee_percentage}%` : `R$ ${Number(acq.fixed_fee || 0).toFixed(2)}`;
+                        const taxaSaque = acq.withdrawal_fee_is_percentage ? `${acq.withdrawal_fee}%` : `R$ ${Number(acq.withdrawal_fee).toFixed(2)}`;
+                        return (
+                          <option key={acq.id} value={acq.id} className="bg-card text-white">
+                            Rota White ({acq.name}) - Taxa: {taxaEntrada} | Saque: {taxaSaque}
+                          </option>
+                        );
+                      })}
                     </optgroup>
                   )}
                   {acquirers.filter(a => a.route_type === "black").length > 0 && (
                     <optgroup label="BLACK" className="bg-card text-muted-foreground">
-                      {acquirers.filter(a => a.route_type === "black").map(acq => (
-                        <option key={acq.id} value={acq.id} className="bg-card text-white">
-                          Rota Black ({acq.name}) - Taxa: {acq.fee_percentage}% | Saque: R$ {Number(acq.withdrawal_fee).toFixed(2)}
-                        </option>
-                      ))}
+                      {acquirers.filter(a => a.route_type === "black").map(acq => {
+                        const taxaEntrada = acq.fee_is_percentage ? `${acq.fee_percentage}%` : `R$ ${Number(acq.fixed_fee || 0).toFixed(2)}`;
+                        const taxaSaque = acq.withdrawal_fee_is_percentage ? `${acq.withdrawal_fee}%` : `R$ ${Number(acq.withdrawal_fee).toFixed(2)}`;
+                        return (
+                          <option key={acq.id} value={acq.id} className="bg-card text-white">
+                            Rota Black ({acq.name}) - Taxa: {taxaEntrada} | Saque: {taxaSaque}
+                          </option>
+                        );
+                      })}
                     </optgroup>
                   )}
                 </select>
