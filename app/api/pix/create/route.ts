@@ -144,22 +144,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar adquirente baseado na rota do usuário (white = MisticPay, black = Promisse Pay)
+    // Buscar adquirente baseado no acquirer_id do usuario ou pela rota
     const userRouteType = profile.route_type || 'black';
+    
+    console.log("[v0] PIX Create - Usuario:", profile.id, "acquirer_id:", profile.acquirer_id, "route_type:", userRouteType);
     
     // Buscar adquirente especifica do usuario ou pela rota
     let acquirerResult;
     if (profile.acquirer_id) {
+      console.log("[v0] Buscando adquirente especifica do usuario:", profile.acquirer_id);
       acquirerResult = await sql`
         SELECT * FROM acquirers WHERE id = ${profile.acquirer_id} AND is_active = true LIMIT 1
       `;
+      console.log("[v0] Resultado busca adquirente especifica:", acquirerResult.length > 0 ? acquirerResult[0].code : "NAO ENCONTRADA");
     }
     
     // Se nao tem adquirente especifica ou nao encontrou, buscar pela rota
     if (!acquirerResult || acquirerResult.length === 0) {
+      console.log("[v0] Buscando adquirente pela rota:", userRouteType);
       acquirerResult = await sql`
-        SELECT * FROM acquirers WHERE is_active = true AND route_type = ${userRouteType} ORDER BY priority LIMIT 1
+        SELECT * FROM acquirers WHERE is_active = true AND route_type = ${userRouteType} ORDER BY priority ASC LIMIT 1
       `;
+      console.log("[v0] Resultado busca por rota:", acquirerResult.length > 0 ? acquirerResult[0].code : "NAO ENCONTRADA");
     }
 
     if (acquirerResult.length === 0) {
@@ -170,6 +176,7 @@ export async function POST(request: NextRequest) {
     }
 
     const acquirer = acquirerResult[0];
+    console.log("[v0] Adquirente selecionada:", acquirer.code, "ID:", acquirer.id, "Nome:", acquirer.name);
     const transactionId = externalId || `lp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     
     let pixResult: { success: boolean; data?: { qrCode?: string; qrCodeBase64?: string; copyPaste?: string; transactionId?: string; fee?: number }; error?: string };
