@@ -15,7 +15,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { UserNotificationsBanner } from "./user-notifications-banner";
 import { SalesChart } from "./sales-chart";
 import { StatsCards } from "./stats-cards";
 import { GoalsRoadmap } from "./goals-roadmap";
@@ -251,9 +250,6 @@ export function DashboardContent({
 
   return (
     <div data-onboarding="dashboard" className="space-y-4 sm:space-y-6 lg:space-y-8 overflow-x-hidden">
-      {/* Notifications Banner */}
-      {profile && <UserNotificationsBanner userId={profile.id} />}
-
       {/* Welcome */}
       <div>
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
