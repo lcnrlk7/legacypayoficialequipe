@@ -118,8 +118,6 @@ export async function PUT(request: Request) {
     const { userId, action, data } = body;
 
     if (action === "update") {
-      console.log("[v0] Admin update user:", userId, "data:", JSON.stringify(data));
-      
       if (data.name !== undefined) {
         await sql`UPDATE profiles SET name = ${data.name}, updated_at = NOW() WHERE id = ${userId}`;
       }
@@ -154,7 +152,6 @@ export async function PUT(request: Request) {
       // Atualizar acquirer_id - aceita null, string vazia ou UUID valido
       if (data.acquirer_id !== undefined) {
         const acquirerId = data.acquirer_id && data.acquirer_id.trim() !== '' ? data.acquirer_id : null;
-        console.log("[v0] Atualizando acquirer_id para:", acquirerId);
         await sql`UPDATE profiles SET acquirer_id = ${acquirerId}, updated_at = NOW() WHERE id = ${userId}`;
       }
 

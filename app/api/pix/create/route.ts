@@ -144,39 +144,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar adquirente baseado no acquirer_id do usuario ou pela rota
-    const userRouteType = profile.route_type || 'black';
-    
-    console.log("[v0] PIX Create - Usuario:", profile.id, "acquirer_id:", profile.acquirer_id, "route_type:", userRouteType);
-    
-    // Buscar adquirente especifica do usuario ou pela rota
-    let acquirerResult;
-    if (profile.acquirer_id) {
-      console.log("[v0] Buscando adquirente especifica do usuario:", profile.acquirer_id);
-      acquirerResult = await sql`
-        SELECT * FROM acquirers WHERE id = ${profile.acquirer_id} AND is_active = true LIMIT 1
-      `;
-      console.log("[v0] Resultado busca adquirente especifica:", acquirerResult.length > 0 ? acquirerResult[0].code : "NAO ENCONTRADA");
+    // Buscar adquirente configurada para o usuario (obrigatorio ter acquirer_id)
+    if (!profile.acquirer_id) {
+      return NextResponse.json(
+        { error: "Rota de pagamento nao configurada. Entre em contato com o suporte." },
+        { status: 400 }
+      );
     }
     
-    // Se nao tem adquirente especifica ou nao encontrou, buscar pela rota
-    if (!acquirerResult || acquirerResult.length === 0) {
-      console.log("[v0] Buscando adquirente pela rota:", userRouteType);
-      acquirerResult = await sql`
-        SELECT * FROM acquirers WHERE is_active = true AND route_type = ${userRouteType} ORDER BY priority ASC LIMIT 1
-      `;
-      console.log("[v0] Resultado busca por rota:", acquirerResult.length > 0 ? acquirerResult[0].code : "NAO ENCONTRADA");
-    }
+    const acquirerResult = await sql`
+      SELECT * FROM acquirers WHERE id = ${profile.acquirer_id} AND is_active = true LIMIT 1
+    `;
 
     if (acquirerResult.length === 0) {
       return NextResponse.json(
-        { error: "Nenhum provedor de pagamento disponível no momento." },
-        { status: 503 }
+        { error: "Rota de pagamento inativa ou invalida. Entre em contato com o suporte." },
+        { status: 400 }
       );
     }
 
     const acquirer = acquirerResult[0];
-    console.log("[v0] Adquirente selecionada:", acquirer.code, "ID:", acquirer.id, "Nome:", acquirer.name);
+    const userRouteType = acquirer.route_type || 'black';
     const transactionId = externalId || `lp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     
     let pixResult: { success: boolean; data?: { qrCode?: string; qrCodeBase64?: string; copyPaste?: string; transactionId?: string; fee?: number }; error?: string };

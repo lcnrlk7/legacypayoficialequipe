@@ -137,44 +137,43 @@ export async function getUserRouteType(userId: string): Promise<'white' | 'black
 }
 
 /**
- * Busca a adquirente correta para um usuário específico
- * Primeiro verifica se o usuario tem uma adquirente especifica configurada (acquirer_id)
- * Caso contrario, busca pela rota (white/black)
+ * Busca a adquirente configurada para um usuario especifico
+ * O usuario DEVE ter acquirer_id configurado pelo painel CEO
+ * Retorna null se nao tiver configurado ou se estiver inativa
  */
 export async function getAcquirerForUser(userId: string): Promise<AcquirerConfig | null> {
   try {
-    // Buscar dados do usuario incluindo acquirer_id
+    // Buscar acquirer_id do usuario
     const userResult = await sql`
-      SELECT route_type, acquirer_id FROM profiles WHERE id = ${userId}
+      SELECT acquirer_id FROM profiles WHERE id = ${userId}
     `;
 
     if (userResult.length === 0) {
-      console.error("[Acquirer] Usuário não encontrado:", userId);
-      return getActiveAcquirer();
+      console.error("[Acquirer] Usuario nao encontrado:", userId);
+      return null;
     }
 
     const user = userResult[0];
 
-    // Se usuario tem adquirente especifica, usar ela
-    if (user.acquirer_id) {
-      const acquirerResult = await sql`
-        SELECT * FROM acquirers WHERE id = ${user.acquirer_id} AND is_active = true
-      `;
-      
-      if (acquirerResult.length > 0) {
-        console.log(`[Acquirer] Usando adquirente especifica para usuario ${userId}:`, acquirerResult[0].name);
-        return acquirerResult[0] as AcquirerConfig;
-      }
-      // Se adquirente especifica nao esta ativa, fallback para rota
-      console.log(`[Acquirer] Adquirente especifica inativa, usando rota`);
+    // Usuario DEVE ter acquirer_id configurado
+    if (!user.acquirer_id) {
+      console.error("[Acquirer] Usuario sem rota configurada:", userId);
+      return null;
     }
 
-    // Fallback: buscar por rota
-    const routeType = user.route_type || 'black';
-    return getAcquirerByRoute(routeType);
+    const acquirerResult = await sql`
+      SELECT * FROM acquirers WHERE id = ${user.acquirer_id} AND is_active = true
+    `;
+    
+    if (acquirerResult.length === 0) {
+      console.error("[Acquirer] Adquirente do usuario inativa ou nao encontrada:", user.acquirer_id);
+      return null;
+    }
+
+    return acquirerResult[0] as AcquirerConfig;
   } catch (error) {
-    console.error("[Acquirer] Erro ao buscar adquirente do usuário:", error);
-    return getActiveAcquirer();
+    console.error("[Acquirer] Erro ao buscar adquirente do usuario:", error);
+    return null;
   }
 }
 

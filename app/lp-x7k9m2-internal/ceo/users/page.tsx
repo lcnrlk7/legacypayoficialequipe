@@ -214,17 +214,6 @@ async function updateUser() {
 
     setIsUpdatingUser(true);
     
-    const updateData = {
-      daily_limit: limitValue,
-      fee_percentage: feeValue,
-      fixed_fee: fixedFeeValue,
-      withdrawal_fee: withdrawalFeeValue,
-      route_type: editForm.route_type,
-      acquirer_id: editForm.acquirer_id || null,
-      is_active: editForm.is_active,
-    };
-    console.log("[v0] Salvando usuario:", selectedUser.id, "dados:", updateData);
-    
     try {
       const response = await fetch("/api/admin/users", {
         method: "PUT",
@@ -232,7 +221,15 @@ async function updateUser() {
         body: JSON.stringify({
           userId: selectedUser.id,
           action: "update",
-          data: updateData,
+          data: {
+            daily_limit: limitValue,
+            fee_percentage: feeValue,
+            fixed_fee: fixedFeeValue,
+            withdrawal_fee: withdrawalFeeValue,
+            route_type: editForm.route_type,
+            acquirer_id: editForm.acquirer_id || null,
+            is_active: editForm.is_active,
+          },
         }),
       });
 
@@ -947,7 +944,6 @@ const openEditModal = (user: UserProfile) => {
                   value={editForm.acquirer_id || ""}
                   onChange={(e) => {
                     const selectedAcquirer = acquirers.find(a => a.id === e.target.value);
-                    console.log("[v0] Rota selecionada:", e.target.value, "Adquirente:", selectedAcquirer?.name, selectedAcquirer?.code);
                     if (selectedAcquirer) {
                       setEditForm({
                         ...editForm,
