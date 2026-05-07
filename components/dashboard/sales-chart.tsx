@@ -121,14 +121,14 @@ export function SalesChart({ transactions }: SalesChartProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-[#1a2028] border border-[#2a323d] rounded-md p-4 sm:p-6"
+      className="bg-[#151a21] border border-[#232b36] rounded-lg p-4 sm:p-6"
     >
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h3 className="text-base sm:text-lg font-semibold text-foreground">Vendas por Dia</h3>
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Acompanhe o volume diario da sua empresa
+          <h3 className="text-base sm:text-lg font-semibold text-white">Vendas por Hora</h3>
+          <p className="text-xs sm:text-sm text-[#6b7a8a]">
+            Acompanhe o volume horario da sua empresa
           </p>
         </div>
         <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">

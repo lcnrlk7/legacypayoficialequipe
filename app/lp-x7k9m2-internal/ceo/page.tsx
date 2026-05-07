@@ -203,16 +203,18 @@ export default function CEODashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="bg-[#1a2028] border border-[#2a323d] rounded-md p-5 hover:border-[#3a4250] transition-colors"
+            className="bg-[#151a21] border border-[#232b36] rounded-lg p-5"
           >
-            <div className="flex items-start justify-between mb-4">
-              <div className={`p-2.5 rounded-md ${stat.bgColor}`}>
+            <div className="flex items-start justify-between">
+              <div>
+                <p className={`text-2xl font-bold mb-1 ${stat.color}`}>{stat.value}</p>
+                <p className="text-sm font-medium text-white">{stat.label}</p>
+                <p className="text-xs text-[#6b7a8a] mt-1">{stat.description}</p>
+              </div>
+              <div className={`p-2.5 rounded-full ${stat.bgColor}`}>
                 <stat.icon className={`w-5 h-5 ${stat.color}`} />
               </div>
             </div>
-            <p className={`text-xl font-bold mb-1 ${stat.color}`}>{stat.value}</p>
-            <p className="text-sm font-medium text-[#e8edf3]">{stat.label}</p>
-            <p className="text-xs text-[#8b99a8] mt-1">{stat.description}</p>
           </motion.div>
         ))}
       </div>
@@ -226,18 +228,18 @@ export default function CEODashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 + index * 0.1 }}
-            className="bg-[#1a2028] border border-[#2a323d] rounded-md p-5 flex items-center justify-between hover:border-[#3a4250] transition-colors group"
+            className="bg-[#151a21] border border-[#232b36] rounded-lg p-5 flex items-center justify-between group"
           >
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-md bg-primary/10">
+              <div className="p-2.5 rounded-full bg-primary/15">
                 <card.icon className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-lg font-semibold text-[#e8edf3]">{card.value}</p>
-                <p className="text-sm text-[#8b99a8]">{card.label}</p>
+                <p className="text-lg font-semibold text-white">{card.value}</p>
+                <p className="text-sm text-[#6b7a8a]">{card.label}</p>
               </div>
             </div>
-            <ArrowUpRight className="w-5 h-5 text-[#8b99a8] group-hover:text-primary transition-colors" />
+            <ArrowUpRight className="w-5 h-5 text-[#6b7a8a] group-hover:text-primary transition-colors" />
           </motion.a>
         ))}
       </div>
@@ -247,14 +249,14 @@ export default function CEODashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
-        className="bg-[#1a2028] border border-[#2a323d] rounded-md overflow-hidden"
+        className="bg-[#151a21] border border-[#232b36] rounded-lg overflow-hidden"
       >
-        <div className="p-5 border-b border-[#2a323d]">
-          <h2 className="text-base font-semibold text-[#e8edf3]">
+        <div className="p-5 border-b border-[#232b36]">
+          <h2 className="text-base font-semibold text-white">
             Transacoes Recentes
           </h2>
         </div>
-        <div className="divide-y divide-[#2a323d]">
+        <div className="divide-y divide-[#232b36]">
           {recentTransactions.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               Nenhuma transação encontrada

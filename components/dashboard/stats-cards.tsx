@@ -276,20 +276,15 @@ export function StatsCards({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.05 }}
-          className="relative bg-[#1a2028] border border-[#2a323d] rounded-md p-4 sm:p-5 hover:border-[#3a4250] transition-colors duration-150"
+          className="relative bg-[#151a21] border border-[#232b36] rounded-lg p-4 sm:p-5"
         >
-          <div className="flex items-center gap-3">
-            {/* Icon */}
-            <div className="w-10 h-10 rounded-md bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <card.icon className="w-5 h-5 text-primary" />
-            </div>
-            
+          <div className="flex items-start justify-between">
             {/* Content */}
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-[#8b99a8] mb-0.5 truncate">
+              <p className="text-xs sm:text-sm text-[#6b7a8a] mb-2 truncate">
                 {card.label}
               </p>
-              <div className="text-base sm:text-lg font-semibold text-[#e8edf3] truncate">
+              <div className="text-xl sm:text-2xl font-bold text-white truncate">
                 {card.isCurrency ? (
                   <AnimatedCounter 
                     value={card.rawValue} 
@@ -305,6 +300,11 @@ export function StatsCards({
                   />
                 )}
               </div>
+            </div>
+            
+            {/* Icon - Right side */}
+            <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center flex-shrink-0">
+              <card.icon className="w-5 h-5 text-primary" />
             </div>
           </div>
         </motion.div>

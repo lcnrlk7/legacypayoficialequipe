@@ -43,15 +43,15 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* TEMA ESCURO (padrao) - Estilo DuttyFy Clean */
+/* TEMA ESCURO (padrao) - Estilo DuttyFy */
 :root {
-  /* Core palette - Clean dark with subtle blue tint */
-  --background: #0c1015;
-  --foreground: #e8edf3;
-  --card: #161b22;
-  --card-foreground: #e8edf3;
-  --popover: #161b22;
-  --popover-foreground: #e8edf3;
+  /* Core palette - DuttyFy style dark */
+  --background: #0d1117;
+  --foreground: #e6edf3;
+  --card: #151a21;
+  --card-foreground: #e6edf3;
+  --popover: #151a21;
+  --popover-foreground: #e6edf3;
   
   /* Primary - Vibrant orange */
   --primary: #ff6a00;
@@ -59,13 +59,13 @@
   --primary-dark: #cc5500;
   --primary-foreground: #000000;
   
-  /* Secondary - Lighter gray-blue */
-  --secondary: #1c232d;
-  --secondary-foreground: #e8edf3;
+  /* Secondary */
+  --secondary: #1c2128;
+  --secondary-foreground: #e6edf3;
   
-  /* Muted - For less prominent elements */
-  --muted: #1a2028;
-  --muted-foreground: #8b99a8;
+  /* Muted */
+  --muted: #161b22;
+  --muted-foreground: #6b7a8a;
   
   /* Accent - Matches primary */
   --accent: #ff6a00;
@@ -75,9 +75,9 @@
   --destructive: #ff4757;
   --destructive-foreground: #ffffff;
   
-  /* Borders and inputs - Subtle gray */
-  --border: #252d38;
-  --input: #1c232d;
+  /* Borders and inputs */
+  --border: #232b36;
+  --input: #1c2128;
   --ring: #ff6a00;
   
   /* Charts - Orange theme */
@@ -90,14 +90,14 @@
   /* Radius */
   --radius: 0.5rem;
   
-  /* Sidebar - Dark clean */
-  --sidebar: #0a0e14;
-  --sidebar-foreground: #e8edf3;
+  /* Sidebar */
+  --sidebar: #0d1117;
+  --sidebar-foreground: #e6edf3;
   --sidebar-primary: #ff6a00;
   --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #1c232d;
+  --sidebar-accent: #1c2128;
   --sidebar-accent-foreground: #ff6a00;
-  --sidebar-border: #252d38;
+  --sidebar-border: #232b36;
   --sidebar-ring: #ff6a00;
 }
 
