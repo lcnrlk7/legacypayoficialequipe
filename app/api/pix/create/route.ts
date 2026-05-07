@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { createMisticPayClient } from "@/lib/acquirers/misticpay";
 import { MedusaPayments } from "@/lib/acquirers/medusa";
+import { Venopag } from "@/lib/acquirers/venopag";
 import { getSystemFeesForUser } from "@/lib/acquirers";
 import { logNewTransaction } from "@/lib/discord-webhook";
 import { detectAttack } from "@/lib/sanitize";
@@ -279,6 +280,84 @@ export async function POST(request: NextRequest) {
         pixResult = {
           success: false,
           error: error instanceof Error ? error.message : "Erro ao criar cobrança PIX com Medusa"
+        };
+      }
+    } else if (acquirer.code === 'venopag') {
+      // Venopag - Rota White
+      try {
+        const venopag = new Venopag({
+          clientId: acquirer.api_key,
+          clientSecret: acquirer.api_secret || "",
+        });
+
+        const webhookUrl = "https://legacypay.site/api/webhooks/venopag";
+        const customerName = profile.name || payerName || "Cliente LegacyPay";
+        const customerDocument = (payerDocument || profile.cpf_cnpj || "00000000000").replace(/\D/g, "");
+
+        const venopagResult = await venopag.createCashIn(
+          amount,
+          customerName,
+          customerDocument,
+          description || "Deposito via PIX - LegacyPay",
+          webhookUrl
+        );
+
+        if (venopagResult.ok) {
+          pixResult = {
+            success: true,
+            data: {
+              qrCode: venopagResult.copyPaste,
+              qrCodeBase64: venopagResult.qr_img,
+              copyPaste: venopagResult.copyPaste,
+              transactionId: venopagResult.request_number || venopagResult.transaction_id,
+            }
+          };
+        } else {
+          // Registrar erro
+          try {
+            await sql`
+              INSERT INTO integration_errors (integration_name, error_code, error_message, request_data, response_data, user_id, created_at)
+              VALUES (
+                'venopag',
+                'CASH_IN_ERROR',
+                ${venopagResult.error || 'Erro ao criar deposito'},
+                ${JSON.stringify({ amount, transactionId })},
+                ${JSON.stringify(venopagResult)},
+                ${profile.id},
+                NOW()
+              )
+            `;
+          } catch (logErr) {
+            console.error("Error logging integration error:", logErr);
+          }
+          
+          pixResult = {
+            success: false,
+            error: venopagResult.error || "Erro ao criar deposito com Venopag"
+          };
+        }
+      } catch (error) {
+        console.error("Venopag error:", error);
+        
+        try {
+          await sql`
+            INSERT INTO integration_errors (integration_name, error_code, error_message, request_data, user_id, created_at)
+            VALUES (
+              'venopag',
+              'EXCEPTION',
+              ${error instanceof Error ? error.message : 'Erro desconhecido'},
+              ${JSON.stringify({ amount, transactionId })},
+              ${profile.id},
+              NOW()
+            )
+          `;
+        } catch (logErr) {
+          console.error("Error logging integration error:", logErr);
+        }
+        
+        pixResult = {
+          success: false,
+          error: error instanceof Error ? error.message : "Erro ao criar cobranca PIX com Venopag"
         };
       }
     } else {
