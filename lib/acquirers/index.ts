@@ -937,28 +937,26 @@ export async function getSystemFeesForUser(userId: string): Promise<FeeConfig> {
   let routeFees: FeeConfig;
   if (user?.acquirer_id) {
     const acquirerResult = await sql`
-      SELECT fee_percentage, fixed_fee, withdrawal_fee, min_deposit, min_withdrawal, route_type
+      SELECT fee_percentage, fixed_fee, fee_is_percentage, withdrawal_fee, withdrawal_fee_is_percentage, min_deposit, min_withdrawal, route_type
       FROM acquirers WHERE id = ${user.acquirer_id} AND is_active = true
     `;
     if (acquirerResult.length > 0) {
       const acq = acquirerResult[0];
-      const acqRouteType = acq.route_type || routeType;
-      const wFee = Number(acq.withdrawal_fee) || 0;
-      // Rotas white usam taxa percentual de saque se o valor <= 10
-      const isWithdrawalPercentage = acqRouteType === 'white' && wFee <= 10;
+      const isFeePercentage = acq.fee_is_percentage ?? true;
+      const isWithdrawalPercentage = acq.withdrawal_fee_is_percentage ?? false;
       
       routeFees = {
-        pixFixedFee: Number(acq.fixed_fee) || 0,
-        pixPercentageFee: Number(acq.fee_percentage) || 0,
-        withdrawalFee: wFee,
+        // Se taxa de entrada e percentual, usa fee_percentage, senao usa fixed_fee
+        pixFixedFee: isFeePercentage ? 0 : Number(acq.fixed_fee) || 0,
+        pixPercentageFee: isFeePercentage ? Number(acq.fee_percentage) || 0 : 0,
+        withdrawalFee: Number(acq.withdrawal_fee) || 0,
         withdrawalFeeIsPercentage: isWithdrawalPercentage,
       };
-      console.log(`[Acquirer] Usando taxas da adquirente especifica para usuario ${userId}, saque percentual: ${isWithdrawalPercentage}`);
     } else {
       routeFees = await getSystemFeesByRoute(routeType);
     }
   } else {
-    // Buscar taxas padrão da rota
+    // Buscar taxas padrao da rota
     routeFees = await getSystemFeesByRoute(routeType);
   }
     

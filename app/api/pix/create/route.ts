@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     // Autenticar via API Key ou sessão
     if (apiKey) {
       const result = await sql`
-        SELECT id, name, email, cpf_cnpj, phone, is_active, kyc_status, balance, fee_percentage, route_type
+        SELECT id, name, email, cpf_cnpj, phone, is_active, kyc_status, balance, fee_percentage, route_type, acquirer_id
         FROM profiles WHERE api_key = ${apiKey}
       `;
       profile = result[0];
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
       const sessionUser = await getCurrentUser();
       if (sessionUser) {
         const result = await sql`
-          SELECT id, name, email, cpf_cnpj, phone, is_active, kyc_status, balance, fee_percentage, route_type
+          SELECT id, name, email, cpf_cnpj, phone, is_active, kyc_status, balance, fee_percentage, route_type, acquirer_id
           FROM profiles WHERE id = ${sessionUser.id}
         `;
         profile = result[0];
