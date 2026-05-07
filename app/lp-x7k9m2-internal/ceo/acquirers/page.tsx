@@ -82,7 +82,9 @@ export default function AcquirersPage() {
     fee_percentage: 2.5,
     withdrawal_fee: 0,
     min_deposit: 1,
-    min_withdrawal: 1,
+    min_withdrawal: 10,
+    max_withdrawal: 10000,
+    daily_limit: 10000,
     route_type: "white" as "white" | "black",
     priority: 0,
   });
@@ -250,7 +252,9 @@ export default function AcquirersPage() {
       fee_percentage: 2.5,
       withdrawal_fee: 0,
       min_deposit: 1,
-      min_withdrawal: 1,
+      min_withdrawal: 10,
+      max_withdrawal: 10000,
+      daily_limit: 10000,
       route_type: "white",
       priority: acquirers.length,
     });
@@ -268,7 +272,9 @@ export default function AcquirersPage() {
       fee_percentage: acquirer.fee_percentage || 2.5,
       withdrawal_fee: acquirer.withdrawal_fee || 0,
       min_deposit: acquirer.min_deposit || 1,
-      min_withdrawal: acquirer.min_withdrawal || 1,
+      min_withdrawal: acquirer.min_withdrawal || 10,
+      max_withdrawal: (acquirer as any).max_withdrawal || 10000,
+      daily_limit: (acquirer as any).daily_limit || 10000,
       route_type: acquirer.route_type || "white",
       priority: acquirer.priority,
     });
@@ -287,7 +293,9 @@ export default function AcquirersPage() {
       fee_percentage: 2.5,
       withdrawal_fee: 0,
       min_deposit: 1,
-      min_withdrawal: 1,
+      min_withdrawal: 10,
+      max_withdrawal: 10000,
+      daily_limit: 10000,
       route_type: "white",
       priority: 0,
     });
@@ -510,7 +518,13 @@ export default function AcquirersPage() {
                         Min. Dep: <span className="text-white">R$ {Number(acquirer.min_deposit || 1).toFixed(2)}</span>
                       </span>
                       <span className="text-muted-foreground">
-                        Min. Saque: <span className="text-white">R$ {Number(acquirer.min_withdrawal || 1).toFixed(2)}</span>
+                        Min. Saque: <span className="text-white">R$ {Number(acquirer.min_withdrawal || 10).toFixed(2)}</span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        Max. Saque: <span className="text-yellow-400">R$ {Number((acquirer as any).max_withdrawal || 10000).toLocaleString('pt-BR')}</span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        Limite Diario: <span className="text-yellow-400">R$ {Number((acquirer as any).daily_limit || 10000).toLocaleString('pt-BR')}</span>
                       </span>
                     </div>
                   </div>
@@ -700,7 +714,7 @@ export default function AcquirersPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                    Min. Depósito (R$)
+                    Min. Deposito (R$)
                   </label>
                   <input
                     type="number"
@@ -724,9 +738,43 @@ export default function AcquirersPage() {
                     onChange={(e) =>
                       setForm({ ...form, min_withdrawal: Number(e.target.value) })
                     }
-                    placeholder="1"
+                    placeholder="10"
                     min="0"
                     step="1"
+                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Limite por Saque (R$)
+                  </label>
+                  <input
+                    type="number"
+                    value={form.max_withdrawal}
+                    onChange={(e) =>
+                      setForm({ ...form, max_withdrawal: Number(e.target.value) })
+                    }
+                    placeholder="10000"
+                    min="0"
+                    step="100"
+                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Limite Diario (R$)
+                  </label>
+                  <input
+                    type="number"
+                    value={form.daily_limit}
+                    onChange={(e) =>
+                      setForm({ ...form, daily_limit: Number(e.target.value) })
+                    }
+                    placeholder="10000"
+                    min="0"
+                    step="100"
                     className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                   />
                 </div>

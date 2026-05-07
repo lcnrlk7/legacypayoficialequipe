@@ -11,6 +11,29 @@ export async function POST(request: NextRequest) {
     
     const { migration } = await request.json();
     
+    if (migration === "acquirer-limits") {
+      // Adicionar colunas max_withdrawal e daily_limit na tabela acquirers
+      await sql`ALTER TABLE acquirers ADD COLUMN IF NOT EXISTS max_withdrawal DECIMAL(12, 2) DEFAULT 10000`;
+      await sql`ALTER TABLE acquirers ADD COLUMN IF NOT EXISTS daily_limit DECIMAL(12, 2) DEFAULT 10000`;
+      
+      // Atualizar valores padrão para adquirentes existentes
+      await sql`UPDATE acquirers SET max_withdrawal = 10000 WHERE max_withdrawal IS NULL`;
+      await sql`UPDATE acquirers SET daily_limit = 10000 WHERE daily_limit IS NULL`;
+      
+      const acquirers = await sql`SELECT name, code, max_withdrawal, daily_limit FROM acquirers`;
+      
+      return NextResponse.json({
+        success: true,
+        message: "Colunas de limites adicionadas com sucesso",
+        acquirers: acquirers.map(a => ({
+          name: a.name,
+          code: a.code,
+          max_withdrawal: Number(a.max_withdrawal),
+          daily_limit: Number(a.daily_limit)
+        }))
+      });
+    }
+
     if (migration === "withdrawal-fee") {
       // 1. Adicionar coluna withdrawal_fee na tabela profiles (se não existir)
       await sql`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS withdrawal_fee DECIMAL(10, 2) DEFAULT NULL`;
@@ -67,6 +90,10 @@ export async function POST(request: NextRequest) {
     }
     
     if (migration === "add-venopag") {
+      // Primeiro garantir que as colunas de limite existem
+      await sql`ALTER TABLE acquirers ADD COLUMN IF NOT EXISTS max_withdrawal DECIMAL(12, 2) DEFAULT 10000`;
+      await sql`ALTER TABLE acquirers ADD COLUMN IF NOT EXISTS daily_limit DECIMAL(12, 2) DEFAULT 10000`;
+      
       // Verificar se ja existe
       const existing = await sql`SELECT id FROM acquirers WHERE code = 'venopag'`;
       
@@ -83,6 +110,8 @@ export async function POST(request: NextRequest) {
             withdrawal_fee = 4.0,
             min_deposit = 1.00,
             min_withdrawal = 10.00,
+            max_withdrawal = 10000.00,
+            daily_limit = 10000.00,
             route_type = 'white',
             health_status = 'online',
             updated_at = NOW()
@@ -91,7 +120,7 @@ export async function POST(request: NextRequest) {
         
         return NextResponse.json({
           success: true,
-          message: "Venopag atualizada com sucesso"
+          message: "Venopag atualizada com sucesso! Taxa deposito: 3%, Taxa saque: 4%, Limite diario: R$10.000, Limite por saque: R$10.000"
         });
       }
       
@@ -100,7 +129,7 @@ export async function POST(request: NextRequest) {
       const nextPriority = (maxP[0]?.mp || 0) + 1;
       
       await sql`
-        INSERT INTO acquirers (id, name, code, api_url, api_key, api_secret, is_active, priority, fee_percentage, withdrawal_fee, min_deposit, min_withdrawal, route_type, health_status, created_at, updated_at)
+        INSERT INTO acquirers (id, name, code, api_url, api_key, api_secret, is_active, priority, fee_percentage, withdrawal_fee, min_deposit, min_withdrawal, max_withdrawal, daily_limit, route_type, health_status, created_at, updated_at)
         VALUES (
           gen_random_uuid(),
           'Venopag',
@@ -114,6 +143,8 @@ export async function POST(request: NextRequest) {
           4.0,
           1.00,
           10.00,
+          10000.00,
+          10000.00,
           'white',
           'online',
           NOW(),
@@ -121,11 +152,11 @@ export async function POST(request: NextRequest) {
         )
       `;
       
-      const acquirers = await sql`SELECT name, code, route_type, fee_percentage, withdrawal_fee, is_active FROM acquirers ORDER BY priority`;
+      const acquirers = await sql`SELECT name, code, route_type, fee_percentage, withdrawal_fee, max_withdrawal, daily_limit, is_active FROM acquirers ORDER BY priority`;
       
       return NextResponse.json({
         success: true,
-        message: "Venopag adicionada com sucesso! Taxa deposito: 3%, Taxa saque: 4%",
+        message: "Venopag adicionada com sucesso! Taxa deposito: 3%, Taxa saque: 4%, Limite diario: R$10.000, Limite por saque: R$10.000",
         acquirers
       });
     }
@@ -133,7 +164,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: false, 
       error: "Migração não reconhecida",
-      available: ["withdrawal-fee", "fixed-fee", "all-fees", "add-venopag"]
+      available: ["acquirer-limits", "withdrawal-fee", "fixed-fee", "all-fees", "add-venopag"]
     }, { status: 400 });
     
   } catch (error) {

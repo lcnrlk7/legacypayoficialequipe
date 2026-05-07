@@ -175,10 +175,21 @@ export async function POST(request: NextRequest) {
     // NOTA: "amount" agora é o valor que o usuário QUER RECEBER
     // totalDebit = amount + taxa (o que será debitado do saldo)
     const systemFees = await getSystemFeesForUser(sessionUser.id);
-    const withdrawalFee = systemFees.withdrawalFee || 2; // Taxa fixa de saque
+    
+    // Calcular taxa de saque (pode ser fixa ou percentual)
+    let totalFee: number;
+    if (systemFees.withdrawalFeeIsPercentage) {
+      // Taxa percentual: calcular sobre o valor do saque
+      totalFee = amount * (systemFees.withdrawalFee / 100);
+      console.log(`[Withdrawal] Taxa percentual: ${systemFees.withdrawalFee}% de ${amount} = ${totalFee}`);
+    } else {
+      // Taxa fixa em reais
+      totalFee = systemFees.withdrawalFee || 2;
+      console.log(`[Withdrawal] Taxa fixa: R$ ${totalFee}`);
+    }
+    
     const netAmount = amount; // Valor que o usuário vai receber
-    const totalFee = withdrawalFee; // Taxa de saque
-    const totalDebit = amount + withdrawalFee; // Total a ser debitado do saldo
+    const totalDebit = amount + totalFee; // Total a ser debitado do saldo
     
     if (amount <= 0) {
       return NextResponse.json(

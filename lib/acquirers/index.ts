@@ -866,9 +866,10 @@ export async function listActiveAcquirers(): Promise<AcquirerConfig[]> {
  * Busca configurações de taxa do sistema
  */
 export interface FeeConfig {
-  pixFixedFee: number;      // Taxa fixa PIX (R$)
-  pixPercentageFee: number; // Taxa percentual PIX (%)
-  withdrawalFee: number;    // Taxa de saque (R$)
+  pixFixedFee: number;           // Taxa fixa PIX (R$)
+  pixPercentageFee: number;      // Taxa percentual PIX (%)
+  withdrawalFee: number;         // Taxa de saque (% ou R$ dependendo da adquirente)
+  withdrawalFeeIsPercentage?: boolean; // Se true, withdrawalFee é percentual
 }
 
 /**
@@ -892,24 +893,30 @@ export async function getSystemFeesByRoute(routeType: 'white' | 'black'): Promis
     const defaultWithdrawalFee = routeType === 'white' ? 2.00 : 5.00;
 
     if (acquirer) {
+      // Verificar se a taxa de saque e percentual (rotas white geralmente usam %)
+      // Convenção: se withdrawal_fee <= 10, é percentual; se > 10, é valor fixo
+      const wFee = Number(acquirer.withdrawal_fee) || defaultWithdrawalFee;
+      const isWithdrawalPercentage = routeType === 'white' && wFee <= 10;
+      
       return {
         pixFixedFee: Number(acquirer.fixed_fee) || (routeType === 'white' ? 1.50 : 0),
         pixPercentageFee: Number(acquirer.fee_percentage) || (routeType === 'white' ? 0 : 4.00),
-        withdrawalFee: Number(acquirer.withdrawal_fee) || defaultWithdrawalFee,
+        withdrawalFee: wFee,
+        withdrawalFeeIsPercentage: isWithdrawalPercentage,
       };
     }
 
     // Taxas padrao por rota se nao encontrar adquirente
-    // WHITE (MisticPay): 0% + R$ 1.50 fixo, R$ 2.00 saque
-    // BLACK (Medusa): 4% + R$ 0.00 fixo, R$ 5.00 saque
+    // WHITE: 0% + R$ 1.50 fixo, 2% saque (percentual)
+    // BLACK (Medusa): 4% + R$ 0.00 fixo, R$ 5.00 saque (fixo)
     return routeType === 'white'
-      ? { pixFixedFee: 1.50, pixPercentageFee: 0, withdrawalFee: 2.00 }
-      : { pixFixedFee: 0, pixPercentageFee: 4.00, withdrawalFee: 5.00 };
+      ? { pixFixedFee: 1.50, pixPercentageFee: 0, withdrawalFee: 2.00, withdrawalFeeIsPercentage: true }
+      : { pixFixedFee: 0, pixPercentageFee: 4.00, withdrawalFee: 5.00, withdrawalFeeIsPercentage: false };
   } catch (error) {
     console.error("[Acquirer] Erro ao buscar taxas:", error);
     return routeType === 'white'
-      ? { pixFixedFee: 1.50, pixPercentageFee: 0, withdrawalFee: 2.00 }
-      : { pixFixedFee: 0, pixPercentageFee: 4.00, withdrawalFee: 5.00 };
+      ? { pixFixedFee: 1.50, pixPercentageFee: 0, withdrawalFee: 2.00, withdrawalFeeIsPercentage: true }
+      : { pixFixedFee: 0, pixPercentageFee: 4.00, withdrawalFee: 5.00, withdrawalFeeIsPercentage: false };
   }
 }
 
@@ -931,17 +938,23 @@ export async function getSystemFeesForUser(userId: string): Promise<FeeConfig> {
   let routeFees: FeeConfig;
   if (user?.acquirer_id) {
     const acquirerResult = await sql`
-      SELECT fee_percentage, fixed_fee, withdrawal_fee, min_deposit, min_withdrawal 
+      SELECT fee_percentage, fixed_fee, withdrawal_fee, min_deposit, min_withdrawal, route_type
       FROM acquirers WHERE id = ${user.acquirer_id} AND is_active = true
     `;
     if (acquirerResult.length > 0) {
       const acq = acquirerResult[0];
+      const acqRouteType = acq.route_type || routeType;
+      const wFee = Number(acq.withdrawal_fee) || 0;
+      // Rotas white usam taxa percentual de saque se o valor <= 10
+      const isWithdrawalPercentage = acqRouteType === 'white' && wFee <= 10;
+      
       routeFees = {
         pixFixedFee: Number(acq.fixed_fee) || 0,
         pixPercentageFee: Number(acq.fee_percentage) || 0,
-        withdrawalFee: Number(acq.withdrawal_fee) || 0,
+        withdrawalFee: wFee,
+        withdrawalFeeIsPercentage: isWithdrawalPercentage,
       };
-      console.log(`[Acquirer] Usando taxas da adquirente especifica para usuario ${userId}`);
+      console.log(`[Acquirer] Usando taxas da adquirente especifica para usuario ${userId}, saque percentual: ${isWithdrawalPercentage}`);
     } else {
       routeFees = await getSystemFeesByRoute(routeType);
     }
@@ -955,6 +968,7 @@ export async function getSystemFeesForUser(userId: string): Promise<FeeConfig> {
       pixFixedFee: routeFees.pixFixedFee,
       pixPercentageFee: routeFees.pixPercentageFee,
       withdrawalFee: routeFees.withdrawalFee,
+      withdrawalFeeIsPercentage: routeFees.withdrawalFeeIsPercentage,
     };
     
     // Taxa percentual de deposito personalizada (PIX In)
@@ -1010,17 +1024,28 @@ export function calculatePixFees(
 /**
  * Calcula as taxas para um saque
  * Retorna o valor líquido que será enviado e a taxa cobrada
+ * Suporta taxa fixa (R$) ou percentual (%)
  */
 export function calculateWithdrawalFees(
   grossAmount: number,
   fees: FeeConfig
-): { netAmount: number; totalFee: number } {
-  const totalFee = fees.withdrawalFee;
+): { netAmount: number; totalFee: number; isPercentage: boolean } {
+  let totalFee: number;
+  
+  if (fees.withdrawalFeeIsPercentage) {
+    // Taxa percentual: calcular sobre o valor do saque
+    totalFee = grossAmount * (fees.withdrawalFee / 100);
+  } else {
+    // Taxa fixa em reais
+    totalFee = fees.withdrawalFee;
+  }
+  
   const netAmount = grossAmount - totalFee;
 
   return {
     netAmount: Math.max(0, netAmount),
     totalFee,
+    isPercentage: fees.withdrawalFeeIsPercentage || false,
   };
 }
 

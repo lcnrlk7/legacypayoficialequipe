@@ -25,15 +25,18 @@ export async function GET() {
     let acquirerData = { 
       min_deposit: 10, 
       min_withdrawal: 10,
+      max_withdrawal: 10000,
+      daily_limit: 10000,
       fee_percentage: 0,
       withdrawal_fee: 0,
       fixed_fee: 0,
       name: "",
-      has_percentage_fee: false
+      has_percentage_fee: false,
+      route_type: "black"
     };
     if (profile?.acquirer_id) {
       const acquirerResult = await sql`
-        SELECT name, min_deposit, min_withdrawal, fee_percentage, withdrawal_fee, fixed_fee 
+        SELECT name, min_deposit, min_withdrawal, max_withdrawal, daily_limit, fee_percentage, withdrawal_fee, fixed_fee, route_type
         FROM acquirers WHERE id = ${profile.acquirer_id} AND is_active = true
       `;
       if (acquirerResult.length > 0) {
@@ -41,11 +44,14 @@ export async function GET() {
         acquirerData = {
           min_deposit: Number(acq.min_deposit) || 10,
           min_withdrawal: Number(acq.min_withdrawal) || 10,
+          max_withdrawal: Number(acq.max_withdrawal) || 10000,
+          daily_limit: Number(acq.daily_limit) || 10000,
           fee_percentage: Number(acq.fee_percentage) || 0,
           withdrawal_fee: Number(acq.withdrawal_fee) || 0,
           fixed_fee: Number(acq.fixed_fee) || 0,
           name: acq.name || "",
-          has_percentage_fee: Number(acq.fee_percentage) > 0
+          has_percentage_fee: Number(acq.fee_percentage) > 0,
+          route_type: acq.route_type || "black"
         };
       }
     }
@@ -79,10 +85,14 @@ export async function GET() {
     const txStats = transactionsResult[0] || { total_fees: 0, total_volume: 0, total_transactions: 0 };
 
     // Usar taxas da adquirente especifica se existir, senao usar do sistema
+    // Verificar se a taxa de saque e percentual (rotas white usam taxa percentual)
+    const isWithdrawalPercentage = acquirerData.route_type === 'white' && Number(acquirerData.withdrawal_fee || 0) <= 10;
+    
     const effectiveFees = acquirerData.name ? {
       pixFixedFee: acquirerData.fixed_fee,
       pixPercentageFee: acquirerData.fee_percentage,
       withdrawalFee: acquirerData.withdrawal_fee,
+      withdrawalFeeIsPercentage: isWithdrawalPercentage,
     } : systemFees;
 
     const fees = {
@@ -90,28 +100,30 @@ export async function GET() {
       pix_fixed_fee: Number(effectiveFees.pixFixedFee),
       pix_percentage_fee: Number(effectiveFees.pixPercentageFee),
       
-      // Taxa PIX Out (saque)
+      // Taxa PIX Out (saque) - pode ser percentual ou fixa
       withdrawal_fee: Number(effectiveFees.withdrawalFee),
+      withdrawal_fee_is_percentage: effectiveFees.withdrawalFeeIsPercentage || false,
       
       // Taxas do usuario especifico (para exibicao no painel)
       user_fee_percentage: Number(effectiveFees.pixPercentageFee),
       user_fixed_fee: Number(effectiveFees.pixFixedFee),
       user_withdrawal_fee: Number(effectiveFees.withdrawalFee),
       
-      // Flag para saber se usa taxa percentual ou fixa
+      // Flag para saber se usa taxa percentual ou fixa (deposito)
       has_percentage_fee: acquirerData.has_percentage_fee || Number(effectiveFees.pixPercentageFee) > 0,
       
       // Informações da rota (mostra nome da adquirente se existir)
       gateway_name: acquirerData.name || ROUTE_DISPLAY_NAMES[routeType as 'white' | 'black'] || 'Rota Black',
       route_type: routeType,
       
-      // Limites - garantir que são números
-      daily_limit: Number(profile?.daily_limit) || 50000,
+      // Limites - garantir que são números (priorizar adquirente, depois perfil, depois sistema)
+      daily_limit: acquirerData.daily_limit || Number(profile?.daily_limit) || 50000,
       monthly_limit: Number(settings.monthly_limit) || 500000,
       min_deposit: acquirerData.min_deposit,
       max_deposit: Number(settings.max_deposit) || 50000,
       min_withdrawal: acquirerData.min_withdrawal,
-      max_withdrawal: Number(settings.max_withdrawal) || 50000,
+      max_withdrawal: acquirerData.max_withdrawal || Number(settings.max_withdrawal) || 10000,
+      per_withdrawal_limit: acquirerData.max_withdrawal || 10000,
       auto_withdrawal_limit: Number(settings.auto_withdrawal_limit) || 500,
       
       // Estatísticas

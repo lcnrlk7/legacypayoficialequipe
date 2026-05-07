@@ -12,12 +12,15 @@ import {
   Shield,
   DollarSign,
   TrendingUp,
+  Calendar,
+  Building2,
 } from "lucide-react";
 
 interface UserFees {
   pix_fixed_fee: number;
   pix_percentage_fee: number;
   withdrawal_fee: number;
+  withdrawal_fee_is_percentage: boolean;
   user_fee_percentage: number;
   has_percentage_fee: boolean;
   gateway_name: string;
@@ -28,6 +31,7 @@ interface UserFees {
   max_deposit: number;
   min_withdrawal: number;
   max_withdrawal: number;
+  per_withdrawal_limit: number;
   total_fees_paid: number;
   total_transactions: number;
   total_volume: number;
@@ -211,137 +215,155 @@ export default function FeesPage() {
         </motion.div>
       )}
 
-      {/* Cards de Taxas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Taxa de Depósito (PIX In) */}
+      {/* Cards Principais - Taxas e Limites */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {/* Taxa de Entrada */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="p-6 rounded-2xl bg-gradient-to-br from-card to-card/50 border border-border"
+          className="p-5 rounded-xl bg-card border border-border"
         >
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-green-500/10 flex items-center justify-center">
-              <ArrowDownLeft className="w-6 h-6 text-green-500" />
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <ArrowDownLeft className="w-5 h-5 text-primary" />
             </div>
-            <div>
-              <h3 className="font-semibold text-foreground">Depósitos (PIX In)</h3>
-              <p className="text-sm text-muted-foreground">Taxa por recebimento</p>
-            </div>
+            <span className="text-sm text-muted-foreground">Taxa de Entrada</span>
           </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-background/50 rounded-xl">
-              <span className="text-muted-foreground">Taxa por transacao</span>
-              <span className="text-2xl font-bold text-primary">
-                {fees?.has_percentage_fee 
-                  ? (fees?.pix_fixed_fee > 0 
-                      ? `${formatPercent(fees?.pix_percentage_fee)} + ${formatCurrency(fees?.pix_fixed_fee)}`
-                      : formatPercent(fees?.pix_percentage_fee))
-                  : formatCurrency(fees?.pix_fixed_fee || 0)
-                }
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-background/30 rounded-lg">
-                <p className="text-xs text-muted-foreground">Depósito Mínimo</p>
-                <p className="font-semibold text-foreground">
-                  {formatCurrency(fees?.min_deposit || 3)}
-                </p>
-              </div>
-              <div className="p-3 bg-background/30 rounded-lg">
-                <p className="text-xs text-muted-foreground">Depósito Máximo</p>
-                <p className="font-semibold text-foreground">
-                  {formatCurrency(fees?.max_deposit || 50000)}
-                </p>
-              </div>
-            </div>
-          </div>
+          <p className="text-2xl font-bold text-foreground">
+            {fees?.has_percentage_fee 
+              ? formatPercent(fees?.pix_percentage_fee)
+              : formatCurrency(fees?.pix_fixed_fee || 0)
+            }
+          </p>
         </motion.div>
 
-        {/* Taxa de Saque (PIX Out) */}
+        {/* Taxa de Saída */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="p-5 rounded-xl bg-card border border-border"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <ArrowUpRight className="w-5 h-5 text-primary" />
+            </div>
+            <span className="text-sm text-muted-foreground">Taxa de Saida</span>
+          </div>
+          <p className="text-2xl font-bold text-foreground">
+            {fees?.withdrawal_fee_is_percentage 
+              ? formatPercent(fees?.withdrawal_fee || 0)
+              : formatCurrency(fees?.withdrawal_fee || 0)
+            }
+          </p>
+        </motion.div>
+
+        {/* Limite Diário */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="p-6 rounded-2xl bg-gradient-to-br from-card to-card/50 border border-border"
+          className="p-5 rounded-xl bg-card border border-border"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Calendar className="w-5 h-5 text-primary" />
+            </div>
+            <span className="text-sm text-muted-foreground">Limite Diario</span>
+          </div>
+          <p className="text-2xl font-bold text-foreground">
+            {formatCurrency(fees?.daily_limit || 10000)}
+          </p>
+        </motion.div>
+
+        {/* Limite por Saque */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="p-5 rounded-xl bg-card border border-border"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-primary" />
+            </div>
+            <span className="text-sm text-muted-foreground">Limite por Saque</span>
+          </div>
+          <p className="text-2xl font-bold text-foreground">
+            {formatCurrency(fees?.per_withdrawal_limit || fees?.max_withdrawal || 10000)}
+          </p>
+        </motion.div>
+      </div>
+
+      {/* Detalhes de Deposito e Saque */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Depositos */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="p-6 rounded-xl bg-card border border-border"
         >
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-orange-500/10 flex items-center justify-center">
-              <ArrowUpRight className="w-6 h-6 text-orange-500" />
+            <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+              <ArrowDownLeft className="w-5 h-5 text-green-500" />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">Saques (PIX Out)</h3>
-              <p className="text-sm text-muted-foreground">Taxa por envio</p>
+              <h3 className="font-semibold text-foreground">Depositos (PIX In)</h3>
+              <p className="text-sm text-muted-foreground">Limites por operacao</p>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-background/50 rounded-xl">
-              <span className="text-muted-foreground">Taxa fixa por saque</span>
-              <span className="text-2xl font-bold text-primary">
-                {formatCurrency(fees?.withdrawal_fee || 7)}
-              </span>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 bg-secondary/50 rounded-lg">
+              <p className="text-xs text-muted-foreground">Minimo</p>
+              <p className="font-semibold text-foreground">
+                {formatCurrency(fees?.min_deposit || 10)}
+              </p>
             </div>
+            <div className="p-3 bg-secondary/50 rounded-lg">
+              <p className="text-xs text-muted-foreground">Maximo</p>
+              <p className="font-semibold text-foreground">
+                {formatCurrency(fees?.max_deposit || 50000)}
+              </p>
+            </div>
+          </div>
+        </motion.div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-background/30 rounded-lg">
-                <p className="text-xs text-muted-foreground">Saque Mínimo</p>
-                <p className="font-semibold text-foreground">
-                  {formatCurrency(fees?.min_withdrawal || 20)}
-                </p>
-              </div>
-              <div className="p-3 bg-background/30 rounded-lg">
-                <p className="text-xs text-muted-foreground">Saque Máximo</p>
-                <p className="font-semibold text-foreground">
-                  {formatCurrency(fees?.max_withdrawal || 50000)}
-                </p>
-              </div>
+        {/* Saques */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="p-6 rounded-xl bg-card border border-border"
+        >
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+              <ArrowUpRight className="w-5 h-5 text-orange-500" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground">Saques (PIX Out)</h3>
+              <p className="text-sm text-muted-foreground">Limites por operacao</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 bg-secondary/50 rounded-lg">
+              <p className="text-xs text-muted-foreground">Minimo</p>
+              <p className="font-semibold text-foreground">
+                {formatCurrency(fees?.min_withdrawal || 10)}
+              </p>
+            </div>
+            <div className="p-3 bg-secondary/50 rounded-lg">
+              <p className="text-xs text-muted-foreground">Maximo</p>
+              <p className="font-semibold text-foreground">
+                {formatCurrency(fees?.max_withdrawal || 10000)}
+              </p>
             </div>
           </div>
         </motion.div>
       </div>
-
-      {/* Limites */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="p-6 rounded-2xl bg-gradient-to-br from-card to-card/50 border border-border"
-      >
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
-            <Shield className="w-6 h-6 text-blue-500" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-foreground">Limites de Operação</h3>
-            <p className="text-sm text-muted-foreground">Seus limites diários e mensais</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 bg-background/50 rounded-xl">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Limite Diário</span>
-            </div>
-            <p className="text-xl font-bold text-foreground">
-              {formatCurrency(fees?.daily_limit || 50000)}
-            </p>
-          </div>
-
-          <div className="p-4 bg-background/50 rounded-xl">
-            <div className="flex items-center gap-2 mb-2">
-              <Clock className="w-4 h-4 text-muted-foreground" />
-              <span className="text-sm text-muted-foreground">Limite Mensal</span>
-            </div>
-            <p className="text-xl font-bold text-foreground">
-              {formatCurrency(fees?.monthly_limit || 500000)}
-            </p>
-          </div>
-        </div>
-      </motion.div>
 
       {/* Informações */}
       <motion.div
