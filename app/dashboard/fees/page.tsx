@@ -185,7 +185,7 @@ export default function FeesPage() {
             fees.route_type === 'black' ? 'text-orange-500' : 'text-green-500'
           }`} />
           <p className={`text-sm ${fees.route_type === 'black' ? 'text-orange-400' : 'text-green-400'}`}>
-            Você está na <strong>{fees.gateway_name}</strong> -{' '}
+            Você está na rota <strong>{fees.route_type?.toUpperCase() || 'BLACK'}</strong> -{' '}
             {fees.has_percentage_fee ? (
               fees.pix_fixed_fee > 0 ? (
                 <>Taxa de <strong>{formatPercent(fees.pix_percentage_fee)} + {formatCurrency(fees.pix_fixed_fee)}</strong> por transação</>
