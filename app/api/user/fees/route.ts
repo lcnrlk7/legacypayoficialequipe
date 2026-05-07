@@ -31,12 +31,13 @@ export async function GET() {
       withdrawal_fee: 0,
       fixed_fee: 0,
       name: "",
-      has_percentage_fee: false,
+      fee_is_percentage: true,
+      withdrawal_fee_is_percentage: false,
       route_type: "black"
     };
     if (profile?.acquirer_id) {
       const acquirerResult = await sql`
-        SELECT name, min_deposit, min_withdrawal, max_withdrawal, daily_limit, fee_percentage, withdrawal_fee, fixed_fee, route_type
+        SELECT name, min_deposit, min_withdrawal, max_withdrawal, daily_limit, fee_percentage, withdrawal_fee, fixed_fee, fee_is_percentage, withdrawal_fee_is_percentage, route_type
         FROM acquirers WHERE id = ${profile.acquirer_id} AND is_active = true
       `;
       if (acquirerResult.length > 0) {
@@ -50,7 +51,8 @@ export async function GET() {
           withdrawal_fee: Number(acq.withdrawal_fee) || 0,
           fixed_fee: Number(acq.fixed_fee) || 0,
           name: acq.name || "",
-          has_percentage_fee: Number(acq.fee_percentage) > 0,
+          fee_is_percentage: acq.fee_is_percentage ?? true,
+          withdrawal_fee_is_percentage: acq.withdrawal_fee_is_percentage ?? false,
           route_type: acq.route_type || "black"
         };
       }
