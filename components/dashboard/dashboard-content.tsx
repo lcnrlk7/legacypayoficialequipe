@@ -20,7 +20,6 @@ import { StatsCards } from "./stats-cards";
 import { GoalsRoadmap } from "./goals-roadmap";
 import { BannerCarousel } from "./banner-carousel";
 import { useProfile } from "@/components/profile-provider";
-import { ActivationChecklist } from "@/components/onboarding/activation-checklist";
 
 export interface Profile {
   id: string;
@@ -259,16 +258,6 @@ export function DashboardContent({
           Bem-vindo ao seu painel de controle
         </p>
       </div>
-
-      {/* Activation Checklist */}
-      {profile && (
-        <ActivationChecklist
-          userId={profile.id}
-          hasApiKey={!!profile.api_key}
-          hasPixKey={pixKeys.length > 0}
-          hasTransaction={transactions.length > 0}
-        />
-      )}
 
       {/* Banner Carousel */}
       <BannerCarousel />
