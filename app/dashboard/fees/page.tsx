@@ -102,7 +102,7 @@ export default function FeesPage() {
             <span className={`font-semibold ${
               fees.route_type === 'black' ? 'text-orange-500' : 'text-zinc-400'
             }`}>
-              {fees.gateway_name}
+              Rota {fees.route_type?.toUpperCase() || 'BLACK'}
             </span>
           </div>
         )}
@@ -412,7 +412,7 @@ export default function FeesPage() {
           </div>
           <div className="flex justify-between items-center pb-3 border-b border-border">
             <span className="text-muted-foreground">
-              Taxa ({fees?.gateway_name || 'Rota'})
+              Taxa (Rota {fees?.route_type?.toUpperCase() || 'BLACK'})
             </span>
             <span className="font-semibold text-red-400">
               {fees?.has_percentage_fee 
