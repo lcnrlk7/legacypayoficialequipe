@@ -43,15 +43,15 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* TEMA ESCURO (padrao) - Estilo Premium Dark Blue */
+/* TEMA ESCURO (padrao) - Estilo DuttyFy Clean */
 :root {
-  /* Core palette - Deep blue-black with warm orange accent */
-  --background: #080b12;
-  --foreground: #f0f4f8;
-  --card: #0d1117;
-  --card-foreground: #f0f4f8;
-  --popover: #0d1117;
-  --popover-foreground: #f0f4f8;
+  /* Core palette - Clean dark with subtle blue tint */
+  --background: #0c1015;
+  --foreground: #e8edf3;
+  --card: #161b22;
+  --card-foreground: #e8edf3;
+  --popover: #161b22;
+  --popover-foreground: #e8edf3;
   
   /* Primary - Vibrant orange */
   --primary: #ff6a00;
@@ -59,13 +59,13 @@
   --primary-dark: #cc5500;
   --primary-foreground: #000000;
   
-  /* Secondary - Blue-tinted dark grays */
-  --secondary: #151b25;
-  --secondary-foreground: #f0f4f8;
+  /* Secondary - Lighter gray-blue */
+  --secondary: #1c232d;
+  --secondary-foreground: #e8edf3;
   
   /* Muted - For less prominent elements */
-  --muted: #121820;
-  --muted-foreground: #7b8a9c;
+  --muted: #1a2028;
+  --muted-foreground: #8b99a8;
   
   /* Accent - Matches primary */
   --accent: #ff6a00;
@@ -75,9 +75,9 @@
   --destructive: #ff4757;
   --destructive-foreground: #ffffff;
   
-  /* Borders and inputs - Blue-tinted */
-  --border: #1e2736;
-  --input: #151b25;
+  /* Borders and inputs - Subtle gray */
+  --border: #252d38;
+  --input: #1c232d;
   --ring: #ff6a00;
   
   /* Charts - Orange theme */
@@ -88,16 +88,16 @@
   --chart-5: #00c2ff;
   
   /* Radius */
-  --radius: 0.75rem;
+  --radius: 0.5rem;
   
-  /* Sidebar - Darker blue-black */
-  --sidebar: #060910;
-  --sidebar-foreground: #f0f4f8;
+  /* Sidebar - Dark clean */
+  --sidebar: #0a0e14;
+  --sidebar-foreground: #e8edf3;
   --sidebar-primary: #ff6a00;
   --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #151b25;
+  --sidebar-accent: #1c232d;
   --sidebar-accent-foreground: #ff6a00;
-  --sidebar-border: #1e2736;
+  --sidebar-border: #252d38;
   --sidebar-ring: #ff6a00;
 }
 

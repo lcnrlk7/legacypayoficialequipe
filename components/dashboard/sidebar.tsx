@@ -166,20 +166,19 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
   }
 
   const SidebarContent = () => (
-    <div className="flex flex-col h-full bg-sidebar">
+    <div className="flex flex-col h-full bg-[#0c1015]">
       {/* Logo */}
-      <div className="p-5 border-b border-border">
+      <div className="p-5 border-b border-[#1e2530]">
         <Link href="/dashboard" className="flex items-center gap-3 group">
           <Image
             src="/logo-icon.png"
             alt="LegacyPay"
-            width={40}
-            height={40}
-            className="drop-shadow-md"
+            width={36}
+            height={36}
           />
           <div className="flex items-baseline">
-            <span className="text-xl font-bold text-foreground">Legacy</span>
-            <span className="text-xl font-bold text-primary">Pay</span>
+            <span className="text-lg font-bold text-[#e8edf3]">Legacy</span>
+            <span className="text-lg font-bold text-primary">Pay</span>
           </div>
         </Link>
       </div>

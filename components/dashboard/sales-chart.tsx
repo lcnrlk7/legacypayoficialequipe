@@ -121,7 +121,7 @@ export function SalesChart({ transactions }: SalesChartProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-card border border-border rounded-xl p-4 sm:p-6"
+      className="bg-[#1a2028] border border-[#2a323d] rounded-md p-4 sm:p-6"
     >
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -203,12 +203,12 @@ export function SalesChart({ transactions }: SalesChartProps) {
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#0d1117',
-                border: '1px solid #1e2736',
-                borderRadius: '8px',
-                padding: '12px',
+                backgroundColor: '#1a2028',
+                border: '1px solid #2a323d',
+                borderRadius: '6px',
+                padding: '10px 12px',
               }}
-              labelStyle={{ color: '#f0f4f8', fontWeight: 'bold', marginBottom: '4px' }}
+              labelStyle={{ color: '#e8edf3', fontWeight: '600', marginBottom: '4px' }}
               formatter={(value: number) => [
                 new Intl.NumberFormat("pt-BR", {
                   style: "currency",

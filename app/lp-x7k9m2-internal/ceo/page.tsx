@@ -203,16 +203,16 @@ export default function CEODashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
-            className="glass rounded-2xl p-6 hover:bg-white/5 transition-colors"
+            className="bg-[#1a2028] border border-[#2a323d] rounded-md p-5 hover:border-[#3a4250] transition-colors"
           >
             <div className="flex items-start justify-between mb-4">
-              <div className={`p-3 rounded-xl ${stat.bgColor}`}>
-                <stat.icon className={`w-6 h-6 ${stat.color}`} />
+              <div className={`p-2.5 rounded-md ${stat.bgColor}`}>
+                <stat.icon className={`w-5 h-5 ${stat.color}`} />
               </div>
             </div>
-            <p className={`text-2xl font-bold mb-1 ${stat.color}`}>{stat.value}</p>
-            <p className="text-sm font-medium text-white">{stat.label}</p>
-            <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
+            <p className={`text-xl font-bold mb-1 ${stat.color}`}>{stat.value}</p>
+            <p className="text-sm font-medium text-[#e8edf3]">{stat.label}</p>
+            <p className="text-xs text-[#8b99a8] mt-1">{stat.description}</p>
           </motion.div>
         ))}
       </div>
@@ -226,18 +226,18 @@ export default function CEODashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 + index * 0.1 }}
-            className="glass rounded-2xl p-6 flex items-center justify-between hover:bg-secondary transition-colors group"
+            className="bg-[#1a2028] border border-[#2a323d] rounded-md p-5 flex items-center justify-between hover:border-[#3a4250] transition-colors group"
           >
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-yellow-400/10">
-                <card.icon className="w-6 h-6 text-yellow-400" />
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-md bg-primary/10">
+                <card.icon className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-lg font-semibold text-white">{card.value}</p>
-                <p className="text-sm text-muted-foreground">{card.label}</p>
+                <p className="text-lg font-semibold text-[#e8edf3]">{card.value}</p>
+                <p className="text-sm text-[#8b99a8]">{card.label}</p>
               </div>
             </div>
-            <ArrowUpRight className="w-5 h-5 text-muted-foreground group-hover:text-white transition-colors" />
+            <ArrowUpRight className="w-5 h-5 text-[#8b99a8] group-hover:text-primary transition-colors" />
           </motion.a>
         ))}
       </div>
@@ -247,14 +247,14 @@ export default function CEODashboard() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
-        className="glass rounded-2xl overflow-hidden"
+        className="bg-[#1a2028] border border-[#2a323d] rounded-md overflow-hidden"
       >
-        <div className="p-6 border-b border-border">
-          <h2 className="text-lg font-semibold text-white">
-            Transações Recentes
+        <div className="p-5 border-b border-[#2a323d]">
+          <h2 className="text-base font-semibold text-[#e8edf3]">
+            Transacoes Recentes
           </h2>
         </div>
-        <div className="divide-y divide-white/5">
+        <div className="divide-y divide-[#2a323d]">
           {recentTransactions.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               Nenhuma transação encontrada
@@ -274,7 +274,7 @@ export default function CEODashboard() {
               return (
                 <div
                   key={transaction.id}
-                  className="p-4 flex items-center justify-between hover:bg-secondary transition-colors"
+                  className="p-4 flex items-center justify-between hover:bg-[#1e2630] transition-colors"
                 >
                   <div className="flex items-center gap-4">
                     <div
