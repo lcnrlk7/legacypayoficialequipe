@@ -18,8 +18,6 @@ import {
   CheckCircle,
   XCircle,
   RefreshCw,
-  Zap,
-  Shield,
   ArrowUpDown,
 } from "lucide-react";
 
@@ -31,7 +29,6 @@ interface Acquirer {
   api_key: string;
   api_secret: string;
   is_active: boolean;
-  priority: number;
   success_rate: number;
   total_transactions: number;
   total_volume: number;
@@ -43,20 +40,10 @@ interface Acquirer {
   min_amount: number;
   max_amount: number;
   created_at: string;
-  // Novos campos para gestao inteligente
   health_status?: "online" | "degraded" | "offline";
   last_health_check?: string;
   avg_response_time?: number;
   failure_count_today?: number;
-  is_fallback?: boolean;
-}
-
-interface RoutingConfig {
-  auto_routing: boolean;
-  routing_mode: "lowest_fee" | "highest_success" | "round_robin" | "priority";
-  fallback_enabled: boolean;
-  fallback_threshold: number; // % de falha para ativar fallback
-  health_check_interval: number; // segundos
 }
 
 export default function AcquirersPage() {
@@ -65,14 +52,6 @@ export default function AcquirersPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingAcquirer, setEditingAcquirer] = useState<Acquirer | null>(null);
   const [checkingHealth, setCheckingHealth] = useState<string | null>(null);
-  const [routingConfig, setRoutingConfig] = useState<RoutingConfig>({
-    auto_routing: true,
-    routing_mode: "lowest_fee",
-    fallback_enabled: true,
-    fallback_threshold: 30,
-    health_check_interval: 60,
-  });
-  const [savingConfig, setSavingConfig] = useState(false);
   const [addingVenopag, setAddingVenopag] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -87,7 +66,6 @@ export default function AcquirersPage() {
     max_withdrawal: 10000,
     daily_limit: 10000,
     route_type: "white" as "white" | "black",
-    priority: 0,
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -101,9 +79,6 @@ export default function AcquirersPage() {
       const data = await response.json();
       if (data.acquirers) {
         setAcquirers(data.acquirers);
-      }
-      if (data.routingConfig) {
-        setRoutingConfig(data.routingConfig);
       }
     } catch (error) {
       console.error("Error loading acquirers:", error);
@@ -128,21 +103,6 @@ export default function AcquirersPage() {
       console.error("Error checking health:", error);
     } finally {
       setCheckingHealth(null);
-    }
-  }
-
-  async function saveRoutingConfig() {
-    setSavingConfig(true);
-    try {
-      await fetch("/api/admin/acquirers/routing", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(routingConfig),
-      });
-    } catch (error) {
-      console.error("Error saving routing config:", error);
-    } finally {
-      setSavingConfig(false);
     }
   }
 
@@ -212,7 +172,6 @@ export default function AcquirersPage() {
               min_deposit: form.min_deposit,
               min_withdrawal: form.min_withdrawal,
               route_type: form.route_type,
-              priority: form.priority,
             },
           }),
         });
@@ -276,7 +235,6 @@ export default function AcquirersPage() {
       max_withdrawal: 10000,
       daily_limit: 10000,
       route_type: "white",
-      priority: acquirers.length,
     });
     setShowModal(true);
   }
@@ -296,7 +254,6 @@ export default function AcquirersPage() {
       max_withdrawal: (acquirer as any).max_withdrawal || 10000,
       daily_limit: (acquirer as any).daily_limit || 10000,
       route_type: acquirer.route_type || "white",
-      priority: acquirer.priority,
     });
     setShowModal(true);
   }
@@ -317,7 +274,6 @@ export default function AcquirersPage() {
       max_withdrawal: 10000,
       daily_limit: 10000,
       route_type: "white",
-      priority: 0,
     });
   }
 
@@ -366,81 +322,6 @@ export default function AcquirersPage() {
           </button>
         </div>
       </div>
-
-      {/* Painel de Roteamento Inteligente */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="glass rounded-2xl p-6 border border-primary/20"
-      >
-        <div className="flex items-center gap-2 mb-4">
-          <Zap className="w-5 h-5 text-primary" />
-          <h2 className="text-lg font-semibold text-white">Roteamento Inteligente</h2>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
-            <label className="text-sm text-muted-foreground mb-2 block">Modo de Roteamento</label>
-            <select
-              value={routingConfig.routing_mode}
-              onChange={(e) => setRoutingConfig({ ...routingConfig, routing_mode: e.target.value as RoutingConfig["routing_mode"] })}
-              className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-white text-sm focus:outline-none focus:border-primary/50"
-            >
-              <option value="lowest_fee">Menor Taxa</option>
-              <option value="highest_success">Maior Sucesso</option>
-              <option value="round_robin">Round Robin</option>
-              <option value="priority">Por Prioridade</option>
-            </select>
-          </div>
-          
-          <div>
-            <label className="text-sm text-muted-foreground mb-2 block">Fallback Automatico</label>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setRoutingConfig({ ...routingConfig, fallback_enabled: !routingConfig.fallback_enabled })}
-                className={`relative w-12 h-6 rounded-full transition-colors ${routingConfig.fallback_enabled ? "bg-primary" : "bg-secondary"}`}
-              >
-                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all ${routingConfig.fallback_enabled ? "left-7" : "left-1"}`} />
-              </button>
-              <span className="text-sm text-white">{routingConfig.fallback_enabled ? "Ativo" : "Inativo"}</span>
-            </div>
-          </div>
-          
-          <div>
-            <label className="text-sm text-muted-foreground mb-2 block">Limite Fallback (%)</label>
-            <input
-              type="number"
-              value={routingConfig.fallback_threshold}
-              onChange={(e) => setRoutingConfig({ ...routingConfig, fallback_threshold: Number(e.target.value) })}
-              className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-white text-sm focus:outline-none focus:border-primary/50"
-              min={0}
-              max={100}
-            />
-          </div>
-          
-          <div className="flex items-end">
-            <button
-              onClick={saveRoutingConfig}
-              disabled={savingConfig}
-              className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {savingConfig ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-              Salvar Config
-            </button>
-          </div>
-        </div>
-        
-        <div className="mt-4 p-3 bg-secondary/50 rounded-lg">
-          <p className="text-xs text-muted-foreground">
-            <strong className="text-white">Modo atual:</strong>{" "}
-            {routingConfig.routing_mode === "lowest_fee" && "Roteando para adquirente com menor taxa"}
-            {routingConfig.routing_mode === "highest_success" && "Roteando para adquirente com maior taxa de sucesso"}
-            {routingConfig.routing_mode === "round_robin" && "Distribuindo transacoes igualmente entre adquirentes"}
-            {routingConfig.routing_mode === "priority" && "Seguindo ordem de prioridade definida"}
-            {routingConfig.fallback_enabled && ` | Fallback ativo se taxa de falha > ${routingConfig.fallback_threshold}%`}
-          </p>
-        </div>
-      </motion.div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -536,9 +417,6 @@ export default function AcquirersPage() {
                           : "bg-purple-500/10 text-purple-400"
                       }`}>
                         {acquirer.route_type === "white" ? "WHITE" : "BLACK"}
-                      </span>
-                      <span className="text-muted-foreground">
-                        Prioridade: <span className="text-white">{acquirer.priority}</span>
                       </span>
                       <span className="text-muted-foreground">
                         Taxa Entrada: <span className="text-primary">{acquirer.fee_percentage || 2.5}%</span>
@@ -810,24 +688,6 @@ export default function AcquirersPage() {
                     className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                   />
                 </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                  Prioridade
-                </label>
-                <input
-                  type="number"
-                  value={form.priority}
-                  onChange={(e) =>
-                    setForm({ ...form, priority: Number(e.target.value) })
-                  }
-                  placeholder="0"
-                  min="0"
-                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
-                />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Menor número = maior prioridade
-                </p>
               </div>
             </div>
 
