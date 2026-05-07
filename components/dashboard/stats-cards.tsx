@@ -276,20 +276,20 @@ export function StatsCards({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.05 }}
-          className="group relative bg-card border border-border rounded-xl p-4 sm:p-5 hover:border-border/80 transition-all duration-200"
+          className="relative bg-[#12161c] border border-[#1e2530] rounded-lg p-4 sm:p-5 hover:border-[#2a3240] transition-all duration-200"
         >
-          <div className="flex items-start gap-3 sm:gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             {/* Icon */}
-            <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl ${card.bgColor} flex items-center justify-center flex-shrink-0`}>
-              <card.icon className={`w-5 h-5 sm:w-5 sm:h-5 ${card.color}`} />
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
+              <card.icon className="w-5 h-5 sm:w-5 sm:h-5 text-primary" />
             </div>
             
             {/* Content */}
             <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm text-muted-foreground mb-0.5 truncate">
+              <p className="text-xs sm:text-sm text-[#7b8a9c] mb-0.5 truncate">
                 {card.label}
               </p>
-              <div className="text-lg sm:text-xl font-semibold text-foreground truncate">
+              <div className="text-lg sm:text-xl font-semibold text-white truncate">
                 {card.isCurrency ? (
                   <AnimatedCounter 
                     value={card.rawValue} 
