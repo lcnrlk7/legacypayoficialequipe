@@ -504,7 +504,7 @@ export default function AcquirersPage() {
                         Taxa Entrada: <span className="text-primary">{acquirer.fee_percentage || 2.5}%</span>
                       </span>
                       <span className="text-muted-foreground">
-                        Taxa Saque: <span className="text-green-400">R$ {Number(acquirer.withdrawal_fee || 0).toFixed(2)}</span>
+                        Taxa Saque: <span className="text-green-400">{Number(acquirer.withdrawal_fee || 0).toFixed(1)}%</span>
                       </span>
                       <span className="text-muted-foreground">
                         Min. Dep: <span className="text-white">R$ {Number(acquirer.min_deposit || 1).toFixed(2)}</span>
@@ -682,7 +682,7 @@ export default function AcquirersPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                    Taxa Saque (R$)
+                    Taxa Saque (%)
                   </label>
                   <input
                     type="number"
@@ -692,7 +692,7 @@ export default function AcquirersPage() {
                     }
                     placeholder="0"
                     min="0"
-                    step="0.5"
+                    step="0.1"
                     className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                   />
                 </div>

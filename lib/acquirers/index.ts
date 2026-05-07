@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db";
 import { MisticPay, mapPixKeyType } from "./misticpay";
 import { MedusaPayments, MEDUSA_STATUS_MAP } from "./medusa";
+import { Venopag, VENOPAG_STATUS_MAP } from "./venopag";
 
 export interface AcquirerConfig {
   id: string;
@@ -331,6 +332,44 @@ export async function createPixPayment(
         };
       }
 
+      case "venopag": {
+        // Venopag - Rota White
+        const client = new Venopag({
+          clientId: config.api_key,
+          clientSecret: config.api_secret || "",
+        });
+
+        const webhookUrl = process.env.NEXT_PUBLIC_APP_URL 
+          ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/venopag`
+          : "https://legacypay.site/api/webhooks/venopag";
+
+        const safePayerName = (payerName && payerName.trim()) ? payerName.trim() : "Cliente LegacyPay";
+        const safePayerDocument = (payerDocument || "00000000000").replace(/\D/g, "");
+        const safeDescription = (description && description.trim()) ? description.trim() : "Deposito PIX - LegacyPay";
+
+        console.log(`[Venopag] Criando deposito: valor=${amount}, nome=${safePayerName}`);
+
+        const result = await client.createCashIn(
+          amount, // Venopag recebe valor em reais
+          safePayerName,
+          safePayerDocument,
+          safeDescription,
+          webhookUrl
+        );
+
+        if (result.ok) {
+          return {
+            success: true,
+            transactionId: result.request_number || result.transaction_id,
+            qrCode: result.copyPaste,
+            qrCodeBase64: result.qr_img,
+            copyPaste: result.copyPaste,
+            amount: amount,
+          };
+        }
+        return { success: false, error: result.error || "Erro ao criar deposito Venopag" };
+      }
+
       default:
         return { success: false, error: `Adquirente ${config.code} não suportada` };
     }
@@ -570,6 +609,61 @@ export async function createWithdrawal(
       return { success: false, error: errorMessage };
     }
   }
+
+  case "venopag": {
+    // Venopag - Rota White
+    const client = new Venopag({
+      clientId: config.api_key,
+      clientSecret: config.api_secret || "",
+    });
+
+    // Buscar dados do usuario para o saque
+    let beneficiaryName = "Cliente LegacyPay";
+    let beneficiaryDocument = "00000000000";
+
+    if (userId) {
+      const userData = await sql`
+        SELECT name, cpf_cnpj FROM profiles WHERE id = ${userId}
+      `;
+      if (userData.length > 0) {
+        beneficiaryName = userData[0].name || "Cliente LegacyPay";
+        beneficiaryDocument = (userData[0].cpf_cnpj || "00000000000").replace(/\D/g, "");
+      }
+    }
+
+    const webhookUrl = process.env.NEXT_PUBLIC_APP_URL 
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/venopag`
+      : "https://legacypay.site/api/webhooks/venopag";
+
+    // Venopag cobra 1% de taxa para saques
+    // Nossa margem adicional e 3%, total 4% para usuario
+    // A taxa da Venopag e descontada do valor, entao enviamos o valor exato
+    console.log(`[Venopag] Iniciando saque: valor=${amount}, pixKey=${pixKey}, beneficiario=${beneficiaryName}`);
+
+    try {
+      const result = await client.createSimpleCashOut(
+        amount, // Venopag recebe valor em reais
+        beneficiaryName,
+        beneficiaryDocument,
+        pixKey,
+        webhookUrl
+      );
+
+      if (result.ok) {
+        console.log("[Venopag] Saque criado com sucesso:", result);
+        return {
+          success: true,
+          withdrawalId: result.e2e,
+          status: result.status || "pending",
+        };
+      }
+      return { success: false, error: result.error || "Erro ao criar saque Venopag" };
+    } catch (withdrawError) {
+      const errorMessage = withdrawError instanceof Error ? withdrawError.message : "Erro desconhecido ao processar saque";
+      console.error("[Venopag] Erro ao criar saque:", errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  }
   
   default:
         return { success: false, error: `Adquirente ${config.code} não suportada` };
@@ -649,6 +743,23 @@ export async function getTransactionStatus(
           status: MEDUSA_STATUS_MAP[result.status] || result.status,
           paidAt: result.paidAt,
         };
+      }
+
+      case "venopag": {
+        const client = new Venopag({
+          clientId: config.api_key,
+          clientSecret: config.api_secret || "",
+        });
+
+        const result = await client.consultTransaction(transactionId);
+
+        if (result.ok) {
+          return {
+            success: true,
+            status: VENOPAG_STATUS_MAP[result.status] || result.status,
+          };
+        }
+        return { success: false, error: result.error || "Erro ao consultar transacao" };
       }
 
       default:
