@@ -276,53 +276,35 @@ export function StatsCards({
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: index * 0.05 }}
-          className="group relative bg-gradient-to-br from-card to-card/80 border border-border/50 rounded-xl sm:rounded-2xl p-3 sm:p-5 overflow-hidden hover:border-primary/30 transition-all duration-300 hover:shadow-lg hover:shadow-primary/5"
+          className="group relative bg-card border border-border rounded-xl p-4 sm:p-5 hover:border-border/80 transition-all duration-200"
         >
-          {/* Gradient overlay on hover */}
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          
-          {/* Glow effect */}
-          <div className={`absolute -top-20 -right-20 w-40 h-40 ${card.bgColor} rounded-full blur-3xl opacity-20 group-hover:opacity-40 transition-opacity duration-300`} />
-          
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-3 sm:mb-4">
-              <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl ${card.bgColor} flex items-center justify-center ring-1 ring-white/10 shadow-lg`}>
-                <card.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${card.color}`} />
-              </div>
-              {/* Sparkline */}
-              <div className="hidden sm:block">
-                <Sparkline 
-                  data={card.sparklineData} 
-                  color={card.sparklineColor}
-                  width={60}
-                  height={28}
-                  strokeWidth={2}
-                />
-              </div>
+          <div className="flex items-start gap-3 sm:gap-4">
+            {/* Icon */}
+            <div className={`w-10 h-10 sm:w-11 sm:h-11 rounded-xl ${card.bgColor} flex items-center justify-center flex-shrink-0`}>
+              <card.icon className={`w-5 h-5 sm:w-5 sm:h-5 ${card.color}`} />
             </div>
-            <p className="text-[10px] sm:text-xs font-medium text-muted-foreground mb-1.5 truncate uppercase tracking-wider">
-              {card.label}
-            </p>
-            <div className="text-lg sm:text-2xl font-bold text-foreground truncate">
-              {card.isCurrency ? (
-                <AnimatedCounter 
-                  value={card.rawValue} 
-                  formatAsCurrency 
-                  duration={1.2}
-                />
-              ) : (
-                <AnimatedCounter 
-                  value={card.rawValue} 
-                  suffix={card.suffix || ""} 
-                  decimals={card.decimals || 0}
-                  duration={1.2}
-                />
-              )}
-            </div>
-            <div className="flex items-center gap-1 mt-2">
-              <span className={`text-[10px] sm:text-xs font-medium truncate ${card.subtitleColor}`}>
-                {card.subtitle}
-              </span>
+            
+            {/* Content */}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-0.5 truncate">
+                {card.label}
+              </p>
+              <div className="text-lg sm:text-xl font-semibold text-foreground truncate">
+                {card.isCurrency ? (
+                  <AnimatedCounter 
+                    value={card.rawValue} 
+                    formatAsCurrency 
+                    duration={1.2}
+                  />
+                ) : (
+                  <AnimatedCounter 
+                    value={card.rawValue} 
+                    suffix={card.suffix || ""} 
+                    decimals={card.decimals || 0}
+                    duration={1.2}
+                  />
+                )}
+              </div>
             </div>
           </div>
         </motion.div>

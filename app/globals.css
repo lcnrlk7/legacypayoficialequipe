@@ -43,61 +43,61 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* TEMA ESCURO (padrao) */
+/* TEMA ESCURO (padrao) - Estilo Premium Dark Blue */
 :root {
-  /* Core palette - Premium dark with warm orange */
-  --background: #050505;
-  --foreground: #ffffff;
-  --card: #0d0d0d;
-  --card-foreground: #ffffff;
-  --popover: #0a0a0a;
-  --popover-foreground: #ffffff;
+  /* Core palette - Deep blue-black with warm orange accent */
+  --background: #080b12;
+  --foreground: #f0f4f8;
+  --card: #0d1117;
+  --card-foreground: #f0f4f8;
+  --popover: #0d1117;
+  --popover-foreground: #f0f4f8;
   
-  /* Primary - Vibrant orange gradient feel */
+  /* Primary - Vibrant orange */
   --primary: #ff6a00;
   --primary-light: #ff8534;
   --primary-dark: #cc5500;
   --primary-foreground: #000000;
   
-  /* Secondary - Subtle grays */
-  --secondary: #1a1a1a;
-  --secondary-foreground: #ffffff;
+  /* Secondary - Blue-tinted dark grays */
+  --secondary: #151b25;
+  --secondary-foreground: #f0f4f8;
   
   /* Muted - For less prominent elements */
-  --muted: #151515;
-  --muted-foreground: #888888;
+  --muted: #121820;
+  --muted-foreground: #7b8a9c;
   
   /* Accent - Matches primary */
   --accent: #ff6a00;
   --accent-foreground: #000000;
   
   /* Destructive */
-  --destructive: #ff3333;
+  --destructive: #ff4757;
   --destructive-foreground: #ffffff;
   
-  /* Borders and inputs */
-  --border: #262626;
-  --input: #1a1a1a;
+  /* Borders and inputs - Blue-tinted */
+  --border: #1e2736;
+  --input: #151b25;
   --ring: #ff6a00;
   
   /* Charts */
   --chart-1: #ff6a00;
-  --chart-2: #ff8534;
-  --chart-3: #ffab00;
-  --chart-4: #00c853;
-  --chart-5: #00b0ff;
+  --chart-2: #3b82f6;
+  --chart-3: #22c55e;
+  --chart-4: #f59e0b;
+  --chart-5: #8b5cf6;
   
   /* Radius */
-  --radius: 1rem;
+  --radius: 0.75rem;
   
-  /* Sidebar */
-  --sidebar: #080808;
-  --sidebar-foreground: #ffffff;
+  /* Sidebar - Darker blue-black */
+  --sidebar: #060910;
+  --sidebar-foreground: #f0f4f8;
   --sidebar-primary: #ff6a00;
   --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #1a1000;
+  --sidebar-accent: #151b25;
   --sidebar-accent-foreground: #ff6a00;
-  --sidebar-border: #1a1a1a;
+  --sidebar-border: #1e2736;
   --sidebar-ring: #ff6a00;
 }
 

@@ -269,7 +269,7 @@ export function DashboardContent({
 
       {/* Period Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h2 className="text-base sm:text-lg font-semibold text-foreground">Resumo Financeiro</h2>
+        <h2 className="text-base sm:text-lg font-semibold text-foreground">Metricas</h2>
         <div className="relative">
           <button
             onClick={() => setShowPeriodDropdown(!showPeriodDropdown)}
