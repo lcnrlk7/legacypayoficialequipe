@@ -203,8 +203,8 @@ export function SalesChart({ transactions }: SalesChartProps) {
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#1a1a1a',
-                border: '1px solid #252525',
+                backgroundColor: '#111111',
+                border: '1px solid #1f1f1f',
                 borderRadius: '6px',
                 padding: '10px 12px',
               }}

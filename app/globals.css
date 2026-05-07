@@ -43,14 +43,14 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* TEMA ESCURO (padrao) - Estilo LegacyPay/DuttyFy Exato */
+/* TEMA ESCURO (padrao) - Estilo LegacyPay Premium */
 :root {
-  /* Core palette - Neutral grays (from DevTools) */
-  --background: #151515;
+  /* Core palette - Deep black with subtle warmth */
+  --background: #0a0a0a;
   --foreground: #fafafa;
-  --card: #1a1a1a;
+  --card: #111111;
   --card-foreground: #fafafa;
-  --popover: #1a1a1a;
+  --popover: #111111;
   --popover-foreground: #fafafa;
   
   /* Primary - Vibrant orange */
@@ -60,15 +60,15 @@
   --primary-foreground: #ffffff;
   
   /* Secondary */
-  --secondary: #202020;
+  --secondary: #1a1a1a;
   --secondary-foreground: #fafafa;
   
   /* Muted */
-  --muted: #202020;
-  --muted-foreground: #a1a1aa;
+  --muted: #1a1a1a;
+  --muted-foreground: #888888;
   
   /* Accent */
-  --accent: #202020;
+  --accent: #1a1a1a;
   --accent-foreground: #fafafa;
   
   /* Destructive */
@@ -76,8 +76,8 @@
   --destructive-foreground: #fef2f2;
   
   /* Borders and inputs */
-  --border: #252525;
-  --input: #1a1a1a;
+  --border: #1f1f1f;
+  --input: #111111;
   --ring: #ff6a00;
   
   /* Charts - Orange theme */
@@ -91,13 +91,13 @@
   --radius: 0.5rem;
   
   /* Sidebar */
-  --sidebar: #151515;
+  --sidebar: #0a0a0a;
   --sidebar-foreground: #fafafa;
   --sidebar-primary: #ff6a00;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #202020;
+  --sidebar-accent: #1a1a1a;
   --sidebar-accent-foreground: #ff6a00;
-  --sidebar-border: #252525;
+  --sidebar-border: #1f1f1f;
   --sidebar-ring: #ff6a00;
 }
 
