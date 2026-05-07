@@ -401,11 +401,7 @@ export default function AcquirersPage() {
                         {getHealthIcon(acquirer.health_status)}
                         {getHealthLabel(acquirer.health_status)}
                       </span>
-                      {acquirer.is_fallback && (
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-orange-400/10 text-orange-400">
-                          Fallback
-                        </span>
-                      )}
+
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">
                       {acquirer.api_url}
