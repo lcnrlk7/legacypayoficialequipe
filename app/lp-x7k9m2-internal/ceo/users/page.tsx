@@ -907,13 +907,13 @@ export default function UsersPage() {
                 </h3>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                    Taxa de Saque (R$)
+                    Taxa de Saque ({editForm.route_type === "white" ? "%" : "R$"})
                   </label>
                   <input
                     type="number"
-                    step="0.5"
+                    step="0.1"
                     min="0"
-                    placeholder={editForm.route_type === "white" ? "2.00" : "5.00"}
+                    placeholder={editForm.route_type === "white" ? "4" : "5.00"}
                     value={editForm.withdrawal_fee}
                     onChange={(e) =>
                       setEditForm({
@@ -924,7 +924,7 @@ export default function UsersPage() {
                     className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Padrao Rota White: R$ 2,00 | Padrao Rota Black: R$ 5,00
+                    Padrao Rota White: 4% | Padrao Rota Black: R$ 5,00
                   </p>
                 </div>
               </div>
@@ -953,7 +953,7 @@ export default function UsersPage() {
                     <optgroup label="WHITE" className="bg-card text-muted-foreground">
                       {acquirers.filter(a => a.route_type === "white").map(acq => (
                         <option key={acq.id} value={acq.id} className="bg-card text-white">
-                          Rota White ({acq.name}) - Taxa: {acq.fee_percentage}% | Saque: R$ {Number(acq.withdrawal_fee).toFixed(2)}
+                          Rota White ({acq.name}) - Taxa: {acq.fee_percentage}% | Saque: {Number(acq.withdrawal_fee).toFixed(1)}%
                         </option>
                       ))}
                     </optgroup>
