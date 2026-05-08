@@ -1712,6 +1712,162 @@ console.log("Status:", status.data.status);`}
                   </div>
                 </div>
 
+                {/* SAQUES / WITHDRAWALS */}
+                <div className="bg-orange-500/5 border border-orange-500/20 rounded-xl p-4">
+                  <h4 className="text-base font-semibold text-orange-400 mb-3">API de Saques (PIX Out)</h4>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Realize saques programaticos para qualquer chave PIX diretamente via API.
+                  </p>
+                  
+                  {/* Criar Saque */}
+                  <div className="mb-4">
+                    <h5 className="text-sm font-semibold text-foreground mb-2">6. Criar Saque</h5>
+                    <p className="text-xs text-muted-foreground mb-2">POST /withdrawal</p>
+                    <code className="block p-3 bg-background rounded-lg text-xs font-mono whitespace-pre overflow-x-auto">
+{`{
+  "amount": 100.00,
+  "pix_key": "email@exemplo.com",
+  "pix_key_type": "email",
+  "external_id": "saque_123",
+  "description": "Saque do pedido 123"
+}`}
+                    </code>
+                    <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                      <p><strong>amount</strong> - Valor em reais (obrigatorio, minimo R$ 10)</p>
+                      <p><strong>pix_key</strong> - Chave PIX do destinatario (obrigatorio)</p>
+                      <p><strong>pix_key_type</strong> - Tipo da chave: cpf, cnpj, email, phone, random (obrigatorio)</p>
+                      <p><strong>external_id</strong> - Seu ID interno para rastrear (opcional)</p>
+                      <p><strong>description</strong> - Descricao do saque (opcional)</p>
+                    </div>
+                  </div>
+                  
+                  {/* Resposta Saque */}
+                  <div className="mb-4">
+                    <h5 className="text-xs font-semibold text-foreground mb-2">Resposta da Criacao do Saque:</h5>
+                    <code className="block p-3 bg-background rounded-lg text-xs font-mono whitespace-pre overflow-x-auto">
+{`{
+  "success": true,
+  "data": {
+    "withdrawal_id": "wd_abc123-uuid",
+    "external_id": "saque_123",
+    "amount": 100.00,
+    "fee": 5.00,
+    "net_amount": 95.00,
+    "pix_key": "email@exemplo.com",
+    "pix_key_type": "email",
+    "status": "pending",
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+}`}
+                    </code>
+                  </div>
+                  
+                  {/* Consultar Status Saque */}
+                  <div className="mb-4">
+                    <h5 className="text-sm font-semibold text-foreground mb-2">7. Consultar Status do Saque</h5>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Consulte o status usando o withdrawal_id ou seu external_id:
+                    </p>
+                    <code className="block p-2 bg-background rounded-lg text-xs font-mono mb-2">
+                      GET /withdrawal?withdrawal_id=wd_abc123-uuid
+                    </code>
+                    <code className="block p-2 bg-background rounded-lg text-xs font-mono">
+                      GET /withdrawal?external_id=saque_123
+                    </code>
+                    
+                    <h6 className="text-xs font-semibold text-foreground mt-3 mb-2">Resposta:</h6>
+                    <code className="block p-3 bg-background rounded-lg text-xs font-mono whitespace-pre overflow-x-auto">
+{`{
+  "success": true,
+  "data": {
+    "withdrawal_id": "wd_abc123-uuid",
+    "external_id": "saque_123",
+    "status": "completed",
+    "amount": 100.00,
+    "fee": 5.00,
+    "net_amount": 95.00,
+    "pix_key": "email@exemplo.com",
+    "recipient_name": "JOAO DA SILVA",
+    "recipient_bank": "Banco Inter",
+    "completed_at": "2024-01-01T00:02:00Z"
+  }
+}`}
+                    </code>
+                  </div>
+                  
+                  {/* Status do Saque */}
+                  <div className="mb-4">
+                    <h5 className="text-xs font-semibold text-foreground mb-2">Status do Saque:</h5>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex items-center gap-2 bg-background p-2 rounded-lg">
+                        <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                        <span><strong>pending</strong> - Aguardando processamento</span>
+                      </div>
+                      <div className="flex items-center gap-2 bg-background p-2 rounded-lg">
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                        <span><strong>processing</strong> - Em processamento</span>
+                      </div>
+                      <div className="flex items-center gap-2 bg-background p-2 rounded-lg">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        <span><strong>completed</strong> - Concluido com sucesso</span>
+                      </div>
+                      <div className="flex items-center gap-2 bg-background p-2 rounded-lg">
+                        <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                        <span><strong>failed</strong> - Falhou</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Exemplo Node.js Saque */}
+                  <div>
+                    <h5 className="text-xs font-semibold text-foreground mb-2">Exemplo - Node.js:</h5>
+                    <code className="block p-3 bg-background rounded-lg text-xs font-mono whitespace-pre overflow-x-auto">
+{`// Criar saque
+async function criarSaque(amount, pixKey, pixKeyType, externalId) {
+  const response = await fetch(\`\${BASE_URL}/withdrawal\`, {
+    method: "POST",
+    headers: {
+      "Authorization": \`Basic \${credentials}\`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      amount,
+      pix_key: pixKey,
+      pix_key_type: pixKeyType,
+      external_id: externalId
+    })
+  });
+  return response.json();
+}
+
+// Consultar status do saque
+async function consultarSaque(externalId) {
+  const response = await fetch(
+    \`\${BASE_URL}/withdrawal?external_id=\${externalId}\`,
+    { headers: { "Authorization": \`Basic \${credentials}\` } }
+  );
+  return response.json();
+}
+
+// Uso
+const saque = await criarSaque(100.00, "email@exemplo.com", "email", "saque_123");
+console.log("Saque criado:", saque.data.withdrawal_id);
+
+// Verificar status
+const status = await consultarSaque("saque_123");
+console.log("Status:", status.data.status);`}
+                    </code>
+                  </div>
+                  
+                  <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                    <p className="text-xs text-red-400 font-medium">Importante:</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Saques sao debitados do seu saldo disponivel. Certifique-se de ter saldo suficiente 
+                      (valor + taxa) antes de criar um saque.
+                    </p>
+                  </div>
+                </div>
+
                 {/* Errors */}
                 <div>
                   <h4 className="text-sm font-semibold text-foreground mb-2">Codigos de Erro</h4>
