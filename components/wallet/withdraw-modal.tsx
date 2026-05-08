@@ -1,18 +1,32 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Loader2, AlertCircle, CheckCircle, Key, ArrowLeft, Wallet, Mail, Phone, CreditCard, Hash } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, Key, ArrowLeft, Wallet, Mail, Phone, CreditCard, Hash, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { calculateWithdrawalFee, formatCurrency, validatePixKey } from '@/lib/pix-validator';
+import { WithdrawalReceipt } from './withdrawal-receipt';
 
 interface PixKey {
   id: string;
   key_type: string;
   key_value: string;
   is_primary: boolean;
+}
+
+interface WithdrawalData {
+  id: string;
+  amount: number;
+  fee: number;
+  netAmount: number;
+  pixKey: string;
+  pixKeyType: string;
+  recipientName?: string;
+  recipientBank?: string;
+  status: string;
+  createdAt: string;
 }
 
 interface WithdrawModalProps {
@@ -22,6 +36,7 @@ interface WithdrawModalProps {
   loading: boolean;
   error: string | null;
   withdrawSuccess: boolean;
+  withdrawalData?: WithdrawalData | null;
   onWithdraw: (amount: number, pixKey: string, pixKeyType: string) => Promise<void>;
   onClose: () => void;
 }
@@ -46,6 +61,7 @@ export function WithdrawModal({
   loading,
   error,
   withdrawSuccess,
+  withdrawalData,
   onWithdraw,
   onClose,
 }: WithdrawModalProps) {
@@ -57,6 +73,7 @@ export function WithdrawModal({
   const [manualKeyType, setManualKeyType] = useState('cpf');
   const [manualKeyValue, setManualKeyValue] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
 
   // Calculate fee when amount changes
   const amount = parseFloat(withdrawAmount) || 0;
@@ -146,6 +163,19 @@ export function WithdrawModal({
 
   // Success state
   if (withdrawSuccess) {
+    // Se tem dados do saque e usuario quer ver comprovante
+    if (showReceipt && withdrawalData) {
+      return (
+        <WithdrawalReceipt 
+          withdrawal={withdrawalData} 
+          onClose={() => {
+            setShowReceipt(false);
+            onClose();
+          }} 
+        />
+      );
+    }
+
     return (
       <div className="text-center space-y-4 py-6">
         <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
@@ -154,20 +184,32 @@ export function WithdrawModal({
         <div>
           <h3 className="font-semibold text-foreground">Saque Solicitado!</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Valor: {formatCurrency(amount)}
+            Valor: {formatCurrency(amount || withdrawalData?.amount || 0)}
           </p>
           <p className="text-sm text-muted-foreground">
-            Chave: {withdrawPixKey}
+            Chave: {withdrawPixKey || withdrawalData?.pixKey}
           </p>
           <p className="text-xs text-muted-foreground mt-2">
-            {amount <= 500
+            {(amount || withdrawalData?.amount || 0) <= 500
               ? 'Seu saque sera processado em breve'
               : 'Seu saque foi enviado para aprovacao'}
           </p>
         </div>
-        <Button onClick={onClose} className="w-full bg-primary hover:bg-primary/90">
-          Fechar
-        </Button>
+        <div className="flex gap-3">
+          {withdrawalData && (
+            <Button 
+              onClick={() => setShowReceipt(true)} 
+              variant="outline"
+              className="flex-1"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Comprovante
+            </Button>
+          )}
+          <Button onClick={onClose} className={`bg-primary hover:bg-primary/90 ${withdrawalData ? 'flex-1' : 'w-full'}`}>
+            Fechar
+          </Button>
+        </div>
       </div>
     );
   }

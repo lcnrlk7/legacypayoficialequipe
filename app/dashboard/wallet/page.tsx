@@ -56,6 +56,18 @@ export default function WalletPage() {
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
+  const [withdrawalData, setWithdrawalData] = useState<{
+    id: string;
+    amount: number;
+    fee: number;
+    netAmount: number;
+    pixKey: string;
+    pixKeyType: string;
+    recipientName?: string;
+    recipientBank?: string;
+    status: string;
+    createdAt: string;
+  } | null>(null);
   const [savedPixKeys, setSavedPixKeys] = useState<PixKey[]>([]);
   const [systemSettings, setSystemSettings] = useState({
     minDeposit: 5,
@@ -260,15 +272,24 @@ const handleDeposit = async () => {
         throw new Error(data.error || "Erro ao processar saque");
       }
 
+      // Salvar dados do saque para o comprovante
+      setWithdrawalData({
+        id: data.withdrawal?.id || data.id || `WD-${Date.now()}`,
+        amount: amount,
+        fee: withdrawalFee,
+        netAmount: amount,
+        pixKey: pixKey,
+        pixKeyType: pixKeyType,
+        recipientName: data.withdrawal?.recipient_name || undefined,
+        recipientBank: data.withdrawal?.recipient_bank || undefined,
+        status: data.withdrawal?.status || 'pending',
+        createdAt: new Date().toISOString(),
+      });
+
       setWithdrawSuccess(true);
       setWithdrawAmount("");
       setWithdrawPixKey("");
       loadBalance();
-
-      setTimeout(() => {
-        setWithdrawSuccess(false);
-        setWithdrawDialogOpen(false);
-      }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao processar saque");
     } finally {
@@ -531,6 +552,7 @@ const handleDeposit = async () => {
                 loading={loading}
                 error={error}
                 withdrawSuccess={withdrawSuccess}
+                withdrawalData={withdrawalData}
                 onWithdraw={handleWithdraw}
                 onClose={() => {
                   setWithdrawDialogOpen(false);
@@ -538,6 +560,7 @@ const handleDeposit = async () => {
                   setWithdrawSuccess(false);
                   setWithdrawAmount("");
                   setWithdrawPixKey("");
+                  setWithdrawalData(null);
                 }}
               />
             </DialogContent>
