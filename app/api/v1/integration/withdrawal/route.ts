@@ -240,8 +240,6 @@ export async function POST(request: NextRequest) {
         net_amount: amount,
         pix_key: pix_key,
         pix_key_type: pix_key_type.toLowerCase(),
-        recipient_name: recipientName,
-        recipient_bank: recipientBank,
         status: status,
         created_at: new Date().toISOString()
       }
