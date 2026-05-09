@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useRef } from 'react';
-import { Download, Share2, CheckCircle, X } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Download, Share2, CheckCircle, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/pix-validator';
 import html2canvas from 'html2canvas';
@@ -24,6 +24,8 @@ interface WithdrawalReceiptProps {
 
 export function WithdrawalReceipt({ withdrawal, onClose }: WithdrawalReceiptProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -31,49 +33,88 @@ export function WithdrawalReceipt({ withdrawal, onClose }: WithdrawalReceiptProp
   };
 
   const handleDownload = async () => {
-    if (!receiptRef.current) return;
+    if (!receiptRef.current || isDownloading) return;
+    
+    setIsDownloading(true);
 
     try {
       const canvas = await html2canvas(receiptRef.current, {
         backgroundColor: '#0a0a0a',
         scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
       });
       
       const link = document.createElement('a');
       link.download = `comprovante-saque-${withdrawal.id.slice(0, 8)}.png`;
       link.href = canvas.toDataURL('image/png');
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
     } catch (error) {
-      console.error('Erro ao gerar imagem:', error);
+      console.error('[v0] Erro ao gerar imagem:', error);
+      alert('Erro ao gerar comprovante. Tente novamente.');
+    } finally {
+      setIsDownloading(false);
     }
   };
 
   const handleShare = async () => {
-    if (!receiptRef.current) return;
+    if (!receiptRef.current || isSharing) return;
+    
+    setIsSharing(true);
 
     try {
       const canvas = await html2canvas(receiptRef.current, {
         backgroundColor: '#0a0a0a',
         scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
       });
       
       canvas.toBlob(async (blob) => {
-        if (!blob) return;
+        if (!blob) {
+          setIsSharing(false);
+          alert('Erro ao gerar comprovante.');
+          return;
+        }
         
         const file = new File([blob], `comprovante-saque-${withdrawal.id.slice(0, 8)}.png`, { type: 'image/png' });
         
-        if (navigator.share && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            files: [file],
-            title: 'Comprovante de Saque',
-            text: `Comprovante de transferencia PIX - ${formatCurrency(withdrawal.amount)}`,
-          });
+        // Verificar se o navegador suporta compartilhamento
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: 'Comprovante de Saque LegacyPay',
+              text: `Comprovante de transferencia PIX - ${formatCurrency(withdrawal.amount)}`,
+            });
+          } catch (shareError) {
+            // Usuario cancelou ou erro no share, fazer download
+            const link = document.createElement('a');
+            link.download = `comprovante-saque-${withdrawal.id.slice(0, 8)}.png`;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          }
         } else {
-          handleDownload();
+          // Navegador nao suporta share, fazer download
+          const link = document.createElement('a');
+          link.download = `comprovante-saque-${withdrawal.id.slice(0, 8)}.png`;
+          link.href = canvas.toDataURL('image/png');
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
         }
-      });
+        setIsSharing(false);
+      }, 'image/png');
     } catch (error) {
-      console.error('Erro ao compartilhar:', error);
+      console.error('[v0] Erro ao compartilhar:', error);
+      setIsSharing(false);
+      // Tentar download como fallback
       handleDownload();
     }
   };
@@ -112,15 +153,14 @@ export function WithdrawalReceipt({ withdrawal, onClose }: WithdrawalReceiptProp
 
         {/* Conteudo do comprovante */}
         <div ref={receiptRef} className="p-6 bg-gradient-to-b from-card to-background">
-          {/* Logo oficial */}
+          {/* Logo */}
           <div className="flex items-center justify-center mb-4">
             <div className="flex items-center gap-2">
-              <img 
-                src="/logo-icon.png" 
-                alt="LegacyPay" 
-                className="w-10 h-10 object-contain"
-                crossOrigin="anonymous"
-              />
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center shadow-lg">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13 3L4 14H12L11 21L20 10H12L13 3Z" fill="white" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
               <div>
                 <span className="text-xl font-bold text-foreground">Legacy</span>
                 <span className="text-xl font-bold text-primary">Pay</span>
@@ -234,16 +274,26 @@ export function WithdrawalReceipt({ withdrawal, onClose }: WithdrawalReceiptProp
             onClick={handleDownload}
             variant="outline"
             className="flex-1"
+            disabled={isDownloading || isSharing}
           >
-            <Download className="w-4 h-4 mr-2" />
-            Baixar
+            {isDownloading ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 mr-2" />
+            )}
+            {isDownloading ? 'Gerando...' : 'Baixar'}
           </Button>
           <Button
             onClick={handleShare}
             className="flex-1 bg-primary hover:bg-primary/90"
+            disabled={isDownloading || isSharing}
           >
-            <Share2 className="w-4 h-4 mr-2" />
-            Compartilhar
+            {isSharing ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Share2 className="w-4 h-4 mr-2" />
+            )}
+            {isSharing ? 'Gerando...' : 'Compartilhar'}
           </Button>
         </div>
       </div>
