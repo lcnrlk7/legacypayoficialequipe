@@ -158,9 +158,11 @@ export default function ReportsPage() {
   const getTypeBadge = (type: string) => {
     const types: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
       pix_in: { color: "bg-green-500/10 text-green-400", icon: <ArrowDownLeft className="w-3 h-3" />, label: "PIX Entrada" },
-      pix_out: { color: "bg-orange-500/10 text-orange-400", icon: <ArrowUpRight className="w-3 h-3" />, label: "PIX Saída" },
+      pix_out: { color: "bg-orange-500/10 text-orange-400", icon: <ArrowUpRight className="w-3 h-3" />, label: "PIX Saida" },
       withdrawal: { color: "bg-purple-500/10 text-purple-400", icon: <ArrowUpRight className="w-3 h-3" />, label: "Saque" },
-      deposit: { color: "bg-blue-500/10 text-blue-400", icon: <ArrowDownLeft className="w-3 h-3" />, label: "Depósito" },
+      deposit: { color: "bg-blue-500/10 text-blue-400", icon: <ArrowDownLeft className="w-3 h-3" />, label: "Deposito" },
+      transfer_in: { color: "bg-emerald-500/10 text-emerald-400", icon: <ArrowDownLeft className="w-3 h-3" />, label: "Transferencia Recebida" },
+      transfer_out: { color: "bg-amber-500/10 text-amber-400", icon: <ArrowUpRight className="w-3 h-3" />, label: "Transferencia Enviada" },
     };
     const typeInfo = types[type] || types.pix_in;
     return (
