@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  Key,
   Clock,
   Calendar,
   ChevronDown,
@@ -19,6 +18,7 @@ import { SalesChart } from "./sales-chart";
 import { StatsCards } from "./stats-cards";
 import { GoalsRoadmap } from "./goals-roadmap";
 import { BannerCarousel } from "./banner-carousel";
+import { CustomizableWidgets } from "./customizable-widgets";
 import { useProfile } from "@/components/profile-provider";
 
 export interface Profile {
@@ -261,6 +261,15 @@ export function DashboardContent({
 
       {/* Banner Carousel */}
       <BannerCarousel />
+
+      {/* Customizable Widgets */}
+      <CustomizableWidgets
+        balance={profile?.balance || 0}
+        totalReceived={totalReceivedGross}
+        totalSent={totalSent}
+        pendingCount={filteredTransactions.filter(t => t.status === 'pending').length}
+        savedPixKeys={pixKeys.map(k => ({ id: k.id, key_value: k.key_value, key_type: k.key_type }))}
+      />
       
       {/* Sales Chart */}
       <div data-onboarding="sales-chart">
@@ -318,38 +327,6 @@ export function DashboardContent({
           userId={profile.id}
         />
       )}
-
-      {/* Quick Actions */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6"
-      >
-          <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">
-            Ações Rápidas
-          </h2>
-          <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 sm:gap-3">
-            <Link href="/dashboard/wallet" className="block">
-              <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground justify-center lg:justify-start text-xs sm:text-sm h-9 sm:h-10">
-                <ArrowDownLeft className="w-4 h-4 lg:mr-2" />
-                <span className="hidden lg:inline">Depositar</span>
-              </Button>
-            </Link>
-            <Link href="/dashboard/wallet" className="block">
-              <Button variant="outline" className="w-full justify-center lg:justify-start text-xs sm:text-sm h-9 sm:h-10">
-                <ArrowUpRight className="w-4 h-4 lg:mr-2" />
-                <span className="hidden lg:inline">Sacar</span>
-              </Button>
-            </Link>
-            <Link href="/dashboard/pix-keys" className="block">
-              <Button variant="outline" className="w-full justify-center lg:justify-start text-xs sm:text-sm h-9 sm:h-10">
-                <Key className="w-4 h-4 lg:mr-2" />
-                <span className="hidden lg:inline">Gerenciar Chaves</span>
-              </Button>
-            </Link>
-          </div>
-      </motion.div>
 
       {/* Recent Transactions */}
       <motion.div
