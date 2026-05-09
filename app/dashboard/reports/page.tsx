@@ -19,7 +19,9 @@ import {
   RefreshCw,
   Loader2,
   X,
+  Receipt,
 } from "lucide-react";
+import { WithdrawalReceipt } from "@/components/wallet/withdrawal-receipt";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -34,6 +36,10 @@ interface Transaction {
   created_at: string;
   payer_name?: string;
   external_id?: string;
+  pix_key?: string;
+  pix_key_type?: string;
+  recipient_name?: string;
+  recipient_bank?: string;
 }
 
 interface ReportStats {
@@ -53,6 +59,8 @@ export default function ReportsPage() {
   const [filter, setFilter] = useState<"all" | "pix_in" | "pix_out" | "withdrawal">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "completed" | "cancelled">("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState<Transaction | null>(null);
   
   // Export states
   const [showExportModal, setShowExportModal] = useState(false);
@@ -424,6 +432,22 @@ export default function ReportsPage() {
                   </span>
                 </div>
               </div>
+              {(tx.type === "withdrawal" || tx.type === "pix_out") && tx.status === "completed" && (
+                <div className="mt-2 pt-2 border-t border-border">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedWithdrawal(tx);
+                      setShowReceipt(true);
+                    }}
+                    className="w-full h-8 text-xs"
+                  >
+                    <Receipt className="w-3 h-3 mr-1" />
+                    Ver Comprovante
+                  </Button>
+                </div>
+              )}
             </motion.div>
           ))
         )}
@@ -437,17 +461,18 @@ export default function ReportsPage() {
               <tr className="border-b border-border">
                 <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-medium text-muted-foreground">Data</th>
                 <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-medium text-muted-foreground">Tipo</th>
-                <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-medium text-muted-foreground">Descrição</th>
+                <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-medium text-muted-foreground">Descricao</th>
                 <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-medium text-muted-foreground">Valor</th>
                 <th className="text-center p-3 sm:p-4 text-xs sm:text-sm font-medium text-muted-foreground">Status</th>
+                <th className="text-center p-3 sm:p-4 text-xs sm:text-sm font-medium text-muted-foreground">Acoes</th>
               </tr>
             </thead>
             <tbody>
               {filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
                     <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>Nenhuma transação encontrada</p>
+                    <p>Nenhuma transacao encontrada</p>
                   </td>
                 </tr>
               ) : (
@@ -480,6 +505,24 @@ export default function ReportsPage() {
                       </span>
                     </td>
                     <td className="p-3 sm:p-4 text-center">{getStatusBadge(tx.status)}</td>
+                    <td className="p-3 sm:p-4 text-center">
+                      {(tx.type === "withdrawal" || tx.type === "pix_out") && tx.status === "completed" ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedWithdrawal(tx);
+                            setShowReceipt(true);
+                          }}
+                          className="h-8 px-2 text-primary hover:text-primary/80"
+                        >
+                          <Receipt className="w-4 h-4 mr-1" />
+                          <span className="text-xs">Comprovante</span>
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </td>
                   </motion.tr>
                 ))
               )}
@@ -490,10 +533,55 @@ export default function ReportsPage() {
         {/* Table Footer */}
         <div className="p-3 sm:p-4 border-t border-border">
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Mostrando {filteredTransactions.length} de {transactions.length} transações
+            Mostrando {filteredTransactions.length} de {transactions.length} transacoes
           </p>
         </div>
       </div>
+
+      {/* Modal Comprovante */}
+      {showReceipt && selectedWithdrawal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-card border border-border rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+          >
+            <div className="p-4 border-b border-border flex items-center justify-between">
+              <h3 className="font-semibold text-foreground">Comprovante de Saque</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowReceipt(false);
+                  setSelectedWithdrawal(null);
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="p-4">
+              <WithdrawalReceipt
+                withdrawal={{
+                  id: selectedWithdrawal.id,
+                  amount: selectedWithdrawal.amount,
+                  fee: selectedWithdrawal.fee || 0,
+                  netAmount: selectedWithdrawal.net_amount || selectedWithdrawal.amount,
+                  pixKey: selectedWithdrawal.pix_key || selectedWithdrawal.description || "-",
+                  pixKeyType: selectedWithdrawal.pix_key_type || "pix",
+                  recipientName: selectedWithdrawal.recipient_name,
+                  recipientBank: selectedWithdrawal.recipient_bank,
+                  status: selectedWithdrawal.status,
+                  createdAt: selectedWithdrawal.created_at,
+                }}
+                onClose={() => {
+                  setShowReceipt(false);
+                  setSelectedWithdrawal(null);
+                }}
+              />
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

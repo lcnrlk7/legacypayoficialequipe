@@ -41,7 +41,11 @@ export async function GET() {
         description: wd.description || "Saque PIX",
         created_at: wd.created_at,
         payer_name: wd.recipient_name,
-        external_id: wd.pix_key,
+        external_id: wd.external_id,
+        pix_key: wd.pix_key,
+        pix_key_type: wd.pix_key_type,
+        recipient_name: wd.recipient_name,
+        recipient_bank: wd.recipient_bank,
       })),
     ].sort((a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime());
 
