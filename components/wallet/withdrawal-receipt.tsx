@@ -112,12 +112,15 @@ export function WithdrawalReceipt({ withdrawal, onClose }: WithdrawalReceiptProp
 
         {/* Conteudo do comprovante */}
         <div ref={receiptRef} className="p-6 bg-gradient-to-b from-card to-background">
-          {/* Logo com design melhorado */}
+          {/* Logo oficial */}
           <div className="flex items-center justify-center mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center shadow-lg shadow-primary/20">
-                <span className="text-white font-bold text-base">LP</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <img 
+                src="/logo-icon.png" 
+                alt="LegacyPay" 
+                className="w-10 h-10 object-contain"
+                crossOrigin="anonymous"
+              />
               <div>
                 <span className="text-xl font-bold text-foreground">Legacy</span>
                 <span className="text-xl font-bold text-primary">Pay</span>
