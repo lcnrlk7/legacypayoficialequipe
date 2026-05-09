@@ -83,9 +83,9 @@ export async function POST(request: NextRequest) {
     const { receiver_identifier, amount, description } = body;
 
     // Validacoes
-    if (!receiver_identifier) {
+    if (!receiver_identifier || !receiver_identifier.includes("@")) {
       return NextResponse.json(
-        { error: "Informe o email, CPF ou telefone do destinatario" },
+        { error: "Informe o email do destinatario" },
         { status: 400 }
       );
     }
@@ -137,22 +137,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar destinatario por email, CPF ou telefone
-    const identifier = receiver_identifier.trim().toLowerCase();
+    // Buscar destinatario por email
+    const email = receiver_identifier.trim().toLowerCase();
     
     const receiverResult = await sql`
-      SELECT id, name, email, cpf_cnpj, phone, is_active
+      SELECT id, name, email, is_active
       FROM profiles 
-      WHERE (LOWER(email) = ${identifier} 
-        OR REPLACE(REPLACE(REPLACE(cpf_cnpj, '.', ''), '-', ''), '/', '') = REPLACE(REPLACE(REPLACE(${identifier}, '.', ''), '-', ''), '/', '')
-        OR REPLACE(REPLACE(REPLACE(phone, '(', ''), ')', ''), '-', '') = REPLACE(REPLACE(REPLACE(${identifier}, '(', ''), ')', ''), '-', ''))
+      WHERE LOWER(email) = ${email}
       AND id != ${user.id}
       LIMIT 1
     `;
 
     if (receiverResult.length === 0) {
       return NextResponse.json(
-        { error: "Destinatario nao encontrado. Verifique o email, CPF ou telefone." },
+        { error: "Destinatario nao encontrado. Verifique se o email esta correto." },
         { status: 404 }
       );
     }

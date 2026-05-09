@@ -308,11 +308,12 @@ export default function TransferPage() {
                   <div className="space-y-4 mb-6">
                     <div>
                       <Label className="text-foreground mb-2 block">
-                        Destinatario
+                        Email do Destinatario
                       </Label>
                       <div className="flex gap-2">
                         <Input
-                          placeholder="Email, CPF ou telefone"
+                          type="email"
+                          placeholder="Digite o email do destinatario"
                           value={identifier}
                           onChange={(e) => {
                             setIdentifier(e.target.value);
