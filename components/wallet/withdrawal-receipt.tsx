@@ -111,41 +111,50 @@ export function WithdrawalReceipt({ withdrawal, onClose }: WithdrawalReceiptProp
         </div>
 
         {/* Conteudo do comprovante */}
-        <div ref={receiptRef} className="p-6 bg-card">
-          {/* Logo */}
-          <div className="flex items-center justify-center mb-6">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                <span className="text-primary-foreground font-bold text-sm">LP</span>
+        <div ref={receiptRef} className="p-6 bg-gradient-to-b from-card to-background">
+          {/* Logo com design melhorado */}
+          <div className="flex items-center justify-center mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center shadow-lg shadow-primary/20">
+                <span className="text-white font-bold text-base">LP</span>
               </div>
-              <span className="text-xl font-bold text-foreground">LegacyPay</span>
+              <div>
+                <span className="text-xl font-bold text-foreground">Legacy</span>
+                <span className="text-xl font-bold text-primary">Pay</span>
+              </div>
             </div>
           </div>
 
           {/* Titulo */}
           <div className="text-center mb-6">
             <p className="text-muted-foreground text-sm">Comprovante de Transferencia via Pix</p>
+            <div className="flex items-center justify-center gap-2 mt-2">
+              <div className="w-8 h-[1px] bg-gradient-to-r from-transparent to-primary/50" />
+              <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+              <div className="w-8 h-[1px] bg-gradient-to-l from-transparent to-primary/50" />
+            </div>
           </div>
 
-          {/* Valor */}
-          <div className="text-center mb-6">
-            <p className="text-muted-foreground text-sm mb-1">Valor</p>
-            <p className="text-3xl font-bold text-primary">{formatCurrency(withdrawal.amount)}</p>
+          {/* Valor com destaque */}
+          <div className="text-center mb-6 p-4 rounded-xl bg-primary/5 border border-primary/10">
+            <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Valor Transferido</p>
+            <p className="text-4xl font-bold text-primary">{formatCurrency(withdrawal.amount)}</p>
             <p className="text-muted-foreground text-xs mt-2">
               Transacao efetuada em {formatDate(withdrawal.createdAt)}
             </p>
           </div>
 
-          <div className="border-t border-border my-4" />
-
           {/* Destino */}
-          <div className="mb-6">
-            <p className="text-primary font-semibold mb-3">Destino</p>
-            <div className="space-y-2">
+          <div className="mb-4 p-4 rounded-xl bg-secondary/30 border border-border">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-2 h-2 rounded-full bg-green-500" />
+              <p className="text-green-500 font-semibold text-sm uppercase tracking-wider">Destino</p>
+            </div>
+            <div className="space-y-3">
               {withdrawal.recipientName && (
                 <div>
                   <p className="text-muted-foreground text-xs">Nome</p>
-                  <p className="text-foreground font-medium">{withdrawal.recipientName}</p>
+                  <p className="text-foreground font-semibold">{withdrawal.recipientName}</p>
                 </div>
               )}
               <div>
@@ -155,21 +164,22 @@ export function WithdrawalReceipt({ withdrawal, onClose }: WithdrawalReceiptProp
               {withdrawal.recipientBank && (
                 <div>
                   <p className="text-muted-foreground text-xs">Banco</p>
-                  <p className="text-foreground font-medium">{withdrawal.recipientBank}</p>
+                  <p className="text-foreground font-semibold">{withdrawal.recipientBank}</p>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="border-t border-border my-4" />
-
           {/* Origem */}
-          <div className="mb-6">
-            <p className="text-primary font-semibold mb-3">Origem</p>
-            <div className="space-y-2">
+          <div className="mb-4 p-4 rounded-xl bg-secondary/30 border border-border">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-2 h-2 rounded-full bg-primary" />
+              <p className="text-primary font-semibold text-sm uppercase tracking-wider">Origem</p>
+            </div>
+            <div className="space-y-3">
               <div>
                 <p className="text-muted-foreground text-xs">Nome</p>
-                <p className="text-foreground font-medium">LEGACYPAY PAGAMENTOS LTDA</p>
+                <p className="text-foreground font-semibold">LEGACYPAY PAGAMENTOS LTDA</p>
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Instituicao</p>
@@ -178,21 +188,23 @@ export function WithdrawalReceipt({ withdrawal, onClose }: WithdrawalReceiptProp
             </div>
           </div>
 
-          <div className="border-t border-border my-4" />
-
           {/* Detalhes da transacao */}
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between">
+          <div className="p-4 rounded-xl bg-secondary/20 space-y-3 text-sm">
+            <div className="flex justify-between items-center">
               <span className="text-muted-foreground">ID da Transacao</span>
-              <span className="text-foreground font-mono text-xs">{withdrawal.id.slice(0, 16)}...</span>
+              <span className="text-foreground font-mono text-xs bg-secondary px-2 py-1 rounded">{withdrawal.id.slice(0, 16)}...</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Taxa de Saque</span>
-              <span className="text-foreground">{formatCurrency(withdrawal.fee)}</span>
+              <span className="text-foreground font-semibold">{formatCurrency(withdrawal.fee)}</span>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Valor Liquido</span>
+              <span className="text-green-500 font-semibold">{formatCurrency(withdrawal.netAmount)}</span>
+            </div>
+            <div className="flex justify-between items-center pt-2 border-t border-border">
               <span className="text-muted-foreground">Status</span>
-              <span className={`px-2 py-0.5 rounded text-xs font-medium ${statusInfo.bg} ${statusInfo.color}`}>
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusInfo.bg} ${statusInfo.color}`}>
                 {statusInfo.label}
               </span>
             </div>
@@ -201,11 +213,16 @@ export function WithdrawalReceipt({ withdrawal, onClose }: WithdrawalReceiptProp
           {/* Icone de sucesso */}
           {(withdrawal.status === 'completed' || withdrawal.status === 'paid') && (
             <div className="flex justify-center mt-6">
-              <div className="w-12 h-12 rounded-full bg-green-500/10 flex items-center justify-center">
-                <CheckCircle className="w-6 h-6 text-green-500" />
+              <div className="w-14 h-14 rounded-full bg-gradient-to-br from-green-500/20 to-green-500/5 flex items-center justify-center border border-green-500/30">
+                <CheckCircle className="w-7 h-7 text-green-500" />
               </div>
             </div>
           )}
+
+          {/* Rodape */}
+          <p className="text-center text-muted-foreground text-xs mt-4">
+            Documento gerado automaticamente pelo sistema LegacyPay
+          </p>
         </div>
 
         {/* Botoes de acao */}
