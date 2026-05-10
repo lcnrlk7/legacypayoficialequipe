@@ -20,8 +20,20 @@ interface UserFee {
   user_id: string;
   name: string;
   email: string;
+  // Taxas personalizadas (para edicao)
+  custom_fee_percentage: number | null;
+  custom_withdrawal_fee: number | null;
+  custom_withdrawal_fee_is_percentage: boolean;
+  // Taxa efetiva (para exibicao)
   fee_percentage: number;
+  withdrawal_fee: number;
+  fee_source: string; // 'personalizada' | 'legada' | 'rota' | 'default'
+  // Rota e adquirente
   route_type: string;
+  acquirer_id: string | null;
+  acquirer_name: string | null;
+  acquirer_fee_percentage: number | null;
+  acquirer_withdrawal_fee: number | null;
   // Taxas separadas
   deposit_fees: number;
   withdrawal_fees: number;
@@ -414,20 +426,32 @@ export default function AdminFeesPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-1 rounded-lg bg-primary/20 text-primary text-sm font-medium">
-                          {user.fee_percentage || 2.5}%
-                        </span>
-                        {user.route_type && (
-                          <span className={`px-2 py-0.5 rounded text-xs ${
-                            user.route_type === 'black' 
-                              ? 'bg-black text-white border border-white/20' 
-                              : 'bg-white/10 text-white'
-                          }`}>
-                            {user.route_type === 'black' ? 'Black' : 'White'}
-                          </span>
-                        )}
+                            <td className="px-6 py-4">
+                              <div className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <span className={`px-2.5 py-1 rounded-lg text-sm font-medium ${
+                                    user.fee_source === 'personalizada' 
+                                      ? 'bg-green-500/20 text-green-400' 
+                                      : 'bg-primary/20 text-primary'
+                                  }`}>
+                                    {user.fee_percentage || 2.5}%
+                                  </span>
+                                  {user.route_type && (
+                                    <span className={`px-2 py-0.5 rounded text-xs ${
+                                      user.route_type === 'black' 
+                                        ? 'bg-black text-white border border-white/20' 
+                                        : 'bg-white/10 text-white'
+                                    }`}>
+                                      {user.route_type === 'black' ? 'Black' : 'White'}
+                                    </span>
+                                  )}
+                                </div>
+                                {user.fee_source === 'personalizada' && (
+                                  <span className="text-xs text-green-400">Personalizada</span>
+                                )}
+                                {user.acquirer_name && user.fee_source !== 'personalizada' && (
+                                  <span className="text-xs text-muted-foreground">{user.acquirer_name}</span>
+                                )}
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">

@@ -925,10 +925,13 @@ export async function getSystemFeesByRoute(routeType: 'white' | 'black'): Promis
  */
 export async function getSystemFeesForUser(userId: string): Promise<FeeConfig> {
   try {
-  // Buscar rota, taxas personalizadas e adquirente especifica do usuário
-  const userResult = await sql`
-  SELECT route_type, fee_percentage, fixed_fee, withdrawal_fee, acquirer_id FROM profiles WHERE id = ${userId}
-  `;
+    // Buscar rota, taxas personalizadas e adquirente especifica do usuário
+    // Prioridade: custom_fee_percentage > fee_percentage (da rota)
+    const userResult = await sql`
+      SELECT route_type, fee_percentage, fixed_fee, withdrawal_fee, acquirer_id,
+             custom_fee_percentage, custom_withdrawal_fee, custom_withdrawal_fee_is_percentage
+      FROM profiles WHERE id = ${userId}
+    `;
   
   const user = userResult[0];
   const routeType = (user?.route_type || 'black') as 'white' | 'black';
@@ -968,26 +971,46 @@ export async function getSystemFeesForUser(userId: string): Promise<FeeConfig> {
       withdrawalFeeIsPercentage: routeFees.withdrawalFeeIsPercentage,
     };
     
+    // PRIORIDADE DE TAXAS:
+    // 1. custom_fee_percentage / custom_withdrawal_fee (taxa personalizada do usuario)
+    // 2. fee_percentage / withdrawal_fee do profiles (legado, se custom nao existir)
+    // 3. Taxa da rota/adquirente (fallback)
+    
     // Taxa percentual de deposito personalizada (PIX In)
-    const userFeePercentage = user?.fee_percentage;
-    if (userFeePercentage !== null && userFeePercentage !== undefined && String(userFeePercentage).trim() !== '') {
-      fees.pixPercentageFee = Number(userFeePercentage);
+    // Prioridade: custom_fee_percentage > fee_percentage
+    const customFeePercentage = user?.custom_fee_percentage;
+    const legacyFeePercentage = user?.fee_percentage;
+    
+    if (customFeePercentage !== null && customFeePercentage !== undefined && String(customFeePercentage).trim() !== '') {
+      fees.pixPercentageFee = Number(customFeePercentage);
+      console.log(`[Acquirer] Usuario ${userId} - Usando taxa PERSONALIZADA de entrada: ${customFeePercentage}%`);
+    } else if (legacyFeePercentage !== null && legacyFeePercentage !== undefined && String(legacyFeePercentage).trim() !== '') {
+      fees.pixPercentageFee = Number(legacyFeePercentage);
+      console.log(`[Acquirer] Usuario ${userId} - Usando taxa LEGADA de entrada: ${legacyFeePercentage}%`);
     }
     
-    // Taxa fixa de deposito personalizada (PIX In)
+    // Taxa fixa de deposito personalizada (PIX In) - mantem legado por enquanto
     const userFixedFee = user?.fixed_fee;
     if (userFixedFee !== null && userFixedFee !== undefined && String(userFixedFee).trim() !== '') {
       fees.pixFixedFee = Number(userFixedFee);
     }
     
     // Taxa de saque personalizada (PIX Out)
-    const userWithdrawalFee = user?.withdrawal_fee;
-    if (userWithdrawalFee !== null && userWithdrawalFee !== undefined && String(userWithdrawalFee).trim() !== '') {
-      fees.withdrawalFee = Number(userWithdrawalFee);
+    // Prioridade: custom_withdrawal_fee > withdrawal_fee
+    const customWithdrawalFee = user?.custom_withdrawal_fee;
+    const legacyWithdrawalFee = user?.withdrawal_fee;
+    const customWithdrawalFeeIsPercentage = user?.custom_withdrawal_fee_is_percentage ?? false;
+    
+    if (customWithdrawalFee !== null && customWithdrawalFee !== undefined && String(customWithdrawalFee).trim() !== '') {
+      fees.withdrawalFee = Number(customWithdrawalFee);
+      fees.withdrawalFeeIsPercentage = customWithdrawalFeeIsPercentage;
+      console.log(`[Acquirer] Usuario ${userId} - Usando taxa PERSONALIZADA de saque: ${customWithdrawalFee}${customWithdrawalFeeIsPercentage ? '%' : ' fixo'}`);
+    } else if (legacyWithdrawalFee !== null && legacyWithdrawalFee !== undefined && String(legacyWithdrawalFee).trim() !== '') {
+      fees.withdrawalFee = Number(legacyWithdrawalFee);
+      console.log(`[Acquirer] Usuario ${userId} - Usando taxa LEGADA de saque: ${legacyWithdrawalFee}`);
     }
     
-    console.log(`[Acquirer] Usuario ${userId} - DB: fee_percentage=${userFeePercentage}, fixed_fee=${userFixedFee}, withdrawal_fee=${userWithdrawalFee}`);
-    console.log(`[Acquirer] Usuario ${userId} - FINAL: PIX In=${fees.pixPercentageFee}%+R$${fees.pixFixedFee}, PIX Out=R$${fees.withdrawalFee}`);
+    console.log(`[Acquirer] Usuario ${userId} - TAXAS FINAIS: PIX In=${fees.pixPercentageFee}%+R$${fees.pixFixedFee}, PIX Out=${fees.withdrawalFee}${fees.withdrawalFeeIsPercentage ? '%' : ' fixo'}`);
     
     return fees;
   } catch (error) {

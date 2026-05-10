@@ -11,9 +11,10 @@ export async function GET() {
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
     }
 
-    // Buscar perfil do usuário com taxas, rota e adquirente especifica
+    // Buscar perfil do usuário com taxas personalizadas, rota e adquirente especifica
     const profileResult = await sql`
-      SELECT fee_percentage, fixed_fee, withdrawal_fee, daily_limit, route_type, acquirer_id
+      SELECT fee_percentage, fixed_fee, withdrawal_fee, daily_limit, route_type, acquirer_id,
+             custom_fee_percentage, custom_withdrawal_fee, custom_withdrawal_fee_is_percentage
       FROM profiles
       WHERE id = ${user.id}
     `;

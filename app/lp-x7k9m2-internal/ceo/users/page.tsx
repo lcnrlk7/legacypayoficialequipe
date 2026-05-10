@@ -36,6 +36,10 @@ interface UserProfile {
   fee_percentage: number | null;
   fixed_fee: number | null;
   withdrawal_fee: number | null;
+  // Taxas personalizadas (tem prioridade sobre fee_percentage/withdrawal_fee)
+  custom_fee_percentage: number | null;
+  custom_withdrawal_fee: number | null;
+  custom_withdrawal_fee_is_percentage: boolean | null;
   last_ip: string | null;
   created_at: string;
   avatar_url: string | null;
@@ -411,18 +415,19 @@ const openEditModal = (user: UserProfile) => {
     }
   }
   
-  // Usar taxas da adquirente do usuario ou valores padrao
-  const feePercentage = userAcquirer?.fee_percentage ?? user.fee_percentage ?? 2.5;
-  const withdrawalFee = userAcquirer?.withdrawal_fee ?? user.withdrawal_fee ?? (user.route_type === "white" ? 4 : 5);
-  const fixedFee = user.fixed_fee ?? 0;
-  
-  setEditForm({
-  daily_limit: user.daily_limit || 10000,
-  fee_percentage: feePercentage.toString(),
-  fixed_fee: fixedFee.toString(),
-  withdrawal_fee: withdrawalFee.toString(),
-  route_type: user.route_type || "white",
-  acquirer_id: acquirerId,
+    // Prioridade de taxas: custom > legado > adquirente > default
+    // Se tem taxa personalizada, mostrar ela; senao mostrar da rota
+    const feePercentage = user.custom_fee_percentage ?? user.fee_percentage ?? userAcquirer?.fee_percentage ?? 2.5;
+    const withdrawalFee = user.custom_withdrawal_fee ?? user.withdrawal_fee ?? userAcquirer?.withdrawal_fee ?? (user.route_type === "white" ? 4 : 5);
+    const fixedFee = user.fixed_fee ?? 0;
+    
+    setEditForm({
+      daily_limit: user.daily_limit || 10000,
+      fee_percentage: feePercentage.toString(),
+      fixed_fee: fixedFee.toString(),
+      withdrawal_fee: withdrawalFee.toString(),
+      route_type: user.route_type || "white",
+      acquirer_id: acquirerId,
       is_active: user.is_active,
     });
     setShowModal(true);
@@ -697,11 +702,20 @@ const openEditModal = (user: UserProfile) => {
                       {formatCurrency(Number(user.balance) || 0)}
                     </p>
                   </td>
-                  <td className="p-4">
-                    <p className="font-medium text-yellow-400">
-                      {user.fee_percentage ? `${Number(user.fee_percentage).toFixed(2)}%` : "Padrão"}
-                    </p>
-                  </td>
+                            <td className="p-4">
+                              <div className="flex flex-col">
+                                <p className="font-medium text-yellow-400">
+                                  {user.custom_fee_percentage !== null && user.custom_fee_percentage !== undefined
+                                    ? `${Number(user.custom_fee_percentage).toFixed(2)}%`
+                                    : user.fee_percentage 
+                                      ? `${Number(user.fee_percentage).toFixed(2)}%` 
+                                      : "Padrao"}
+                                </p>
+                                {user.custom_fee_percentage !== null && user.custom_fee_percentage !== undefined && (
+                                  <span className="text-xs text-green-400">Personalizada</span>
+                                )}
+                              </div>
+                            </td>
                   <td className="p-4">
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${
