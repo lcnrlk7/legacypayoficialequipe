@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
           message.chat.id,
           message.message_id,
           from.id,
-          data
+          data,
+          from.first_name
         );
       }
     }

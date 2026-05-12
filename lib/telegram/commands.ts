@@ -1,11 +1,23 @@
 import { neon } from "@neondatabase/serverless";
 import bcrypt from "bcryptjs";
-import { sendMessage, editMessageText, answerCallbackQuery } from "./bot";
+import { sendMessage, sendPhoto, editMessageText, answerCallbackQuery } from "./bot";
 import { getSystemFeesForUser } from "@/lib/acquirers";
+import { getMedusaPayments } from "@/lib/acquirers/medusa";
 
 const sql = neon(process.env.DATABASE_URL!);
 
-// Estado temporario para fluxos multi-etapa
+// ═══════════════════════════════════════════════════════════════
+// CONFIGURACOES
+// ═══════════════════════════════════════════════════════════════
+
+const BOT_NAME = "LegacyPay";
+const SUPPORT_LINK = "https://t.me/legacypayusers";
+const SITE_URL = "https://legacypay.com.br";
+
+// ═══════════════════════════════════════════════════════════════
+// ESTADO TEMPORARIO
+// ═══════════════════════════════════════════════════════════════
+
 const userStates: Map<number, {
   action: string;
   data: Record<string, unknown>;
@@ -16,7 +28,7 @@ function setState(telegramId: number, action: string, data: Record<string, unkno
   userStates.set(telegramId, {
     action,
     data,
-    expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutos
+    expiresAt: Date.now() + 10 * 60 * 1000,
   });
 }
 
@@ -33,10 +45,13 @@ function clearState(telegramId: number) {
   userStates.delete(telegramId);
 }
 
-// Verificar se usuario esta vinculado
+// ═══════════════════════════════════════════════════════════════
+// FUNCOES AUXILIARES
+// ═══════════════════════════════════════════════════════════════
+
 async function getLinkedUser(telegramId: number) {
   const result = await sql`
-    SELECT tu.*, p.email, p.name, p.balance, p.is_active as account_active
+    SELECT tu.*, p.email, p.name, p.balance, p.is_active as account_active, p.cpf_cnpj
     FROM telegram_users tu
     JOIN profiles p ON tu.user_id = p.id
     WHERE tu.telegram_id = ${telegramId} AND tu.is_active = true
@@ -44,93 +59,213 @@ async function getLinkedUser(telegramId: number) {
   return result[0] || null;
 }
 
-// Comando /start
+function formatCurrency(value: number): string {
+  return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function maskEmail(email: string): string {
+  const [user, domain] = email.split("@");
+  return user.substring(0, 2) + "***@" + domain;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// TECLADOS INLINE (BOTOES)
+// ═══════════════════════════════════════════════════════════════
+
+const MAIN_MENU_KEYBOARD = {
+  inline_keyboard: [
+    [
+      { text: "💰 Saldo", callback_data: "menu_saldo" },
+      { text: "📥 Depositar", callback_data: "menu_depositar" },
+    ],
+    [
+      { text: "📤 Sacar", callback_data: "menu_sacar" },
+      { text: "📋 Extrato", callback_data: "menu_extrato" },
+    ],
+    [
+      { text: "📊 Taxas", callback_data: "menu_taxas" },
+      { text: "❓ Ajuda", callback_data: "menu_ajuda" },
+    ],
+    [
+      { text: "🌐 Acessar Painel Web", url: `${SITE_URL}/dashboard` },
+    ],
+  ],
+};
+
+const DEPOSIT_VALUES_KEYBOARD = {
+  inline_keyboard: [
+    [
+      { text: "💵 R$ 20", callback_data: "deposit_20" },
+      { text: "💵 R$ 50", callback_data: "deposit_50" },
+      { text: "💵 R$ 100", callback_data: "deposit_100" },
+    ],
+    [
+      { text: "💵 R$ 200", callback_data: "deposit_200" },
+      { text: "💵 R$ 500", callback_data: "deposit_500" },
+      { text: "💵 R$ 1000", callback_data: "deposit_1000" },
+    ],
+    [
+      { text: "✏️ Outro Valor", callback_data: "deposit_custom" },
+    ],
+    [
+      { text: "🔙 Voltar ao Menu", callback_data: "back_menu" },
+      { text: "❌ Cancelar", callback_data: "cancel" },
+    ],
+  ],
+};
+
+const WITHDRAW_VALUES_KEYBOARD = (balance: number) => ({
+  inline_keyboard: [
+    [
+      { text: "💸 R$ 50", callback_data: "withdraw_50" },
+      { text: "💸 R$ 100", callback_data: "withdraw_100" },
+      { text: "💸 R$ 200", callback_data: "withdraw_200" },
+    ],
+    [
+      { text: "💸 R$ 500", callback_data: "withdraw_500" },
+      { text: `💸 Tudo (R$ ${formatCurrency(balance)})`, callback_data: "withdraw_all" },
+    ],
+    [
+      { text: "✏️ Outro Valor", callback_data: "withdraw_custom" },
+    ],
+    [
+      { text: "🔙 Voltar ao Menu", callback_data: "back_menu" },
+      { text: "❌ Cancelar", callback_data: "cancel" },
+    ],
+  ],
+});
+
+const BACK_MENU_KEYBOARD = {
+  inline_keyboard: [
+    [{ text: "🔙 Voltar ao Menu", callback_data: "back_menu" }],
+  ],
+};
+
+// ═══════════════════════════════════════════════════════════════
+// COMANDO /start - MENU PRINCIPAL
+// ═══════════════════════════════════════════════════════════════
+
 export async function handleStart(chatId: number, telegramId: number, firstName: string, username?: string) {
   const linkedUser = await getLinkedUser(telegramId);
   
   if (linkedUser) {
+    const balance = Number(linkedUser.balance);
+    const name = linkedUser.name || firstName;
+    
     await sendMessage(chatId, `
-Ola, <b>${linkedUser.name || firstName}</b>! 👋
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ <b>${BOT_NAME}</b> ⚡
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Sua conta ja esta vinculada ao LegacyPay.
+👋 Ola, <b>${name}</b>!
 
-<b>Comandos disponiveis:</b>
-/saldo - Ver seu saldo
-/depositar - Gerar PIX para deposito
-/sacar - Solicitar saque
-/extrato - Ver ultimas transacoes
-/taxas - Ver suas taxas
-/ajuda - Lista de comandos
-/desvincular - Remover vinculo
-    `);
+💳 <b>Sua Conta:</b>
+├ 📧 ${maskEmail(linkedUser.email)}
+└ 💰 Saldo: <b>R$ ${formatCurrency(balance)}</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📱 <b>MENU PRINCIPAL</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Selecione uma opcao abaixo:
+    `, { reply_markup: MAIN_MENU_KEYBOARD });
     return;
   }
   
   setState(telegramId, "awaiting_email");
   
   await sendMessage(chatId, `
-Bem-vindo ao <b>LegacyPay Bot</b>! 🚀
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ <b>BEM-VINDO AO ${BOT_NAME}</b> ⚡
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Para comecar, preciso vincular sua conta.
+🚀 A plataforma de pagamentos mais rapida!
 
-<b>Digite o email da sua conta LegacyPay:</b>
-  `);
+✅ Depositos instantaneos
+✅ Saques em minutos  
+✅ Taxas competitivas
+✅ Suporte 24 horas
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📝 Para comecar, vamos vincular sua conta.
+
+<b>Digite o email da sua conta ${BOT_NAME}:</b>
+  `, {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "📝 Criar Conta", url: `${SITE_URL}/register` }],
+        [{ text: "❓ Suporte", url: SUPPORT_LINK }],
+      ],
+    },
+  });
 }
 
-// Comando /saldo
+// ═══════════════════════════════════════════════════════════════
+// COMANDO /saldo
+// ═══════════════════════════════════════════════════════════════
+
 export async function handleSaldo(chatId: number, telegramId: number) {
   const user = await getLinkedUser(telegramId);
   
   if (!user) {
-    await sendMessage(chatId, "Voce precisa vincular sua conta primeiro. Use /start");
+    await sendMessage(chatId, "⚠️ Voce precisa vincular sua conta primeiro.\n\nUse /start para comecar.");
     return;
   }
   
-  const balance = Number(user.balance).toFixed(2);
+  const balance = Number(user.balance);
+  const fees = await getSystemFeesForUser(user.user_id as string);
   
   await sendMessage(chatId, `
-💰 <b>Seu Saldo</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 <b>SEU SALDO</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>Disponivel:</b> R$ ${balance}
+┌─────────────────────────┐
+│                         │
+│   💵 <b>R$ ${formatCurrency(balance)}</b>
+│                         │
+└─────────────────────────┘
 
-Use /depositar para adicionar saldo
-Use /sacar para solicitar saque
-  `);
+📊 <b>Suas Taxas:</b>
+├ 📥 Deposito: ${fees.pixPercentageFee}%
+└ 📤 Saque: R$ ${formatCurrency(fees.withdrawalFee)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  `, { reply_markup: MAIN_MENU_KEYBOARD });
 }
 
-// Comando /depositar
+// ═══════════════════════════════════════════════════════════════
+// COMANDO /depositar - GERAR PIX VIA MEDUSA BLACK
+// ═══════════════════════════════════════════════════════════════
+
 export async function handleDepositar(chatId: number, telegramId: number, amount?: number) {
   const user = await getLinkedUser(telegramId);
   
   if (!user) {
-    await sendMessage(chatId, "Voce precisa vincular sua conta primeiro. Use /start");
+    await sendMessage(chatId, "⚠️ Voce precisa vincular sua conta primeiro.\n\nUse /start para comecar.");
     return;
   }
   
   if (!amount || amount < 10) {
     setState(telegramId, "awaiting_deposit_amount");
+    
+    const fees = await getSystemFeesForUser(user.user_id as string);
+    
     await sendMessage(chatId, `
-💵 <b>Deposito PIX</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📥 <b>DEPOSITAR VIA PIX</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Digite o valor que deseja depositar (minimo R$ 10,00):
+⚡ PIX Instantaneo - Cai na hora!
 
-Exemplo: <code>100</code> ou <code>50.50</code>
-    `, {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: "R$ 50", callback_data: "deposit_50" },
-            { text: "R$ 100", callback_data: "deposit_100" },
-            { text: "R$ 200", callback_data: "deposit_200" },
-          ],
-          [
-            { text: "R$ 500", callback_data: "deposit_500" },
-            { text: "R$ 1000", callback_data: "deposit_1000" },
-          ],
-          [{ text: "Cancelar", callback_data: "cancel" }],
-        ],
-      },
-    });
+📊 <b>Taxa:</b> ${fees.pixPercentageFee}%
+💵 <b>Minimo:</b> R$ 10,00
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Selecione um valor ou digite outro:
+    `, { reply_markup: DEPOSIT_VALUES_KEYBOARD });
     return;
   }
   
@@ -140,116 +275,203 @@ Exemplo: <code>100</code> ou <code>50.50</code>
 async function generatePixDeposit(chatId: number, telegramId: number, user: Record<string, unknown>, amount: number) {
   clearState(telegramId);
   
-  await sendMessage(chatId, "Gerando PIX... Aguarde.");
+  const loadingMsg = await sendMessage(chatId, `
+⏳ <b>Gerando PIX...</b>
+
+Aguarde um momento...
+  `);
   
   try {
     const fees = await getSystemFeesForUser(user.user_id as string);
     const fee = amount * (fees.pixPercentageFee / 100) + fees.pixFixedFee;
     const netAmount = amount - fee;
     
-    // Buscar API key do usuario para gerar PIX
-    const userApiKey = await sql`
-      SELECT api_key FROM profiles WHERE id = ${user.user_id as string}
+    // Buscar adquirente Medusa Black
+    const acquirer = await sql`
+      SELECT * FROM acquirers 
+      WHERE name ILIKE '%medusa%' AND route_type = 'black' AND is_active = true
+      LIMIT 1
     `;
     
-    if (!userApiKey[0]?.api_key) {
-      await sendMessage(chatId, `
-⚠️ <b>Deposito via Telegram indisponivel</b>
+    if (acquirer.length === 0) {
+      await editMessageText(chatId, loadingMsg.message_id, `
+⚠️ <b>Servico temporariamente indisponivel</b>
 
-Para depositar, acesse o painel web:
-https://legacypay.com.br/dashboard/wallet
+Por favor, tente novamente mais tarde ou acesse o painel web.
 
-Ou gere sua API Key no painel para usar o deposito via Telegram.
+🌐 ${SITE_URL}/dashboard/wallet
       `);
       return;
     }
     
-    // Por enquanto, mostrar instrucoes de deposito
-    await sendMessage(chatId, `
-💰 <b>Deposito</b>
+    const medusa = getMedusaPayments(
+      acquirer[0].api_key as string,
+      acquirer[0].api_secret as string
+    );
+    
+    // Gerar PIX
+    const amountCents = Math.round(amount * 100);
+    const pixResponse = await medusa.createSimplePixPayment(
+      amountCents,
+      (user.name as string) || "Cliente",
+      (user.cpf_cnpj as string) || "00000000000",
+      user.email as string,
+      `Deposito Telegram - ${user.email}`,
+      `${SITE_URL}/api/webhooks/medusa`
+    );
+    
+    const qrCode = pixResponse.pix?.qrcode || pixResponse.transaction?.pix?.qrcode;
+    const transactionId = pixResponse.insertId || pixResponse.id;
+    
+    if (!qrCode) {
+      throw new Error("QR Code nao gerado");
+    }
+    
+    // Salvar transacao no banco
+    await sql`
+      INSERT INTO transactions (
+        user_id, type, amount, fee, net_amount, status, 
+        external_id, acquirer_id, description, metadata
+      ) VALUES (
+        ${user.user_id as string}, 'pix_in', ${amount}, ${fee}, ${netAmount}, 'pending',
+        ${String(transactionId)}, ${acquirer[0].id}, 'Deposito via Telegram',
+        ${JSON.stringify({ source: 'telegram', telegram_id: telegramId })}
+      )
+    `;
+    
+    await editMessageText(chatId, loadingMsg.message_id, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ <b>PIX GERADO COM SUCESSO</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>Valor solicitado:</b> R$ ${amount.toFixed(2)}
-<b>Taxa estimada:</b> R$ ${fee.toFixed(2)} (${fees.pixPercentageFee}%)
-<b>Voce recebe:</b> R$ ${netAmount.toFixed(2)}
+💵 <b>Valor:</b> R$ ${formatCurrency(amount)}
+💸 <b>Taxa:</b> R$ ${formatCurrency(fee)} (${fees.pixPercentageFee}%)
+💰 <b>Voce recebe:</b> R$ ${formatCurrency(netAmount)}
 
-Para depositar, acesse o painel:
-👉 https://legacypay.com.br/dashboard/wallet
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📱 <b>CODIGO PIX COPIA E COLA:</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Em breve o deposito via Telegram estara disponivel!
-    `);
+<code>${qrCode}</code>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⏱️ <b>Valido por:</b> 30 minutos
+📲 <b>ID:</b> ${transactionId}
+
+✅ Voce sera notificado quando o pagamento for confirmado!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    `, { reply_markup: BACK_MENU_KEYBOARD });
+    
   } catch (error) {
-    console.error("Erro ao gerar PIX:", error);
-    await sendMessage(chatId, "Erro ao processar. Tente novamente mais tarde.");
+    console.error("[Telegram] Erro ao gerar PIX:", error);
+    await editMessageText(chatId, loadingMsg.message_id, `
+❌ <b>Erro ao gerar PIX</b>
+
+Ocorreu um erro ao processar sua solicitacao.
+Por favor, tente novamente ou acesse o painel web.
+
+🌐 ${SITE_URL}/dashboard/wallet
+    `, { reply_markup: BACK_MENU_KEYBOARD });
   }
 }
 
-// Comando /sacar
+// ═══════════════════════════════════════════════════════════════
+// COMANDO /sacar
+// ═══════════════════════════════════════════════════════════════
+
 export async function handleSacar(chatId: number, telegramId: number, amount?: number) {
   const user = await getLinkedUser(telegramId);
   
   if (!user) {
-    await sendMessage(chatId, "Voce precisa vincular sua conta primeiro. Use /start");
+    await sendMessage(chatId, "⚠️ Voce precisa vincular sua conta primeiro.\n\nUse /start para comecar.");
     return;
   }
   
   if (!user.pin_hash) {
     setState(telegramId, "create_pin");
     await sendMessage(chatId, `
-🔐 <b>Criar PIN de Seguranca</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔐 <b>CRIAR PIN DE SEGURANCA</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Para realizar saques, voce precisa criar um PIN de 4 digitos.
 
-<b>Digite seu novo PIN:</b>
-    `);
+Este PIN sera usado para confirmar todas as suas operacoes de saque.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>Digite seu novo PIN (4 numeros):</b>
+    `, { reply_markup: { inline_keyboard: [[{ text: "❌ Cancelar", callback_data: "cancel" }]] } });
     return;
   }
   
   const balance = Number(user.balance);
+  const fees = await getSystemFeesForUser(user.user_id as string);
+  
+  if (balance < 10) {
+    await sendMessage(chatId, `
+⚠️ <b>Saldo insuficiente</b>
+
+Seu saldo atual: R$ ${formatCurrency(balance)}
+Minimo para saque: R$ 10,00
+
+📥 Use /depositar para adicionar saldo.
+    `, { reply_markup: BACK_MENU_KEYBOARD });
+    return;
+  }
   
   if (!amount || amount < 10) {
     setState(telegramId, "awaiting_withdrawal_amount");
     await sendMessage(chatId, `
-💸 <b>Solicitar Saque</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📤 <b>SOLICITAR SAQUE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>Saldo disponivel:</b> R$ ${balance.toFixed(2)}
+💰 <b>Saldo disponivel:</b> R$ ${formatCurrency(balance)}
+💸 <b>Taxa de saque:</b> R$ ${formatCurrency(fees.withdrawalFee)}
+⚡ <b>Tempo estimado:</b> 5-30 minutos
 
-Digite o valor que deseja sacar (minimo R$ 10,00):
-    `, {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            { text: "R$ 50", callback_data: "withdraw_50" },
-            { text: "R$ 100", callback_data: "withdraw_100" },
-          ],
-          [
-            { text: "Sacar Tudo", callback_data: "withdraw_all" },
-          ],
-          [{ text: "Cancelar", callback_data: "cancel" }],
-        ],
-      },
-    });
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Selecione um valor ou digite outro:
+    `, { reply_markup: WITHDRAW_VALUES_KEYBOARD(balance) });
     return;
   }
   
   if (amount > balance) {
-    await sendMessage(chatId, `Saldo insuficiente. Seu saldo e R$ ${balance.toFixed(2)}`);
+    await sendMessage(chatId, `
+⚠️ <b>Saldo insuficiente</b>
+
+Seu saldo: R$ ${formatCurrency(balance)}
+Valor solicitado: R$ ${formatCurrency(amount)}
+    `, { reply_markup: BACK_MENU_KEYBOARD });
     return;
   }
   
   setState(telegramId, "awaiting_pix_key", { amount });
   await sendMessage(chatId, `
-<b>Digite sua chave PIX:</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔑 <b>CHAVE PIX</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Pode ser: CPF, Email, Telefone ou Chave Aleatoria
-  `);
+Valor do saque: R$ ${formatCurrency(amount)}
+
+<b>Digite sua chave PIX:</b>
+(CPF, Email, Telefone ou Chave Aleatoria)
+  `, { reply_markup: { inline_keyboard: [[{ text: "❌ Cancelar", callback_data: "cancel" }]] } });
 }
 
-// Comando /extrato
+// ═══════════════════════════════════════════════════════════════
+// COMANDO /extrato
+// ═══════════════════════════════════════════════════════════════
+
 export async function handleExtrato(chatId: number, telegramId: number) {
   const user = await getLinkedUser(telegramId);
   
   if (!user) {
-    await sendMessage(chatId, "Voce precisa vincular sua conta primeiro. Use /start");
+    await sendMessage(chatId, "⚠️ Voce precisa vincular sua conta primeiro.\n\nUse /start para comecar.");
     return;
   }
   
@@ -265,12 +487,21 @@ export async function handleExtrato(chatId: number, telegramId: number) {
     ORDER BY created_at DESC LIMIT 5
   `;
   
-  let message = `📋 <b>Ultimas Transacoes</b>\n\n`;
+  let message = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📋 <b>EXTRATO</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💰 Saldo atual: <b>R$ ${formatCurrency(Number(user.balance))}</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📜 <b>ULTIMAS TRANSACOES:</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
   
   if (transactions.length === 0 && withdrawals.length === 0) {
-    message += "Nenhuma transacao encontrada.";
+    message += "\n📭 Nenhuma transacao encontrada.\n";
   } else {
-    // Combinar e ordenar
     interface TransactionItem {
       created_at: string;
       status: string;
@@ -294,92 +525,150 @@ export async function handleExtrato(chatId: number, telegramId: number) {
     ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10);
     
     all.forEach(t => {
-      const emoji = t.tipo === "deposito" ? "💰" : "💸";
-      const status = t.status === "completed" ? "✅" : t.status === "pending" ? "⏳" : "❌";
+      const emoji = t.tipo === "deposito" ? "📥" : "📤";
+      const statusEmoji = t.status === "completed" ? "✅" : t.status === "pending" ? "⏳" : "❌";
       const date = new Date(t.created_at).toLocaleDateString("pt-BR");
-      message += `${emoji} R$ ${t.amount.toFixed(2)} - ${status} - ${date}\n`;
+      const time = new Date(t.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      const tipo = t.tipo === "deposito" ? "Deposito" : "Saque";
+      
+      message += `\n${emoji} <b>${tipo}</b> - R$ ${formatCurrency(t.amount)}\n`;
+      message += `    ${statusEmoji} ${t.status === "completed" ? "Confirmado" : t.status === "pending" ? "Pendente" : "Falhou"} • ${date} ${time}\n`;
     });
   }
   
-  await sendMessage(chatId, message);
+  message += "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+  
+  await sendMessage(chatId, message, { reply_markup: MAIN_MENU_KEYBOARD });
 }
 
-// Comando /taxas
+// ═══════════════════════════════════════════════════════════════
+// COMANDO /taxas
+// ═══════════════════════════════════════════════════════════════
+
 export async function handleTaxas(chatId: number, telegramId: number) {
   const user = await getLinkedUser(telegramId);
   
   if (!user) {
-    await sendMessage(chatId, "Voce precisa vincular sua conta primeiro. Use /start");
+    await sendMessage(chatId, "⚠️ Voce precisa vincular sua conta primeiro.\n\nUse /start para comecar.");
     return;
   }
   
   const fees = await getSystemFeesForUser(user.user_id as string);
   
   await sendMessage(chatId, `
-📊 <b>Suas Taxas</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 <b>SUAS TAXAS</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>Deposito (PIX In):</b>
-Taxa: ${fees.pixPercentageFee}%${fees.pixFixedFee > 0 ? ` + R$ ${fees.pixFixedFee.toFixed(2)}` : ""}
+📥 <b>DEPOSITO (PIX IN)</b>
+├ Taxa: <b>${fees.pixPercentageFee}%</b>
+${fees.pixFixedFee > 0 ? `├ Taxa fixa: R$ ${formatCurrency(fees.pixFixedFee)}\n` : ""}└ Tempo: Instantaneo ⚡
 
-<b>Saque (PIX Out):</b>
-Taxa: ${fees.withdrawalFeeIsPercentage ? fees.withdrawalFee + "%" : "R$ " + fees.withdrawalFee.toFixed(2)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>Transferencia Interna:</b>
-Taxa: GRATIS
-  `);
+📤 <b>SAQUE (PIX OUT)</b>
+├ Taxa: <b>R$ ${formatCurrency(fees.withdrawalFee)}</b>
+└ Tempo: 5-30 minutos ⏱️
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔄 <b>TRANSFERENCIA INTERNA</b>
+├ Taxa: <b>GRATIS</b> ✨
+└ Tempo: Instantaneo ⚡
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 <i>Taxas sujeitas a alteracoes. Consulte o painel para mais detalhes.</i>
+  `, { reply_markup: MAIN_MENU_KEYBOARD });
 }
 
-// Comando /ajuda
+// ═══════════════════════════════════════════════════════════════
+// COMANDO /ajuda
+// ═══════════════════════════════════════════════════════════════
+
 export async function handleAjuda(chatId: number) {
   await sendMessage(chatId, `
-📚 <b>Comandos Disponiveis</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❓ <b>CENTRAL DE AJUDA</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-/start - Iniciar / Vincular conta
-/saldo - Ver seu saldo atual
-/depositar - Gerar PIX para deposito
-/sacar - Solicitar saque
-/extrato - Ver ultimas transacoes
-/taxas - Ver suas taxas
-/ajuda - Esta mensagem
-/desvincular - Remover vinculo da conta
+📱 <b>COMANDOS DISPONIVEIS:</b>
 
-<b>Suporte:</b> Entre no nosso grupo de suporte
-  `);
+/start - 🏠 Menu principal
+/saldo - 💰 Ver seu saldo
+/depositar - 📥 Depositar via PIX
+/sacar - 📤 Solicitar saque
+/extrato - 📋 Ver transacoes
+/taxas - 📊 Ver suas taxas
+/ajuda - ❓ Esta mensagem
+/desvincular - 🔓 Desvincular conta
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🆘 <b>PRECISA DE AJUDA?</b>
+
+📞 Suporte 24 horas
+🌐 Site: ${SITE_URL}
+💬 Grupo: ${SUPPORT_LINK}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  `, { 
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: "💬 Falar com Suporte", url: SUPPORT_LINK }],
+        [{ text: "🌐 Acessar Painel Web", url: `${SITE_URL}/dashboard` }],
+        [{ text: "🔙 Voltar ao Menu", callback_data: "back_menu" }],
+      ],
+    },
+  });
 }
 
-// Comando /desvincular
+// ═══════════════════════════════════════════════════════════════
+// COMANDO /desvincular
+// ═══════════════════════════════════════════════════════════════
+
 export async function handleDesvincular(chatId: number, telegramId: number) {
   const user = await getLinkedUser(telegramId);
   
   if (!user) {
-    await sendMessage(chatId, "Sua conta nao esta vinculada.");
+    await sendMessage(chatId, "⚠️ Sua conta nao esta vinculada.\n\nUse /start para vincular.");
     return;
   }
   
   await sendMessage(chatId, `
-⚠️ <b>Desvincular Conta</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ <b>DESVINCULAR CONTA</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Tem certeza que deseja desvincular sua conta LegacyPay deste Telegram?
+Tem certeza que deseja desvincular sua conta <b>${BOT_NAME}</b> deste Telegram?
 
-Voce podera vincular novamente a qualquer momento.
+📧 Conta: ${maskEmail(user.email)}
+
+⚠️ Voce podera vincular novamente a qualquer momento.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   `, {
     reply_markup: {
       inline_keyboard: [
         [
-          { text: "Sim, desvincular", callback_data: "confirm_unlink" },
-          { text: "Cancelar", callback_data: "cancel" },
+          { text: "✅ Sim, desvincular", callback_data: "confirm_unlink" },
+        ],
+        [
+          { text: "❌ Cancelar", callback_data: "back_menu" },
         ],
       ],
     },
   });
 }
 
-// Processar mensagem de texto (fluxos)
+// ═══════════════════════════════════════════════════════════════
+// PROCESSAR MENSAGENS DE TEXTO
+// ═══════════════════════════════════════════════════════════════
+
 export async function handleTextMessage(chatId: number, telegramId: number, text: string, firstName: string) {
   const state = getState(telegramId);
   
   if (!state) {
-    // Verificar se e um comando
     if (text.startsWith("/")) {
       const [command, ...args] = text.split(" ");
       const amount = args[0] ? parseFloat(args[0]) : undefined;
@@ -402,13 +691,19 @@ export async function handleTextMessage(chatId: number, telegramId: number, text
           return handleAjuda(chatId);
         case "/desvincular":
           return handleDesvincular(chatId, telegramId);
+        case "/menu":
+          return handleStart(chatId, telegramId, firstName);
         default:
-          await sendMessage(chatId, "Comando nao reconhecido. Use /ajuda para ver os comandos disponiveis.");
+          await sendMessage(chatId, `
+⚠️ Comando nao reconhecido.
+
+Use /ajuda para ver os comandos disponiveis ou clique no botao abaixo:
+          `, { reply_markup: MAIN_MENU_KEYBOARD });
       }
       return;
     }
     
-    await sendMessage(chatId, "Use /ajuda para ver os comandos disponiveis.");
+    await sendMessage(chatId, "Use /start para abrir o menu principal.", { reply_markup: MAIN_MENU_KEYBOARD });
     return;
   }
   
@@ -423,7 +718,7 @@ export async function handleTextMessage(chatId: number, telegramId: number, text
     case "awaiting_deposit_amount":
       const depositAmount = parseFloat(text.replace(",", "."));
       if (isNaN(depositAmount) || depositAmount < 10) {
-        await sendMessage(chatId, "Valor invalido. Digite um valor minimo de R$ 10,00");
+        await sendMessage(chatId, "⚠️ Valor invalido. Digite um valor minimo de R$ 10,00", { reply_markup: BACK_MENU_KEYBOARD });
         return;
       }
       const depositUser = await getLinkedUser(telegramId);
@@ -434,15 +729,25 @@ export async function handleTextMessage(chatId: number, telegramId: number, text
     case "awaiting_withdrawal_amount":
       const withdrawAmount = parseFloat(text.replace(",", "."));
       if (isNaN(withdrawAmount) || withdrawAmount < 10) {
-        await sendMessage(chatId, "Valor invalido. Digite um valor minimo de R$ 10,00");
+        await sendMessage(chatId, "⚠️ Valor invalido. Digite um valor minimo de R$ 10,00", { reply_markup: BACK_MENU_KEYBOARD });
         return;
       }
       setState(telegramId, "awaiting_pix_key", { amount: withdrawAmount });
-      await sendMessage(chatId, "Digite sua chave PIX:");
+      await sendMessage(chatId, `
+🔑 <b>CHAVE PIX</b>
+
+Valor do saque: R$ ${formatCurrency(withdrawAmount)}
+
+<b>Digite sua chave PIX:</b>
+      `, { reply_markup: { inline_keyboard: [[{ text: "❌ Cancelar", callback_data: "cancel" }]] } });
       break;
     case "awaiting_pix_key":
       setState(telegramId, "awaiting_pin", { ...state.data, pixKey: text });
-      await sendMessage(chatId, "Digite seu PIN de 4 digitos para confirmar:");
+      await sendMessage(chatId, `
+🔐 <b>CONFIRMAR SAQUE</b>
+
+<b>Digite seu PIN de 4 digitos:</b>
+      `, { reply_markup: { inline_keyboard: [[{ text: "❌ Cancelar", callback_data: "cancel" }]] } });
       break;
     case "awaiting_pin":
       await processWithdrawalPin(chatId, telegramId, text, state.data);
@@ -456,35 +761,57 @@ export async function handleTextMessage(chatId: number, telegramId: number, text
   }
 }
 
-// Processar email para vinculacao
+// ═══════════════════════════════════════════════════════════════
+// FUNCOES DE PROCESSAMENTO
+// ═══════════════════════════════════════════════════════════════
+
 async function processEmail(chatId: number, telegramId: number, email: string, firstName: string) {
   const emailLower = email.toLowerCase().trim();
   
-  // Verificar se email existe no LegacyPay
+  if (!emailLower.includes("@")) {
+    await sendMessage(chatId, "⚠️ Email invalido. Digite um email valido:", { 
+      reply_markup: { inline_keyboard: [[{ text: "❌ Cancelar", callback_data: "cancel" }]] } 
+    });
+    return;
+  }
+  
   const profile = await sql`
     SELECT id, name, email FROM profiles 
     WHERE LOWER(email) = ${emailLower} AND is_active = true
   `;
   
   if (profile.length === 0) {
-    await sendMessage(chatId, "Email nao encontrado. Verifique se digitou corretamente ou crie uma conta em nosso site.");
+    await sendMessage(chatId, `
+⚠️ <b>Email nao encontrado</b>
+
+Verifique se digitou corretamente ou crie uma conta:
+    `, { 
+      reply_markup: { 
+        inline_keyboard: [
+          [{ text: "📝 Criar Conta", url: `${SITE_URL}/register` }],
+          [{ text: "🔄 Tentar Novamente", callback_data: "retry_email" }],
+        ] 
+      } 
+    });
     return;
   }
   
-  // Verificar se ja esta vinculado a outro Telegram
   const existing = await sql`
     SELECT * FROM telegram_users WHERE user_id = ${profile[0].id}
   `;
   
   if (existing.length > 0 && existing[0].telegram_id !== telegramId) {
-    await sendMessage(chatId, "Esta conta ja esta vinculada a outro Telegram. Use /desvincular no outro dispositivo primeiro.");
+    await sendMessage(chatId, `
+⚠️ <b>Conta ja vinculada</b>
+
+Esta conta ja esta vinculada a outro Telegram.
+Use /desvincular no outro dispositivo primeiro.
+    `, { reply_markup: BACK_MENU_KEYBOARD });
     return;
   }
   
-  // Gerar codigo de verificacao
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   
-  // Salvar codigo temporariamente
   if (existing.length > 0) {
     await sql`
       UPDATE telegram_users 
@@ -498,22 +825,26 @@ async function processEmail(chatId: number, telegramId: number, email: string, f
     `;
   }
   
-  // TODO: Enviar email com codigo (por enquanto mostra no chat para teste)
-  // Em producao, usar nodemailer ou similar
   console.log(`[Telegram] Codigo de verificacao para ${email}: ${code}`);
   
   setState(telegramId, "awaiting_verification_code", { email: emailLower, userId: profile[0].id });
   
   await sendMessage(chatId, `
-Enviamos um codigo de verificacao para <b>${emailLower}</b>.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📧 <b>VERIFICACAO DE EMAIL</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Enviamos um codigo de verificacao para:
+<b>${emailLower}</b>
+
+⏱️ O codigo expira em 10 minutos.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 <b>Digite o codigo de 6 digitos:</b>
-
-(O codigo expira em 10 minutos)
-  `);
+  `, { reply_markup: { inline_keyboard: [[{ text: "❌ Cancelar", callback_data: "cancel" }]] } });
 }
 
-// Processar codigo de verificacao
 async function processVerificationCode(chatId: number, telegramId: number, code: string) {
   const state = getState(telegramId);
   if (!state) return;
@@ -526,12 +857,15 @@ async function processVerificationCode(chatId: number, telegramId: number, code:
   `;
   
   if (result.length === 0) {
-    await sendMessage(chatId, "Codigo invalido ou expirado. Use /start para tentar novamente.");
+    await sendMessage(chatId, `
+❌ <b>Codigo invalido ou expirado</b>
+
+Use /start para tentar novamente.
+    `, { reply_markup: BACK_MENU_KEYBOARD });
     clearState(telegramId);
     return;
   }
   
-  // Ativar vinculo
   await sql`
     UPDATE telegram_users 
     SET is_active = true, verification_code = NULL, verification_expires_at = NULL, telegram_id = ${telegramId}
@@ -541,33 +875,43 @@ async function processVerificationCode(chatId: number, telegramId: number, code:
   clearState(telegramId);
   
   await sendMessage(chatId, `
-✅ <b>Conta vinculada com sucesso!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ <b>CONTA VINCULADA!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Agora voce pode usar todos os comandos:
-/saldo - Ver seu saldo
-/depositar - Gerar PIX
-/sacar - Solicitar saque
-/extrato - Ver transacoes
+Parabens! Sua conta foi vinculada com sucesso.
 
-Boas operacoes! 🚀
-  `);
+Agora voce pode usar todos os recursos do ${BOT_NAME} diretamente pelo Telegram!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Clique em um botao abaixo para comecar:
+  `, { reply_markup: MAIN_MENU_KEYBOARD });
 }
 
-// Processar criacao de PIN
 async function processCreatePin(chatId: number, telegramId: number, pin: string) {
   if (!/^\d{4}$/.test(pin)) {
-    await sendMessage(chatId, "PIN invalido. Digite exatamente 4 numeros.");
+    await sendMessage(chatId, "⚠️ PIN invalido. Digite exatamente 4 numeros:", { 
+      reply_markup: { inline_keyboard: [[{ text: "❌ Cancelar", callback_data: "cancel" }]] } 
+    });
     return;
   }
   
   setState(telegramId, "confirm_pin", { pin });
-  await sendMessage(chatId, "Confirme seu PIN (digite novamente):");
+  await sendMessage(chatId, `
+🔐 <b>CONFIRMAR PIN</b>
+
+Digite novamente seu PIN para confirmar:
+  `, { reply_markup: { inline_keyboard: [[{ text: "❌ Cancelar", callback_data: "cancel" }]] } });
 }
 
-// Confirmar PIN
 async function processConfirmPin(chatId: number, telegramId: number, pin: string, data: Record<string, unknown>) {
   if (pin !== data.pin) {
-    await sendMessage(chatId, "PINs nao conferem. Use /sacar para tentar novamente.");
+    await sendMessage(chatId, `
+❌ <b>PINs nao conferem</b>
+
+Use /sacar para tentar novamente.
+    `, { reply_markup: BACK_MENU_KEYBOARD });
     clearState(telegramId);
     return;
   }
@@ -581,13 +925,17 @@ async function processConfirmPin(chatId: number, telegramId: number, pin: string
   clearState(telegramId);
   
   await sendMessage(chatId, `
-✅ PIN criado com sucesso!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ <b>PIN CRIADO COM SUCESSO!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Agora voce pode realizar saques. Use /sacar para continuar.
-  `);
+Seu PIN de seguranca foi configurado.
+Agora voce pode realizar saques.
+
+Use /sacar para continuar.
+  `, { reply_markup: MAIN_MENU_KEYBOARD });
 }
 
-// Processar PIN para saque
 async function processWithdrawalPin(chatId: number, telegramId: number, pin: string, data: Record<string, unknown>) {
   const user = await getLinkedUser(telegramId);
   if (!user) return;
@@ -595,7 +943,9 @@ async function processWithdrawalPin(chatId: number, telegramId: number, pin: str
   const isValid = await bcrypt.compare(pin, user.pin_hash);
   
   if (!isValid) {
-    await sendMessage(chatId, "PIN incorreto. Tente novamente.");
+    await sendMessage(chatId, "❌ PIN incorreto. Tente novamente:", { 
+      reply_markup: { inline_keyboard: [[{ text: "❌ Cancelar", callback_data: "cancel" }]] } 
+    });
     return;
   }
   
@@ -606,74 +956,157 @@ async function processWithdrawalPin(chatId: number, telegramId: number, pin: str
   const balance = Number(user.balance);
   
   if (amount > balance) {
-    await sendMessage(chatId, `Saldo insuficiente. Seu saldo e R$ ${balance.toFixed(2)}`);
+    await sendMessage(chatId, `
+⚠️ <b>Saldo insuficiente</b>
+
+Seu saldo: R$ ${formatCurrency(balance)}
+Valor solicitado: R$ ${formatCurrency(amount)}
+    `, { reply_markup: BACK_MENU_KEYBOARD });
     return;
   }
   
-  // Buscar taxas
   const fees = await getSystemFeesForUser(user.user_id as string);
   const fee = fees.withdrawalFeeIsPercentage 
     ? amount * (fees.withdrawalFee / 100) 
     : fees.withdrawalFee;
   const netAmount = amount - fee;
   
-  // Criar saque
   await sql`
     INSERT INTO withdrawals (user_id, amount, fee, net_amount, pix_key, status, description)
     VALUES (${user.user_id as string}, ${amount}, ${fee}, ${netAmount}, ${pixKey}, 'pending', 'Saque via Telegram')
   `;
   
-  // Debitar saldo
   await sql`
     UPDATE profiles SET balance = balance - ${amount} WHERE id = ${user.user_id as string}
   `;
   
   await sendMessage(chatId, `
-✅ <b>Saque Solicitado!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ <b>SAQUE SOLICITADO!</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>Valor:</b> R$ ${amount.toFixed(2)}
-<b>Taxa:</b> R$ ${fee.toFixed(2)}
-<b>Voce recebe:</b> R$ ${netAmount.toFixed(2)}
-<b>Chave PIX:</b> ${pixKey}
+💵 <b>Valor:</b> R$ ${formatCurrency(amount)}
+💸 <b>Taxa:</b> R$ ${formatCurrency(fee)}
+💰 <b>Voce recebe:</b> R$ ${formatCurrency(netAmount)}
 
-⏱️ Previsao: 5-30 minutos
-Voce sera notificado quando for processado.
-  `);
+🔑 <b>Chave PIX:</b>
+<code>${pixKey}</code>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⏱️ <b>Previsao:</b> 5-30 minutos
+
+✅ Voce sera notificado quando o saque for processado!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  `, { reply_markup: MAIN_MENU_KEYBOARD });
 }
 
-// Processar callbacks (botoes)
-export async function handleCallback(callbackId: string, chatId: number, messageId: number, telegramId: number, data: string) {
+// ═══════════════════════════════════════════════════════════════
+// PROCESSAR CALLBACKS (BOTOES)
+// ═══════════════════════════════════════════════════════════════
+
+export async function handleCallback(callbackId: string, chatId: number, messageId: number, telegramId: number, data: string, firstName: string) {
   await answerCallbackQuery(callbackId);
   
   const user = await getLinkedUser(telegramId);
   
+  // Cancelar operacao
   if (data === "cancel") {
     clearState(telegramId);
-    await editMessageText(chatId, messageId, "Operacao cancelada.");
+    await editMessageText(chatId, messageId, "❌ Operacao cancelada.\n\nUse /start para voltar ao menu.");
     return;
   }
   
+  // Voltar ao menu
+  if (data === "back_menu") {
+    clearState(telegramId);
+    await handleStart(chatId, telegramId, firstName);
+    return;
+  }
+  
+  // Retry email
+  if (data === "retry_email") {
+    setState(telegramId, "awaiting_email");
+    await sendMessage(chatId, "<b>Digite o email da sua conta:</b>");
+    return;
+  }
+  
+  // Confirmar desvinculacao
   if (data === "confirm_unlink") {
     await sql`UPDATE telegram_users SET is_active = false WHERE telegram_id = ${telegramId}`;
     clearState(telegramId);
-    await editMessageText(chatId, messageId, "Conta desvinculada com sucesso. Use /start para vincular novamente.");
+    await editMessageText(chatId, messageId, `
+✅ <b>Conta desvinculada</b>
+
+Sua conta foi desvinculada com sucesso.
+Use /start para vincular novamente.
+    `);
     return;
   }
   
+  // Menu actions
+  if (data === "menu_saldo") {
+    return handleSaldo(chatId, telegramId);
+  }
+  if (data === "menu_depositar") {
+    return handleDepositar(chatId, telegramId);
+  }
+  if (data === "menu_sacar") {
+    return handleSacar(chatId, telegramId);
+  }
+  if (data === "menu_extrato") {
+    return handleExtrato(chatId, telegramId);
+  }
+  if (data === "menu_taxas") {
+    return handleTaxas(chatId, telegramId);
+  }
+  if (data === "menu_ajuda") {
+    return handleAjuda(chatId);
+  }
+  
+  // Deposito com valor predefinido
   if (data.startsWith("deposit_")) {
-    const amount = parseInt(data.replace("deposit_", ""));
-    if (user) {
-      await generatePixDeposit(chatId, telegramId, user, amount);
+    if (!user) {
+      await sendMessage(chatId, "⚠️ Vincule sua conta primeiro. Use /start");
+      return;
     }
+    if (data === "deposit_custom") {
+      setState(telegramId, "awaiting_deposit_amount");
+      await sendMessage(chatId, `
+💵 <b>VALOR PERSONALIZADO</b>
+
+Digite o valor que deseja depositar (minimo R$ 10,00):
+      `, { reply_markup: { inline_keyboard: [[{ text: "❌ Cancelar", callback_data: "cancel" }]] } });
+      return;
+    }
+    const amount = parseInt(data.replace("deposit_", ""));
+    await generatePixDeposit(chatId, telegramId, user, amount);
     return;
   }
   
+  // Saque com valor predefinido
   if (data.startsWith("withdraw_")) {
-    if (!user) return;
+    if (!user) {
+      await sendMessage(chatId, "⚠️ Vincule sua conta primeiro. Use /start");
+      return;
+    }
     
     const balance = Number(user.balance);
-    let amount: number;
     
+    if (data === "withdraw_custom") {
+      setState(telegramId, "awaiting_withdrawal_amount");
+      await sendMessage(chatId, `
+💸 <b>VALOR PERSONALIZADO</b>
+
+Saldo disponivel: R$ ${formatCurrency(balance)}
+
+Digite o valor que deseja sacar (minimo R$ 10,00):
+      `, { reply_markup: { inline_keyboard: [[{ text: "❌ Cancelar", callback_data: "cancel" }]] } });
+      return;
+    }
+    
+    let amount: number;
     if (data === "withdraw_all") {
       amount = balance;
     } else {
@@ -681,17 +1114,37 @@ export async function handleCallback(callbackId: string, chatId: number, message
     }
     
     if (amount > balance) {
-      await sendMessage(chatId, `Saldo insuficiente. Seu saldo e R$ ${balance.toFixed(2)}`);
+      await sendMessage(chatId, `
+⚠️ <b>Saldo insuficiente</b>
+
+Seu saldo: R$ ${formatCurrency(balance)}
+      `, { reply_markup: BACK_MENU_KEYBOARD });
+      return;
+    }
+    
+    if (amount < 10) {
+      await sendMessage(chatId, "⚠️ Valor minimo para saque: R$ 10,00", { reply_markup: BACK_MENU_KEYBOARD });
       return;
     }
     
     if (!user.pin_hash) {
       setState(telegramId, "create_pin");
-      await sendMessage(chatId, "Para realizar saques, voce precisa criar um PIN de 4 digitos. Digite seu novo PIN:");
+      await sendMessage(chatId, `
+🔐 <b>CRIAR PIN</b>
+
+Para realizar saques, crie um PIN de 4 digitos:
+      `, { reply_markup: { inline_keyboard: [[{ text: "❌ Cancelar", callback_data: "cancel" }]] } });
       return;
     }
     
     setState(telegramId, "awaiting_pix_key", { amount });
-    await sendMessage(chatId, "Digite sua chave PIX:");
+    await sendMessage(chatId, `
+🔑 <b>CHAVE PIX</b>
+
+Valor do saque: R$ ${formatCurrency(amount)}
+
+<b>Digite sua chave PIX:</b>
+    `, { reply_markup: { inline_keyboard: [[{ text: "❌ Cancelar", callback_data: "cancel" }]] } });
+    return;
   }
 }
