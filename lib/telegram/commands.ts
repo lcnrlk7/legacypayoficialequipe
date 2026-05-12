@@ -1,8 +1,14 @@
 import { neon } from "@neondatabase/serverless";
-import { sendMessage, sendPhoto, editMessageText, answerCallbackQuery } from "./bot";
+import { sendMessage, sendPhoto, editMessageText, answerCallbackQuery, checkChannelMembership, deleteMessage } from "./bot";
 import { logTelegramAction } from "./logs";
 import { notifyDeposit, notifyWithdrawal } from "./notify";
 import { MedusaPayments } from "@/lib/acquirers/medusa";
+
+// IDs dos canais obrigatorios
+const REQUIRED_CHANNELS = [
+  { id: "@legacypaybot", name: "Vendas", link: "https://t.me/legacypaybot" },
+  { id: "@legacypayavisos", name: "Avisos", link: "https://t.me/legacypayavisos" },
+];
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -27,6 +33,53 @@ const MIN_WITHDRAWAL = 20;
 
 // Estado temporario
 const userStates: Map<number, { step: string; data?: Record<string, unknown> }> = new Map();
+
+// ══════════════════════════════════════════════════════════════════════════════
+// VERIFICACAO DE CANAIS OBRIGATORIOS
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function checkRequiredChannels(userId: number): Promise<{ isOk: boolean; missing: typeof REQUIRED_CHANNELS }> {
+  const missing: typeof REQUIRED_CHANNELS = [];
+  
+  for (const channel of REQUIRED_CHANNELS) {
+    const isMember = await checkChannelMembership(channel.id, userId);
+    if (!isMember) {
+      missing.push(channel);
+    }
+  }
+  
+  return {
+    isOk: missing.length === 0,
+    missing,
+  };
+}
+
+function msgEntrarCanais(missing: typeof REQUIRED_CHANNELS) {
+  const canaisList = missing.map(c => `   - <a href="${c.link}">${c.name}</a>`).join("\n");
+  
+  return `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   ⚠️ <b>ENTRE NOS CANAIS</b> ⚠️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Para usar o bot, voce precisa
+entrar nos nossos canais:
+
+${canaisList}
+
+Apos entrar, clique em
+<b>Verificar</b> abaixo.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+}
+
+const BOTOES_CANAIS = (missing: typeof REQUIRED_CHANNELS) => ({
+  inline_keyboard: [
+    ...missing.map(c => [{ text: `📢 Entrar: ${c.name}`, url: c.link }]),
+    [{ text: "✅ Verificar", callback_data: "verificar_canais" }],
+  ],
+});
 
 // ══════════════════════════════════════════════════════════════════════════════
 // FUNCOES DE BANCO DE DADOS
@@ -414,7 +467,7 @@ function msgAjuda(): string {
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
          📞 <b>SUPORTE 24H</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━���
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━�����
 
    ����� Discord: ${DISCORD_LINK}
    📱 WhatsApp: ${WHATSAPP}
@@ -472,6 +525,14 @@ export async function handleMessage(
   firstName: string,
   username?: string
 ) {
+  // Verificar se usuario esta nos canais obrigatorios
+  const { isOk, missing } = await checkRequiredChannels(telegramId);
+  
+  if (!isOk) {
+    await sendMessage(chatId, msgEntrarCanais(missing), { reply_markup: BOTOES_CANAIS(missing) });
+    return;
+  }
+  
   // Criar/buscar usuario do bot
   const user = await getOrCreateBotUser(telegramId, firstName, username);
   const balance = Number(user.balance);
@@ -977,6 +1038,23 @@ export async function handleCallback(
     return;
   }
   
+  // Verificar canais obrigatorios
+  if (data === "verificar_canais") {
+    const { isOk, missing } = await checkRequiredChannels(telegramId);
+    
+    if (isOk) {
+      // Usuario entrou nos canais, mostrar menu
+      try {
+        await deleteMessage(chatId, messageId);
+      } catch {}
+      await sendMessage(chatId, msgBoasVindas(firstName || "Usuario", balance), { reply_markup: MENU_PRINCIPAL });
+    } else {
+      // Ainda faltam canais
+      await editMessageText(chatId, messageId, msgEntrarCanais(missing), { reply_markup: BOTOES_CANAIS(missing) });
+    }
+    return;
+  }
+  
   // Copiar codigo PIX
   if (data === "copy_pix") {
     const state = userStates.get(telegramId);
@@ -990,11 +1068,18 @@ Toque na mensagem acima para copiar o codigo PIX.`, { reply_markup: VOLTAR_MENU 
     return;
   }
   
+  // Menu - envia nova mensagem (para funcionar em fotos)
+  if (data === "menu") {
+    userStates.delete(telegramId);
+    try {
+      await deleteMessage(chatId, messageId);
+    } catch {}
+    await sendMessage(chatId, msgBoasVindas(firstName || "Usuario", balance), { reply_markup: MENU_PRINCIPAL });
+    return;
+  }
+  
   // Outros callbacks
   switch (data) {
-    case "menu":
-      await editMessageText(chatId, messageId, msgBoasVindas(firstName || "Usuario", balance), { reply_markup: MENU_PRINCIPAL });
-      break;
       
     case "saldo":
       await editMessageText(chatId, messageId, msgSaldo(firstName || "Usuario", balance, Number(user.total_deposited), Number(user.total_withdrawn)), { reply_markup: VOLTAR_MENU });

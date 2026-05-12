@@ -130,6 +130,45 @@ export async function setWebhook(url: string) {
   return response.json();
 }
 
+// Verificar se usuario e membro de um canal
+export async function checkChannelMembership(
+  chatId: string,
+  userId: number
+): Promise<boolean> {
+  try {
+    const response = await fetch(`${TELEGRAM_API}/getChatMember`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        user_id: userId,
+      }),
+    });
+    const data = await response.json();
+    
+    if (!data.ok) return false;
+    
+    // Verificar status: member, administrator, creator sao validos
+    const validStatuses = ["member", "administrator", "creator"];
+    return validStatuses.includes(data.result?.status);
+  } catch {
+    return false;
+  }
+}
+
+// Deletar mensagem
+export async function deleteMessage(chatId: number | string, messageId: number) {
+  const response = await fetch(`${TELEGRAM_API}/deleteMessage`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: chatId,
+      message_id: messageId,
+    }),
+  });
+  return response.json();
+}
+
 // Funcoes de notificacao para canais
 export async function notifySalesChannel(data: {
   type: "deposit" | "withdrawal";
