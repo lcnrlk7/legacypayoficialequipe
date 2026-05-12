@@ -416,7 +416,7 @@ function msgAjuda(): string {
          📞 <b>SUPORTE 24H</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   💬 Discord: ${DISCORD_LINK}
+   ��� Discord: ${DISCORD_LINK}
    📱 WhatsApp: ${WHATSAPP}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -619,16 +619,19 @@ async function processDeposit(chatId: number, telegramId: number, amount: number
 `);
   
   try {
-    // Buscar Medusa ativa
+    // Buscar Medusa ativa (por nome)
     const acquirer = await sql`
       SELECT * FROM acquirers 
-      WHERE provider = 'medusa' AND is_active = true
+      WHERE name ILIKE '%medusa%' AND is_active = true
+      ORDER BY priority ASC
       LIMIT 1
     `;
     
     if (!acquirer[0]) {
       throw new Error("Gateway indisponivel");
     }
+    
+    console.log("[Bot] Usando acquirer:", acquirer[0].name);
     
     const medusa = new MedusaPayments({
       secretKey: acquirer[0].api_key,
@@ -696,17 +699,21 @@ async function processDeposit(chatId: number, telegramId: number, amount: number
     
     await sendMessage(chatId, `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       ❌ <b>ERRO</b>
+       ❌ <b>GATEWAY INDISPONIVEL</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   Erro ao gerar PIX.
-   Tente novamente em instantes.
+   O gateway de pagamento esta
+   temporariamente indisponivel.
+
+   Por favor, tente novamente em
+   alguns minutos ou entre em
+   contato com o suporte.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      📞 <b>SUPORTE</b>
+      📞 <b>SUPORTE 24H</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   💬 ${DISCORD_LINK}
-   📱 ${WHATSAPP}
+   💬 Discord: ${DISCORD_LINK}
+   📱 WhatsApp: ${WHATSAPP}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `, { reply_markup: VOLTAR_MENU });
   }
