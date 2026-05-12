@@ -85,6 +85,7 @@ const menuCategories = [
       { href: "/dashboard/fees", icon: Percent, label: "Taxas" },
       { href: "/dashboard/affiliates", icon: Users, label: "Afiliados" },
       { href: "/dashboard/telegram", icon: Bot, label: "Bot Telegram" },
+      { href: "/dashboard/deliveries", icon: Truck, label: "Minhas Entregas" },
     ],
   },
   {
