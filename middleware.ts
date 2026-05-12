@@ -73,6 +73,11 @@ export async function middleware(request: NextRequest) {
     return response
   }
   
+  // Ignorar webhook do Telegram (nao precisa de auth)
+  if (pathname.startsWith('/api/telegram')) {
+    return NextResponse.next()
+  }
+  
   // Verificar se IP esta bloqueado
   const clientIp = getClientIp(request)
   const blocked = await isIpBlocked(clientIp)
