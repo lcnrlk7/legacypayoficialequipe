@@ -63,7 +63,10 @@ export async function sendMessage(
 export async function sendPhoto(
   chatId: number | string,
   photo: string,
-  caption?: string
+  caption?: string,
+  options?: {
+    reply_markup?: object;
+  }
 ) {
   const response = await fetch(`${TELEGRAM_API}/sendPhoto`, {
     method: "POST",
@@ -73,6 +76,7 @@ export async function sendPhoto(
       photo,
       caption,
       parse_mode: "HTML",
+      reply_markup: options?.reply_markup,
     }),
   });
   return response.json();

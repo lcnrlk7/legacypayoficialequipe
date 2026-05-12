@@ -1,5 +1,5 @@
 import { neon } from "@neondatabase/serverless";
-import { sendMessage, editMessageText, answerCallbackQuery } from "./bot";
+import { sendMessage, sendPhoto, editMessageText, answerCallbackQuery } from "./bot";
 import { logTelegramAction } from "./logs";
 import { notifyDeposit, notifyWithdrawal } from "./notify";
 import { MedusaPayments } from "@/lib/acquirers/medusa";
@@ -416,7 +416,7 @@ function msgAjuda(): string {
          📞 <b>SUPORTE 24H</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   ���� Discord: ${DISCORD_LINK}
+   ����� Discord: ${DISCORD_LINK}
    📱 WhatsApp: ${WHATSAPP}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -678,28 +678,33 @@ async function processDeposit(chatId: number, telegramId: number, amount: number
       String(txId)
     );
     
-    await sendMessage(chatId, `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       📥 <b>PIX GERADO!</b> 📥
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    // Salvar codigo para callback de copiar
+    userStates.set(telegramId, { step: "pix_generated", data: { pixCode: qrCode } });
+    
+    // Gerar URL do QR Code via API
+    const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrCode)}`;
+    
+    // Enviar QR Code como imagem
+    await sendPhoto(
+      chatId,
+      qrImageUrl,
+      `📥 <b>PIX GERADO!</b>
 
-   💵 Valor: <b>R$ ${formatCurrency(amount)}</b>
-   📊 Taxa (${TELEGRAM_PIX_FEE_PERCENT}%): R$ ${formatCurrency(fee)}
-   ✅ Voce recebe: <b>R$ ${formatCurrency(netAmount)}</b>
+💵 Valor: <b>R$ ${formatCurrency(amount)}</b>
+📊 Taxa (${TELEGRAM_PIX_FEE_PERCENT}%): R$ ${formatCurrency(fee)}
+✅ Voce recebe: <b>R$ ${formatCurrency(netAmount)}</b>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      📋 <b>COPIA E COLA</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-<code>${qrCode}</code>
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-   ⏰ Valido por 30 minutos
-   ✅ Credito automatico
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`, { reply_markup: VOLTAR_MENU });
+⏰ Valido por 30 minutos
+✅ Credito automatico`,
+      {
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: "📋 Copiar Codigo PIX", callback_data: "copy_pix" }],
+            [{ text: "🔙 Voltar ao Menu", callback_data: "menu" }]
+          ]
+        }
+      }
+    );
     
     await logTelegramAction(telegramId, null, "DEPOSIT_GENERATED", "depositar", { amount, txId });
     
@@ -868,7 +873,7 @@ export async function handleCallback(
    Digite o valor do deposito:
    (minimo R$ ${formatCurrency(MIN_DEPOSIT)})
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━���━━━━━━━━
 `, { reply_markup: CANCELAR });
       return;
     }
@@ -923,6 +928,19 @@ export async function handleCallback(
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `, { reply_markup: CANCELAR });
+    return;
+  }
+  
+  // Copiar codigo PIX
+  if (data === "copy_pix") {
+    const state = userStates.get(telegramId);
+    if (state?.data?.pixCode) {
+      await sendMessage(chatId, `<code>${state.data.pixCode}</code>
+
+Toque na mensagem acima para copiar o codigo PIX.`, { reply_markup: VOLTAR_MENU });
+    } else {
+      await sendMessage(chatId, "Codigo PIX expirado. Gere um novo deposito.", { reply_markup: VOLTAR_MENU });
+    }
     return;
   }
   
