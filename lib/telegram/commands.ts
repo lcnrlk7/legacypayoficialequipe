@@ -4,6 +4,7 @@ import { sendMessage, sendPhoto, editMessageText, answerCallbackQuery } from "./
 import { getSystemFeesForUser } from "@/lib/acquirers";
 import { getMedusaPayments } from "@/lib/acquirers/medusa";
 import { logTelegramAction } from "./logs";
+import { notifyNewUserLinked } from "./notify";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -900,6 +901,10 @@ Use /start para tentar novamente.
     return;
   }
   
+  // Buscar dados do usuario para notificacao
+  const userProfile = await sql`SELECT email, name FROM profiles WHERE id = ${state.data.userId as string}`;
+  const userTelegram = await sql`SELECT telegram_username FROM telegram_users WHERE user_id = ${state.data.userId as string}`;
+  
   await sql`
     UPDATE telegram_users 
     SET is_active = true, verification_code = NULL, verification_expires_at = NULL, telegram_id = ${telegramId}
@@ -907,6 +912,14 @@ Use /start para tentar novamente.
   `;
   
   clearState(telegramId);
+  
+  // Notificar no canal de vendas que um novo usuario foi vinculado
+  if (userProfile[0]) {
+    await notifyNewUserLinked(userProfile[0].email, userTelegram[0]?.telegram_username);
+  }
+  
+  // Log da acao
+  await logTelegramAction(telegramId, state.data.userId as string, "USER_LINKED", "/start", { email: userProfile[0]?.email });
   
   await sendMessage(chatId, `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -917,6 +930,11 @@ Parabens! Sua conta foi vinculada com sucesso.
 
 Agora voce pode usar todos os recursos do ${BOT_NAME} diretamente pelo Telegram!
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📢 <b>SIGA NOSSOS CANAIS:</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Vendas: ${SALES_CHANNEL}
+📣 Avisos: ${ANNOUNCEMENTS_CHANNEL}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Clique em um botao abaixo para comecar:

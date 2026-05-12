@@ -2,6 +2,11 @@ import { neon } from "@neondatabase/serverless";
 
 const sql = neon(process.env.DATABASE_URL!);
 
+// Constantes de links
+const SITE_URL = "https://www.legacypay.site";
+const DISCORD_LINK = "https://discord.gg/ea32hgRSeM";
+const WHATSAPP_LINK = "https://wa.me/5534999353187";
+
 // Enviar mensagem para um chat/canal
 async function sendToChannel(chatId: string, message: string) {
   const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -52,13 +57,21 @@ export async function notifyDeposit(userId: string, amount: number, fee: number)
   const now = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
   
   const message = `
-<b>DEPOSITO CONFIRMADO</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 <b>DEPOSITO CONFIRMADO</b> 💰
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>Usuario:</b> ${maskedEmail}
-<b>Valor:</b> R$ ${amount.toFixed(2)}
-<b>Taxa:</b> R$ ${fee.toFixed(2)}
-<b>Creditado:</b> R$ ${netAmount.toFixed(2)}
-<b>Data:</b> ${now}
+👤 <b>Usuario:</b> ${maskedEmail}
+
+💵 <b>Valor:</b> R$ ${amount.toFixed(2)}
+📊 <b>Taxa:</b> R$ ${fee.toFixed(2)}
+✅ <b>Creditado:</b> R$ ${netAmount.toFixed(2)}
+
+🕐 <b>Data:</b> ${now}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ <b>LegacyPay</b> - Pagamentos Rapidos
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
   
   await sendToChannel(settings.sales_channel_id, message);
@@ -83,16 +96,36 @@ export async function notifyWithdrawal(userId: string, amount: number, fee: numb
   const netAmount = amount - fee;
   const now = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
   
-  const statusEmoji = status === "completed" ? "APROVADO" : status === "pending" ? "PROCESSANDO" : "RECUSADO";
+  let statusText = "";
+  let emoji = "";
+  
+  if (status === "completed") {
+    statusText = "SAQUE APROVADO";
+    emoji = "💸";
+  } else if (status === "pending") {
+    statusText = "SAQUE EM PROCESSAMENTO";
+    emoji = "⏳";
+  } else {
+    statusText = "SAQUE RECUSADO";
+    emoji = "❌";
+  }
   
   const message = `
-<b>SAQUE ${statusEmoji}</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${emoji} <b>${statusText}</b> ${emoji}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>Usuario:</b> ${maskedEmail}
-<b>Valor:</b> R$ ${amount.toFixed(2)}
-<b>Taxa:</b> R$ ${fee.toFixed(2)}
-<b>Liquido:</b> R$ ${netAmount.toFixed(2)}
-<b>Data:</b> ${now}
+👤 <b>Usuario:</b> ${maskedEmail}
+
+💵 <b>Valor:</b> R$ ${amount.toFixed(2)}
+📊 <b>Taxa:</b> R$ ${fee.toFixed(2)}
+✅ <b>Liquido:</b> R$ ${netAmount.toFixed(2)}
+
+🕐 <b>Data:</b> ${now}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ <b>LegacyPay</b> - Pagamentos Rapidos
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
   
   await sendToChannel(settings.sales_channel_id, message);
@@ -112,22 +145,90 @@ export async function notifyUserTransaction(userId: string, type: "deposit" | "w
   if (telegramUser.length === 0) return;
   
   const telegramId = telegramUser[0].telegram_id;
+  const now = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
   
   let message = "";
   
   if (type === "deposit") {
     if (status === "completed") {
-      message = `<b>Deposito confirmado!</b>\n\nValor: R$ ${amount.toFixed(2)}\n\nSeu saldo foi atualizado.`;
+      message = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💰 <b>DEPOSITO CONFIRMADO!</b> 💰
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ Seu deposito foi creditado!
+
+💵 <b>Valor:</b> R$ ${amount.toFixed(2)}
+🕐 <b>Data:</b> ${now}
+
+📱 Acesse seu painel:
+${SITE_URL}/dashboard
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
     } else if (status === "pending") {
-      message = `<b>Deposito pendente</b>\n\nValor: R$ ${amount.toFixed(2)}\n\nAguardando confirmacao do pagamento.`;
+      message = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏳ <b>DEPOSITO PENDENTE</b> ⏳
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⏰ Aguardando confirmacao do pagamento.
+
+💵 <b>Valor:</b> R$ ${amount.toFixed(2)}
+
+Voce sera notificado assim que for confirmado.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
     }
   } else {
     if (status === "completed") {
-      message = `<b>Saque processado!</b>\n\nValor: R$ ${amount.toFixed(2)}\n\nO PIX foi enviado para sua conta.`;
+      message = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💸 <b>SAQUE ENVIADO!</b> 💸
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ O PIX foi enviado para sua conta!
+
+💵 <b>Valor:</b> R$ ${amount.toFixed(2)}
+🕐 <b>Data:</b> ${now}
+
+Confira sua conta bancaria.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
     } else if (status === "pending") {
-      message = `<b>Saque em processamento</b>\n\nValor: R$ ${amount.toFixed(2)}\n\nVoce sera notificado quando for concluido.`;
+      message = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏳ <b>SAQUE EM PROCESSAMENTO</b> ⏳
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⏰ Seu saque esta sendo processado.
+
+💵 <b>Valor:</b> R$ ${amount.toFixed(2)}
+
+Voce sera notificado quando for enviado.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
     } else if (status === "rejected") {
-      message = `<b>Saque recusado</b>\n\nValor: R$ ${amount.toFixed(2)}\n\nEntre em contato com o suporte.`;
+      message = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+❌ <b>SAQUE RECUSADO</b> ❌
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ Seu saque foi recusado.
+
+💵 <b>Valor:</b> R$ ${amount.toFixed(2)}
+
+O valor foi devolvido ao seu saldo.
+
+📞 <b>Suporte:</b>
+💬 Discord: ${DISCORD_LINK}
+📱 WhatsApp: (34) 99935-3187
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
     }
   }
   
@@ -144,4 +245,31 @@ export async function sendAnnouncement(message: string) {
   }
   
   return await sendToChannel(settings.announcements_channel_id, message);
+}
+
+// Notificar novo usuario vinculado
+export async function notifyNewUserLinked(email: string, telegramUsername: string | null) {
+  const settings = await getSettings();
+  if (!settings?.bot_enabled || !settings?.sales_channel_id) {
+    return;
+  }
+  
+  const emailParts = email.split("@");
+  const maskedEmail = emailParts[0].substring(0, 3) + "***@" + emailParts[1];
+  const now = new Date().toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" });
+  
+  const message = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🆕 <b>NOVO USUARIO TELEGRAM</b> 🆕
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+👤 <b>Email:</b> ${maskedEmail}
+📱 <b>Telegram:</b> ${telegramUsername ? "@" + telegramUsername : "Privado"}
+
+🕐 <b>Data:</b> ${now}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+  
+  await sendToChannel(settings.sales_channel_id, message);
 }
