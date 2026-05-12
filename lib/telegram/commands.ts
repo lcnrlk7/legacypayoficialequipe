@@ -414,7 +414,7 @@ function msgAjuda(): string {
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
          📞 <b>SUPORTE 24H</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━���
 
    ����� Discord: ${DISCORD_LINK}
    📱 WhatsApp: ${WHATSAPP}
@@ -757,17 +757,54 @@ async function processWithdrawal(chatId: number, telegramId: number, amount: num
        ⏳ <b>PROCESSANDO...</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   Aguarde...
+   Aguarde enquanto processamos
+   seu saque...
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `);
   
   try {
-    // Debitar saldo
+    // Buscar Medusa Black
+    const acquirer = await sql`
+      SELECT * FROM acquirers 
+      WHERE name ILIKE '%medusa%black%' AND is_active = true
+      LIMIT 1
+    `;
+    
+    if (!acquirer[0]) {
+      const fallback = await sql`
+        SELECT * FROM acquirers 
+        WHERE name ILIKE '%medusa%' AND is_active = true
+        LIMIT 1
+      `;
+      if (!fallback[0]) {
+        throw new Error("Gateway indisponivel");
+      }
+      acquirer[0] = fallback[0];
+    }
+    
+    // Debitar saldo primeiro
     await updateBotUserBalance(telegramId, amount, "subtract");
     
     // Salvar chave PIX
     await saveBotUserPixKey(telegramId, pixKey);
+    
+    // CPF fixo para saques do bot
+    const CPF_FIXO_BOT = "63909654002";
+    
+    // Solicitar saque via Medusa
+    const medusa = new MedusaPayments({
+      secretKey: acquirer[0].api_key,
+      licenseKey: acquirer[0].api_secret,
+    });
+    
+    const withdrawalResponse = await medusa.requestSimpleWithdrawal(
+      netAmount * 100, // Em centavos
+      pixKey,
+      user.first_name as string || "Cliente",
+      CPF_FIXO_BOT,
+      `${SITE_URL}/api/webhooks/telegram-pix`
+    );
     
     // Criar transacao
     await createBotTransaction(
@@ -779,7 +816,8 @@ async function processWithdrawal(chatId: number, telegramId: number, amount: num
       netAmount,
       "completed",
       undefined,
-      pixKey
+      pixKey,
+      withdrawalResponse.id
     );
     
     // Notificar no canal
@@ -834,6 +872,14 @@ async function processWithdrawal(chatId: number, telegramId: number, amount: num
    Erro ao processar saque.
    Seu saldo foi estornado.
 
+   Por favor, tente novamente
+   em alguns instantes.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      📞 <b>SUPORTE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   💬 ${DISCORD_LINK}
+   📱 ${WHATSAPP}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `, { reply_markup: VOLTAR_MENU });
   }
