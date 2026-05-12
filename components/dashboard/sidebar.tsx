@@ -36,6 +36,7 @@ import {
   ChevronRight,
   FolderKanban,
   Send,
+  Bot,
   type LucideIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -83,6 +84,7 @@ const menuCategories = [
       { href: "/dashboard/pix-keys", icon: ArrowLeftRight, label: "Chaves PIX" },
       { href: "/dashboard/fees", icon: Percent, label: "Taxas" },
       { href: "/dashboard/affiliates", icon: Users, label: "Afiliados" },
+      { href: "/dashboard/telegram", icon: Bot, label: "Bot Telegram" },
     ],
   },
   {
