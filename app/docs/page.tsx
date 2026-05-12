@@ -275,35 +275,136 @@ export default function DocsPage() {
                 <div>
                   <h1 className="text-4xl font-bold text-foreground mb-4">Autenticacao</h1>
                   <p className="text-lg text-muted-foreground">
-                    Todas as requisicoes devem incluir sua API Key no header Authorization.
+                    Existem dois tipos de autenticacao: API Key (simples) e Basic Auth (integracoes).
                   </p>
                 </div>
 
-                <div className="bg-card border border-border rounded-2xl p-6">
-                  <h2 className="text-xl font-semibold text-foreground mb-4">Obtendo sua API Key</h2>
-                  <ol className="list-decimal list-inside space-y-2 text-muted-foreground mb-4">
-                    <li>Crie uma conta ou faca login no dashboard</li>
-                    <li>Acesse a secao API no menu lateral</li>
-                    <li>Copie sua API Key (comeca com <code className="text-primary">lp_</code>)</li>
-                  </ol>
-                  <Link href="/dashboard/api">
-                    <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
-                      Ir para o Dashboard
-                    </Button>
-                  </Link>
+                {/* Explicacao das Credenciais */}
+                <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-2xl p-6">
+                  <h2 className="text-xl font-semibold text-foreground mb-4">Tipos de Credenciais</h2>
+                  <div className="space-y-4">
+                    <div className="bg-background/50 rounded-xl p-4 border border-border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                        <h3 className="font-semibold text-foreground">API Key</h3>
+                        <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded">Simples</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Chave unica para acesso basico. Encontrada no Dashboard &gt; API.
+                      </p>
+                      <code className="text-xs bg-secondary px-2 py-1 rounded text-primary">lp_xxxxxxxxxxxxxxxx</code>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        <strong>Uso:</strong> Enviar no body da requisicao como <code className="text-primary">apiKey</code>
+                      </p>
+                    </div>
+
+                    <div className="bg-background/50 rounded-xl p-4 border border-border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                        <h3 className="font-semibold text-foreground">Client ID + Client Secret</h3>
+                        <span className="text-xs bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded">Integracoes</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Par de credenciais para integracoes avancadas. Encontrado no Dashboard &gt; Integracao API.
+                      </p>
+                      <div className="space-y-1">
+                        <div>
+                          <span className="text-xs text-muted-foreground">Client ID:</span>
+                          <code className="text-xs bg-secondary px-2 py-1 rounded text-primary ml-2">cli_xxxxxxxxxxxxxxxx</code>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground">Client Secret:</span>
+                          <code className="text-xs bg-secondary px-2 py-1 rounded text-primary ml-2">sec_xxxxxxxxxxxxxxxx</code>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        <strong>Uso:</strong> Basic Auth no header - <code className="text-primary">Authorization: Basic base64(client_id:client_secret)</code>
+                      </p>
+                    </div>
+
+                    <div className="bg-background/50 rounded-xl p-4 border border-border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        <h3 className="font-semibold text-foreground">Webhook Secret</h3>
+                        <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded">Seguranca</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Chave para validar que as notificacoes vieram da LegacyPay.
+                      </p>
+                      <code className="text-xs bg-secondary px-2 py-1 rounded text-primary">whsec_xxxxxxxxxxxxxxxx</code>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        <strong>Uso:</strong> Valide o header <code className="text-primary">X-LegacyPay-Signature</code> usando HMAC-SHA256
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="bg-card border border-border rounded-2xl p-6">
-                  <h2 className="text-xl font-semibold text-foreground mb-4">Header de Autenticacao</h2>
+                  <h2 className="text-xl font-semibold text-foreground mb-4">Obtendo suas Credenciais</h2>
+                  <ol className="list-decimal list-inside space-y-3 text-muted-foreground mb-4">
+                    <li><strong>API Key:</strong> Dashboard &gt; API &gt; Copie a chave que comeca com <code className="text-primary">lp_</code></li>
+                    <li><strong>Client ID/Secret:</strong> Dashboard &gt; Integracao API &gt; Crie uma nova integracao</li>
+                    <li><strong>Webhook Secret:</strong> Gerado automaticamente ao criar uma integracao</li>
+                  </ol>
+                  <div className="flex gap-2 flex-wrap">
+                    <Link href="/dashboard/api">
+                      <Button className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                        Ver API Key
+                      </Button>
+                    </Link>
+                    <Link href="/dashboard/integration">
+                      <Button variant="outline">
+                        Criar Integracao
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+
+                <div className="bg-card border border-border rounded-2xl p-6">
+                  <h2 className="text-xl font-semibold text-foreground mb-4">Metodo 1: API Key (Simples)</h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Envie a API Key no body da requisicao. Ideal para testes rapidos.
+                  </p>
                   <CodeBlock 
-                    code={`Authorization: Bearer lp_sua_api_key_aqui`}
-                    id="auth-header"
+                    code={`POST /api/pix/create
+Content-Type: application/json
+
+{
+  "apiKey": "lp_sua_api_key_aqui",
+  "amount": 100.00,
+  "description": "Pagamento teste"
+}`}
+                    id="auth-apikey"
                     language="http"
                   />
                 </div>
 
                 <div className="bg-card border border-border rounded-2xl p-6">
-                  <h2 className="text-xl font-semibold text-foreground mb-4">Exemplo de Requisicao</h2>
+                  <h2 className="text-xl font-semibold text-foreground mb-4">Metodo 2: Basic Auth (Integracoes)</h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Use Basic Auth com client_id:client_secret em Base64. Recomendado para producao.
+                  </p>
+                  <CodeBlock 
+                    code={`# Suas credenciais
+CLIENT_ID="cli_seu_client_id"
+CLIENT_SECRET="sec_seu_client_secret"
+
+# Codificar em Base64
+# Em JavaScript: btoa(client_id + ":" + client_secret)
+# Em Python: base64.b64encode(f"{client_id}:{client_secret}".encode()).decode()
+# Em PHP: base64_encode($client_id . ":" . $client_secret)
+
+Authorization: Basic Y2xpX3NldV9jbGllbnRfaWQ6c2VjX3NldV9jbGllbnRfc2VjcmV0`}
+                    id="auth-basic"
+                    language="http"
+                  />
+                </div>
+
+                <div className="bg-card border border-border rounded-2xl p-6">
+                  <h2 className="text-xl font-semibold text-foreground mb-4">Exemplos Completos</h2>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Exemplos usando Basic Auth (client_id:client_secret) - recomendado para producao e bots.
+                  </p>
                   
                   <div className="flex gap-2 mb-4 flex-wrap">
                     {languages.map((lang) => (
@@ -323,29 +424,56 @@ export default function DocsPage() {
 
                   {activeLang === "curl" && (
                     <CodeBlock
-                      code={`curl -X POST "${baseUrl}/api/pix/create" \\
+                      code={`# Usando Basic Auth (client_id:client_secret)
+CLIENT_ID="cli_seu_client_id"
+CLIENT_SECRET="sec_seu_client_secret"
+
+# Codificar credenciais em Base64
+CREDENTIALS=$(echo -n "$CLIENT_ID:$CLIENT_SECRET" | base64)
+
+curl -X POST "${baseUrl}/api/v1/integration/pix" \\
+  -H "Authorization: Basic $CREDENTIALS" \\
   -H "Content-Type: application/json" \\
-  -d '{"apiKey": "lp_sua_api_key", "amount": 10.00}'`}
+  -d '{
+    "amount": 100.00,
+    "external_id": "pedido_123",
+    "description": "Pagamento do pedido #123"
+  }'`}
                       id="auth-curl"
                       language="bash"
                     />
                   )}
                   {activeLang === "javascript" && (
                     <CodeBlock
-                      code={`const response = await fetch("${baseUrl}/api/pix/create", {
+                      code={`// Suas credenciais (Dashboard > Integracao API)
+const CLIENT_ID = "cli_seu_client_id";
+const CLIENT_SECRET = "sec_seu_client_secret";
+
+// Codificar em Base64
+const credentials = btoa(CLIENT_ID + ":" + CLIENT_SECRET);
+
+// Criar cobranca PIX
+const response = await fetch("${baseUrl}/api/v1/integration/pix", {
   method: "POST",
   headers: {
+    "Authorization": "Basic " + credentials,
     "Content-Type": "application/json"
   },
   body: JSON.stringify({
-    apiKey: "lp_sua_api_key",
     amount: 100.00,
-    description: "Pagamento teste"
+    external_id: "pedido_123",
+    description: "Pagamento do pedido #123"
   })
 });
 
 const data = await response.json();
-console.log(data);`}
+
+if (data.success) {
+  console.log("QR Code:", data.data.pix.qr_code_base64);
+  console.log("Copy-Paste:", data.data.pix.copy_paste);
+} else {
+  console.error("Erro:", data.error);
+}`}
                       id="auth-js"
                       language="javascript"
                     />
@@ -353,18 +481,38 @@ console.log(data);`}
                   {activeLang === "python" && (
                     <CodeBlock
                       code={`import requests
+import base64
 
+# Suas credenciais (Dashboard > Integracao API)
+CLIENT_ID = "cli_seu_client_id"
+CLIENT_SECRET = "sec_seu_client_secret"
+
+# Codificar em Base64
+credentials = base64.b64encode(
+    f"{CLIENT_ID}:{CLIENT_SECRET}".encode()
+).decode()
+
+# Criar cobranca PIX
 response = requests.post(
-    "${baseUrl}/api/pix/create",
+    "${baseUrl}/api/v1/integration/pix",
+    headers={
+        "Authorization": f"Basic {credentials}",
+        "Content-Type": "application/json"
+    },
     json={
-        "apiKey": "lp_sua_api_key",
         "amount": 100.00,
-        "description": "Pagamento teste"
+        "external_id": "pedido_123",
+        "description": "Pagamento do pedido #123"
     }
 )
 
 data = response.json()
-print(data)`}
+
+if data.get("success"):
+    print("QR Code:", data["data"]["pix"]["qr_code_base64"])
+    print("Copy-Paste:", data["data"]["pix"]["copy_paste"])
+else:
+    print("Erro:", data.get("error"))`}
                       id="auth-python"
                       language="python"
                     />
@@ -372,28 +520,57 @@ print(data)`}
                   {activeLang === "php" && (
                     <CodeBlock
                       code={`<?php
+// Suas credenciais (Dashboard > Integracao API)
+$clientId = "cli_seu_client_id";
+$clientSecret = "sec_seu_client_secret";
+
+// Codificar em Base64
+$credentials = base64_encode($clientId . ":" . $clientSecret);
+
 $curl = curl_init();
 
 curl_setopt_array($curl, [
-    CURLOPT_URL => "${baseUrl}/api/pix/create",
+    CURLOPT_URL => "${baseUrl}/api/v1/integration/pix",
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST => true,
-    CURLOPT_HTTPHEADER => ["Content-Type: application/json"],
+    CURLOPT_HTTPHEADER => [
+        "Authorization: Basic " . $credentials,
+        "Content-Type: application/json"
+    ],
     CURLOPT_POSTFIELDS => json_encode([
-        "apiKey" => "lp_sua_api_key",
         "amount" => 100.00,
-        "description" => "Pagamento teste"
+        "external_id" => "pedido_123",
+        "description" => "Pagamento do pedido #123"
     ])
 ]);
 
 $response = curl_exec($curl);
 $data = json_decode($response, true);
 
-print_r($data);`}
+if ($data["success"]) {
+    echo "QR Code: " . $data["data"]["pix"]["qr_code_base64"] . "\\n";
+    echo "Copy-Paste: " . $data["data"]["pix"]["copy_paste"] . "\\n";
+} else {
+    echo "Erro: " . $data["error"] . "\\n";
+}`}
                       id="auth-php"
                       language="php"
                     />
                   )}
+                </div>
+
+                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl p-6">
+                  <h3 className="text-lg font-semibold text-yellow-500 mb-2">Erro Comum: Credenciais Invalidas</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Se voce esta recebendo erro de credenciais invalidas, verifique:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
+                    <li>Voce esta usando <strong>Client ID</strong> e <strong>Client Secret</strong>, nao a API Key</li>
+                    <li>As credenciais estao codificadas em <strong>Base64</strong> no formato <code className="text-primary">client_id:client_secret</code></li>
+                    <li>O header e <code className="text-primary">Authorization: Basic ...</code> (nao Bearer)</li>
+                    <li>A integracao esta <strong>ativa</strong> no Dashboard</li>
+                    <li>Sua conta tem <strong>KYC aprovado</strong></li>
+                  </ul>
                 </div>
               </motion.div>
             )}
@@ -672,7 +849,7 @@ print_r($data);`}
                   <div className="mt-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
                     <p className="text-sm text-yellow-400">
                       <strong>Nota sobre taxas:</strong> A taxa e calculada automaticamente com base na rota utilizada.
-                      Rota White: 0,75% + R$1,00 | Rota Black: 1,5% + R$1,50
+                      Rota White: 0% + R$1,50 fixo | Rota Black: 4% + R$0,00 fixo
                     </p>
                   </div>
                 </div>
@@ -1075,7 +1252,7 @@ const fullIntegrationPrompt = `Preciso integrar a API de pagamentos PIX da Legac
 
 ## Informacoes da API
 
-**URL Base:** https://api.legacypay.com.br
+**URL Base:** https://api.legacypay.site
 **Autenticacao:** Bearer Token no header Authorization
 **Minha API Key:** SUA_API_KEY (substitua pela sua chave real)
 
@@ -1112,8 +1289,8 @@ const fullIntegrationPrompt = `Preciso integrar a API de pagamentos PIX da Legac
 Todas as respostas seguem: { success: boolean, data?: object, error?: { code, message } }
 
 ## Taxas
-- Rota White: 0,75% + R$1,00 fixo
-- Rota Black: 1,5% + R$1,50 fixo
+- Rota White (MisticPay): 0% + R$1,50 fixo | Saque: R$2,00
+- Rota Black (Medusa): 4% + R$0,00 fixo | Saque: R$5,00
 
 Por favor, crie uma integracao completa para meu projeto com:
 1. Funcao para criar cobrancas PIX com QR Code
@@ -1125,7 +1302,7 @@ Por favor, crie uma integracao completa para meu projeto com:
 
 const chargePrompt = `Preciso criar cobrancas PIX com QR Code usando a API LegacyPay.
 
-**URL Base:** https://api.legacypay.com.br
+**URL Base:** https://api.legacypay.site
 **Minha API Key:** SUA_API_KEY
 
 **Endpoint:** POST /v1/pix/charge
@@ -1162,7 +1339,7 @@ Crie uma funcao que:
 
 const webhookPrompt = `Preciso configurar um webhook para receber notificacoes de pagamento da LegacyPay.
 
-**URL Base:** https://api.legacypay.com.br
+**URL Base:** https://api.legacypay.site
 **Minha API Key:** SUA_API_KEY
 
 **Eventos disponiveis:**
@@ -1199,7 +1376,7 @@ Crie um endpoint webhook que:
 
 const transferPrompt = `Preciso enviar transferencias PIX automaticamente usando a API LegacyPay.
 
-**URL Base:** https://api.legacypay.com.br
+**URL Base:** https://api.legacypay.site
 **Minha API Key:** SUA_API_KEY
 
 **Endpoint:** POST /v1/pix/transfer
@@ -1229,8 +1406,8 @@ const transferPrompt = `Preciso enviar transferencias PIX automaticamente usando
 }
 
 **Taxas:**
-- Rota White: 0,75% + R$1,00
-- Rota Black: 1,5% + R$1,50
+- Rota White (MisticPay): 0% + R$1,50 fixo | Saque: R$2,00
+- Rota Black (Medusa): 4% + R$0,00 fixo | Saque: R$5,00
 
 Crie uma funcao que:
 1. Receba valor, chave PIX e tipo da chave

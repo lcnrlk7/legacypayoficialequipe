@@ -23,6 +23,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { WithdrawModal } from "@/components/wallet/withdraw-modal";
 
 interface PixTransaction {
   id: string;
@@ -43,6 +44,7 @@ interface PixKey {
 
 export default function WalletPage() {
   const [balance, setBalance] = useState(0);
+  const [pendingWithdrawals, setPendingWithdrawals] = useState(0);
   const [depositAmount, setDepositAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawPixKey, setWithdrawPixKey] = useState("");
@@ -54,20 +56,28 @@ export default function WalletPage() {
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
+  const [withdrawalData, setWithdrawalData] = useState<{
+    id: string;
+    amount: number;
+    fee: number;
+    netAmount: number;
+    pixKey: string;
+    pixKeyType: string;
+    recipientName?: string;
+    recipientBank?: string;
+    status: string;
+    createdAt: string;
+  } | null>(null);
   const [savedPixKeys, setSavedPixKeys] = useState<PixKey[]>([]);
-  const [selectedPixKeyId, setSelectedPixKeyId] = useState<string>("");
-  const [useCustomPixKey, setUseCustomPixKey] = useState(false);
   const [systemSettings, setSystemSettings] = useState({
     minDeposit: 5,
     maxDeposit: 100000,
-    minWithdrawal: 5,
+    minWithdrawal: 25, // Minimo R$ 25 para rota black
     maxWithdrawal: 50000,
     autoWithdrawalLimit: 500,
-    withdrawalFeePercentage: 1.5,
-    withdrawalFeeFixed: 0,
-    acquirerFee: 1.00,
+    withdrawalFee: 5, // Taxa de saque (Medusa R$ 5)
   });
-  const [withdrawalFee, setWithdrawalFee] = useState<number>(5); // Taxa de saque do usuário
+  const [userRoute, setUserRoute] = useState<string>('black');
 
   useEffect(() => {
     loadBalance();
@@ -80,8 +90,20 @@ export default function WalletPage() {
     try {
       const response = await fetch("/api/user/fees");
       const data = await response.json();
-      if (data.fees?.withdrawal_fee !== undefined) {
-        setWithdrawalFee(Number(data.fees.withdrawal_fee));
+      if (data.fees) {
+        const route = data.fees.route_type || 'black';
+        // Usar taxa de saque da API (considera taxa individual do usuario ou padrao da rota)
+        const withdrawFee = data.fees.withdrawal_fee || (route === 'black' ? 5 : 2);
+        // Minimo de saque da API ou padrao
+        const minWithdraw = data.fees.min_withdrawal || (route === 'black' ? 25 : 15);
+        
+        setUserRoute(route);
+        setSystemSettings(prev => ({
+          ...prev,
+          withdrawalFee: withdrawFee,
+          minWithdrawal: minWithdraw,
+          maxWithdrawal: data.fees.max_withdrawal || prev.maxWithdrawal,
+        }));
       }
     } catch (err) {
       console.error("Error loading user fees:", err);
@@ -93,7 +115,14 @@ export default function WalletPage() {
       const response = await fetch("/api/settings");
       const data = await response.json();
       if (data.settings) {
-        setSystemSettings(data.settings);
+        // Manter valores locais e apenas atualizar os que vem da API
+        setSystemSettings(prev => ({
+          ...prev,
+          minDeposit: data.settings.minDeposit || prev.minDeposit,
+          maxDeposit: data.settings.maxDeposit || prev.maxDeposit,
+          maxWithdrawal: data.settings.maxWithdrawal || prev.maxWithdrawal,
+          autoWithdrawalLimit: data.settings.autoWithdrawalLimit || prev.autoWithdrawalLimit,
+        }));
       }
     } catch (err) {
       console.error("Error loading settings:", err);
@@ -106,15 +135,6 @@ export default function WalletPage() {
       const data = await response.json();
       if (data.pixKeys) {
         setSavedPixKeys(data.pixKeys);
-        // Selecionar a chave primária por padrão
-        const primaryKey = data.pixKeys.find((k: PixKey) => k.is_primary);
-        if (primaryKey) {
-          setSelectedPixKeyId(primaryKey.id);
-          setWithdrawPixKey(primaryKey.key_value);
-        } else if (data.pixKeys.length > 0) {
-          setSelectedPixKeyId(data.pixKeys[0].id);
-          setWithdrawPixKey(data.pixKeys[0].key_value);
-        }
       }
     } catch (err) {
       console.error("Error loading pix keys:", err);
@@ -123,12 +143,8 @@ export default function WalletPage() {
 
   function handlePixKeySelect(keyId: string) {
     if (keyId === "custom") {
-      setUseCustomPixKey(true);
-      setSelectedPixKeyId("");
       setWithdrawPixKey("");
     } else {
-      setUseCustomPixKey(false);
-      setSelectedPixKeyId(keyId);
       const key = savedPixKeys.find(k => k.id === keyId);
       if (key) {
         setWithdrawPixKey(key.key_value);
@@ -144,6 +160,9 @@ export default function WalletPage() {
       
       if (data.balance !== undefined) {
         setBalance(data.balance);
+      }
+      if (data.pendingWithdrawals !== undefined) {
+        setPendingWithdrawals(data.pendingWithdrawals);
       }
     } catch (err) {
       console.error("Error loading balance:", err);
@@ -204,20 +223,28 @@ const handleDeposit = async () => {
     }
   };
 
-  const handleWithdraw = async () => {
-    const amount = parseFloat(withdrawAmount);
-    if (!withdrawAmount || amount <= 0 || !withdrawPixKey) {
+  const handleWithdraw = async (amount: number, pixKey: string, pixKeyType: string) => {
+    if (!amount || amount <= 0 || !pixKey) {
       setError("Preencha todos os campos");
       return;
     }
 
     if (amount < systemSettings.minWithdrawal) {
-      setError(`Valor mínimo: R$ ${systemSettings.minWithdrawal.toFixed(2).replace('.', ',')}`);
+      setError(`Valor minimo: R$ ${systemSettings.minWithdrawal.toFixed(2).replace('.', ',')}`);
       return;
     }
 
-    if (amount > balance) {
-      setError("Saldo insuficiente");
+    // Taxa fixa de saque
+    const withdrawalFee = systemSettings.withdrawalFee || 5;
+    const totalDebit = amount + withdrawalFee;
+
+    if (amount <= 0) {
+      setError("Informe um valor valido para receber");
+      return;
+    }
+
+    if (totalDebit > balance) {
+      setError(`Saldo insuficiente. Para receber R$ ${amount.toFixed(2)}, voce precisa de R$ ${totalDebit.toFixed(2)}`);
       return;
     }
 
@@ -225,13 +252,17 @@ const handleDeposit = async () => {
     setError(null);
 
     try {
+      const token = localStorage.getItem("auth-token");
       const response = await fetch("/api/withdrawals/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
         body: JSON.stringify({
           amount: amount,
-          pixKey: withdrawPixKey,
-          description: "Saque via PIX - LegacyPay",
+          pixKey: pixKey,
+          pixKeyType: pixKeyType, // Tipo selecionado pelo usuário
         }),
       });
 
@@ -241,22 +272,24 @@ const handleDeposit = async () => {
         throw new Error(data.error || "Erro ao processar saque");
       }
 
+      // Salvar dados do saque para o comprovante
+      setWithdrawalData({
+        id: data.withdrawal?.id || data.id || `WD-${Date.now()}`,
+        amount: amount,
+        fee: withdrawalFee,
+        netAmount: amount,
+        pixKey: pixKey,
+        pixKeyType: pixKeyType,
+        recipientName: data.withdrawal?.recipient_name || undefined,
+        recipientBank: data.withdrawal?.recipient_bank || undefined,
+        status: data.withdrawal?.status || 'pending',
+        createdAt: new Date().toISOString(),
+      });
+
       setWithdrawSuccess(true);
       setWithdrawAmount("");
       setWithdrawPixKey("");
       loadBalance();
-
-      // Mostrar mensagem apropriada baseado se precisa aprovação
-      const message = data.message || (data.withdrawal?.requiresApproval 
-        ? "Saque acima de R$ 500,00 enviado para aprovação do administrador."
-        : "Saque enviado para processamento!");
-      
-      alert(message);
-
-      setTimeout(() => {
-        setWithdrawSuccess(false);
-        setWithdrawDialogOpen(false);
-      }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao processar saque");
     } finally {
@@ -316,23 +349,38 @@ const handleDeposit = async () => {
         animate={{ opacity: 1, y: 0 }}
         className="bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 rounded-2xl p-8"
       >
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center glow-orange-sm">
-            <Wallet className="w-7 h-7 text-primary-foreground" />
+        <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
+          <div className="flex items-center gap-4 flex-1">
+            <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center glow-orange-sm">
+              <Wallet className="w-7 h-7 text-primary-foreground" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Saldo Disponível</p>
+              {loadingBalance ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  <span className="text-muted-foreground">Carregando...</span>
+                </div>
+              ) : (
+                <p className="text-3xl lg:text-4xl font-bold text-foreground">
+                  {formatCurrency(balance)}
+                </p>
+              )}
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Saldo Disponível</p>
-            {loadingBalance ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                <span className="text-muted-foreground">Carregando...</span>
+          {pendingWithdrawals > 0 && (
+            <div className="flex items-center gap-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3">
+              <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center">
+                <ArrowUpRight className="w-5 h-5 text-yellow-500" />
               </div>
-            ) : (
-              <p className="text-3xl lg:text-4xl font-bold text-foreground">
-                {formatCurrency(balance)}
-              </p>
-            )}
-          </div>
+              <div>
+                <p className="text-xs text-yellow-500/80">Saques Pendentes</p>
+                <p className="text-lg font-semibold text-yellow-500">
+                  {formatCurrency(pendingWithdrawals)}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap gap-3 mt-6">
           <Dialog open={depositDialogOpen} onOpenChange={(open) => {
@@ -493,159 +541,28 @@ const handleDeposit = async () => {
                 Sacar
               </Button>
             </DialogTrigger>
-            <DialogContent className="bg-card border-border">
+            <DialogContent className="!bg-[#1a1a1a] border-border max-w-md sm:max-w-lg">
               <DialogHeader>
-                <DialogTitle>Sacar via PIX</DialogTitle>
+                <DialogTitle className="text-foreground">Sacar via PIX</DialogTitle>
               </DialogHeader>
-              <div className="space-y-4 pt-4">
-                {error && (
-                  <div className="flex items-center gap-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
-                    <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    {error}
-                  </div>
-                )}
-
-                {withdrawSuccess ? (
-                  <div className="text-center space-y-4 py-6">
-                    <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
-                      <CheckCircle className="w-8 h-8 text-green-500" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-foreground">Saque Solicitado!</h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Seu saque está sendo processado e será enviado em breve.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {/* Info de saldo disponível */}
-                    <div className="p-4 bg-secondary/50 rounded-xl border border-border">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium text-foreground">Saldo disponível:</span>
-                        <span className="font-bold text-primary">
-                          {formatCurrency(balance)}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Chave PIX de destino
-                      </label>
-                      
-                      {savedPixKeys.length > 0 && (
-                        <div className="space-y-3">
-                          <div className="relative">
-                            <select
-                              value={useCustomPixKey ? "custom" : selectedPixKeyId}
-                              onChange={(e) => handlePixKeySelect(e.target.value)}
-                              className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-foreground appearance-none cursor-pointer focus:outline-none focus:border-primary/50"
-                            >
-                              <option value="" disabled>Selecione uma chave</option>
-                              {savedPixKeys.map((key) => (
-                                <option key={key.id} value={key.id} className="bg-card">
-                                  {key.key_type.toUpperCase()}: {key.key_value} {key.is_primary && "(Principal)"}
-                                </option>
-                              ))}
-                              <option value="custom" className="bg-card">
-                                Usar outra chave PIX
-                              </option>
-                            </select>
-                            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
-                          </div>
-                          
-                          {!useCustomPixKey && selectedPixKeyId && (
-                            <div className="flex items-center gap-2 px-3 py-2 bg-primary/5 border border-primary/20 rounded-lg">
-                              <Key className="w-4 h-4 text-primary" />
-                              <span className="text-sm text-foreground truncate">
-                                {savedPixKeys.find(k => k.id === selectedPixKeyId)?.key_value}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                      
-                      {(useCustomPixKey || savedPixKeys.length === 0) && (
-                        <Input
-                          placeholder="CPF, email, telefone ou chave aleatória"
-                          value={withdrawPixKey}
-                          onChange={(e) => setWithdrawPixKey(e.target.value)}
-                          className="bg-secondary border-border"
-                        />
-                      )}
-                      
-                      {savedPixKeys.length === 0 && (
-                        <p className="text-xs text-muted-foreground">
-                          Cadastre chaves PIX em &quot;Chaves PIX&quot; para selecioná-las aqui
-                        </p>
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-foreground">
-                        Valor do saque
-                      </label>
-                      <Input
-                        type="number"
-                        placeholder="0,00"
-                        min={systemSettings.minWithdrawal}
-                        max={balance}
-                        value={withdrawAmount}
-                        onChange={(e) => setWithdrawAmount(e.target.value)}
-                        className={`bg-secondary border-border ${Number(withdrawAmount) > balance ? "border-red-500" : ""}`}
-                      />
-                      {Number(withdrawAmount) > balance && (
-                        <p className="text-xs text-red-500">
-                          Valor excede o saldo disponível de {formatCurrency(balance)}
-                        </p>
-                      )}
-                      {Number(withdrawAmount) > 0 && Number(withdrawAmount) < systemSettings.minWithdrawal && (
-                        <p className="text-xs text-red-500">
-                          Valor mínimo para saque: R$ {systemSettings.minWithdrawal.toFixed(2).replace('.', ',')}
-                        </p>
-                      )}
-                      {Number(withdrawAmount) > systemSettings.maxWithdrawal && (
-                        <p className="text-xs text-red-500">
-                          Valor máximo para saque: R$ {systemSettings.maxWithdrawal.toFixed(2).replace('.', ',')}
-                        </p>
-                      )}
-                      {Number(withdrawAmount) > systemSettings.autoWithdrawalLimit && Number(withdrawAmount) <= systemSettings.maxWithdrawal && (
-                        <p className="text-xs text-yellow-500">
-                          Saques acima de R$ {systemSettings.autoWithdrawalLimit.toFixed(2).replace('.', ',')} requerem aprovação do administrador
-                        </p>
-                      )}
-                    </div>
-                    {Number(withdrawAmount) > 0 && (
-                      <div className="bg-secondary/50 rounded-lg p-3 text-sm text-muted-foreground space-y-2">
-                        <div className="flex justify-between">
-                          <span>Taxa de saque:</span>
-                          <span>-{formatCurrency(withdrawalFee)}</span>
-                        </div>
-                        <div className="flex justify-between pt-2 border-t border-border font-medium text-foreground">
-                          <span>Você receberá:</span>
-                          <span className="text-primary">
-                            {formatCurrency(Math.max(0, Number(withdrawAmount) - withdrawalFee))}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-                    <Button
-                      onClick={handleWithdraw}
-                      disabled={loading || !withdrawAmount || !withdrawPixKey || Number(withdrawAmount) > balance || Number(withdrawAmount) < systemSettings.minWithdrawal || Number(withdrawAmount) > systemSettings.maxWithdrawal}
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                          Processando...
-                        </>
-                      ) : (
-                        "Confirmar Saque"
-                      )}
-                    </Button>
-                  </>
-                )}
-              </div>
+              <WithdrawModal
+                balance={balance}
+                savedPixKeys={savedPixKeys}
+                systemSettings={systemSettings}
+                loading={loading}
+                error={error}
+                withdrawSuccess={withdrawSuccess}
+                withdrawalData={withdrawalData}
+                onWithdraw={handleWithdraw}
+                onClose={() => {
+                  setWithdrawDialogOpen(false);
+                  setError(null);
+                  setWithdrawSuccess(false);
+                  setWithdrawAmount("");
+                  setWithdrawPixKey("");
+                  setWithdrawalData(null);
+                }}
+              />
             </DialogContent>
           </Dialog>
 
@@ -697,15 +614,15 @@ const handleDeposit = async () => {
           <ul className="space-y-3 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
-              Taxa fixa de R$ {withdrawalFee.toFixed(2).replace('.', ',')} por saque
+              Taxa de saque: R$ {(systemSettings.withdrawalFee || 5).toFixed(2).replace('.', ',')}
             </li>
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
-              Valor mínimo: R$ {systemSettings.minWithdrawal.toFixed(2).replace('.', ',')}
+              Valor minimo: R$ {(systemSettings.minWithdrawal || 25).toFixed(2).replace('.', ',')}
             </li>
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
-              Processamento em até 5 minutos
+              Processamento em ate 5 minutos
             </li>
             <li className="flex items-start gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />

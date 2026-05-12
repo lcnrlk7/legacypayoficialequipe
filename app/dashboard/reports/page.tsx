@@ -17,7 +17,11 @@ import {
   TrendingUp,
   DollarSign,
   RefreshCw,
+  Loader2,
+  X,
+  Receipt,
 } from "lucide-react";
+import { WithdrawalReceipt } from "@/components/wallet/withdrawal-receipt";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -32,6 +36,10 @@ interface Transaction {
   created_at: string;
   payer_name?: string;
   external_id?: string;
+  pix_key?: string;
+  pix_key_type?: string;
+  recipient_name?: string;
+  recipient_bank?: string;
 }
 
 interface ReportStats {
@@ -51,6 +59,16 @@ export default function ReportsPage() {
   const [filter, setFilter] = useState<"all" | "pix_in" | "pix_out" | "withdrawal">("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "completed" | "cancelled">("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [selectedWithdrawal, setSelectedWithdrawal] = useState<Transaction | null>(null);
+  
+  // Export states
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportType, setExportType] = useState<"transactions" | "withdrawals" | "commissions">("transactions");
+  const [exportStartDate, setExportStartDate] = useState("");
+  const [exportEndDate, setExportEndDate] = useState("");
+  const [exportStatus, setExportStatus] = useState("all");
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     loadReports();
@@ -69,6 +87,37 @@ export default function ReportsPage() {
       console.error("Error loading reports:", error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams({ type: exportType });
+      if (exportStartDate) params.append("startDate", exportStartDate);
+      if (exportEndDate) params.append("endDate", exportEndDate);
+      if (exportStatus) params.append("status", exportStatus);
+
+      const response = await fetch(`/api/user/export?${params.toString()}`);
+      if (!response.ok) throw new Error("Erro ao exportar");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const typeName = exportType === "transactions" ? "transacoes" : exportType === "withdrawals" ? "saques" : "comissoes";
+      a.download = `${typeName}_${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      setShowExportModal(false);
+    } catch (error) {
+      console.error("Erro ao exportar:", error);
+      alert("Erro ao exportar dados");
+    } finally {
+      setExporting(false);
     }
   }
 
@@ -109,9 +158,11 @@ export default function ReportsPage() {
   const getTypeBadge = (type: string) => {
     const types: Record<string, { color: string; icon: React.ReactNode; label: string }> = {
       pix_in: { color: "bg-green-500/10 text-green-400", icon: <ArrowDownLeft className="w-3 h-3" />, label: "PIX Entrada" },
-      pix_out: { color: "bg-orange-500/10 text-orange-400", icon: <ArrowUpRight className="w-3 h-3" />, label: "PIX Saída" },
+      pix_out: { color: "bg-orange-500/10 text-orange-400", icon: <ArrowUpRight className="w-3 h-3" />, label: "PIX Saida" },
       withdrawal: { color: "bg-purple-500/10 text-purple-400", icon: <ArrowUpRight className="w-3 h-3" />, label: "Saque" },
-      deposit: { color: "bg-blue-500/10 text-blue-400", icon: <ArrowDownLeft className="w-3 h-3" />, label: "Depósito" },
+      deposit: { color: "bg-blue-500/10 text-blue-400", icon: <ArrowDownLeft className="w-3 h-3" />, label: "Deposito" },
+      transfer_in: { color: "bg-emerald-500/10 text-emerald-400", icon: <ArrowDownLeft className="w-3 h-3" />, label: "Transferencia Recebida" },
+      transfer_out: { color: "bg-amber-500/10 text-amber-400", icon: <ArrowUpRight className="w-3 h-3" />, label: "Transferencia Enviada" },
     };
     const typeInfo = types[type] || types.pix_in;
     return (
@@ -150,14 +201,130 @@ export default function ReportsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Relatórios</h1>
-          <p className="text-sm text-muted-foreground">Acompanhe seus PIX, saques e transações</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Relatorios</h1>
+          <p className="text-sm text-muted-foreground">Acompanhe seus PIX, saques e transacoes</p>
         </div>
-        <Button variant="outline" onClick={loadReports} size="sm" className="w-fit">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Atualizar
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={loadReports} size="sm" className="w-fit">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Atualizar
+          </Button>
+          <Button onClick={() => setShowExportModal(true)} size="sm" className="w-fit">
+            <Download className="w-4 h-4 mr-2" />
+            Exportar CSV
+          </Button>
+        </div>
       </div>
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-card border border-border rounded-2xl p-6 w-full max-w-md"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-foreground">
+                Exportar Dados
+              </h2>
+              <button onClick={() => setShowExportModal(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">
+                  Tipo de Relatorio
+                </label>
+                <select
+                  value={exportType}
+                  onChange={(e) => setExportType(e.target.value as "transactions" | "withdrawals" | "commissions")}
+                  className="w-full px-4 py-2 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                >
+                  <option value="transactions">Transacoes PIX</option>
+                  <option value="withdrawals">Saques</option>
+                  <option value="commissions">Comissoes de Afiliado</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">
+                  Data Inicial
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="date"
+                    value={exportStartDate}
+                    onChange={(e) => setExportStartDate(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">
+                  Data Final
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="date"
+                    value={exportEndDate}
+                    onChange={(e) => setExportEndDate(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">
+                  Status
+                </label>
+                <select
+                  value={exportStatus}
+                  onChange={(e) => setExportStatus(e.target.value)}
+                  className="w-full px-4 py-2 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                >
+                  <option value="all">Todos</option>
+                  <option value="paid">Pagos/Concluidos</option>
+                  <option value="pending">Pendentes</option>
+                  <option value="cancelled">Cancelados</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowExportModal(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleExport}
+                disabled={exporting}
+                className="flex-1"
+              >
+                {exporting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Exportando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar
+                  </>
+                )}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 gap-2 sm:gap-4">
@@ -267,6 +434,22 @@ export default function ReportsPage() {
                   </span>
                 </div>
               </div>
+              {(tx.type === "withdrawal" || tx.type === "pix_out") && tx.status === "completed" && (
+                <div className="mt-2 pt-2 border-t border-border">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedWithdrawal(tx);
+                      setShowReceipt(true);
+                    }}
+                    className="w-full h-8 text-xs"
+                  >
+                    <Receipt className="w-3 h-3 mr-1" />
+                    Ver Comprovante
+                  </Button>
+                </div>
+              )}
             </motion.div>
           ))
         )}
@@ -280,17 +463,18 @@ export default function ReportsPage() {
               <tr className="border-b border-border">
                 <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-medium text-muted-foreground">Data</th>
                 <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-medium text-muted-foreground">Tipo</th>
-                <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-medium text-muted-foreground">Descrição</th>
+                <th className="text-left p-3 sm:p-4 text-xs sm:text-sm font-medium text-muted-foreground">Descricao</th>
                 <th className="text-right p-3 sm:p-4 text-xs sm:text-sm font-medium text-muted-foreground">Valor</th>
                 <th className="text-center p-3 sm:p-4 text-xs sm:text-sm font-medium text-muted-foreground">Status</th>
+                <th className="text-center p-3 sm:p-4 text-xs sm:text-sm font-medium text-muted-foreground">Acoes</th>
               </tr>
             </thead>
             <tbody>
               {filteredTransactions.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-muted-foreground">
+                  <td colSpan={6} className="p-8 text-center text-muted-foreground">
                     <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                    <p>Nenhuma transação encontrada</p>
+                    <p>Nenhuma transacao encontrada</p>
                   </td>
                 </tr>
               ) : (
@@ -323,6 +507,24 @@ export default function ReportsPage() {
                       </span>
                     </td>
                     <td className="p-3 sm:p-4 text-center">{getStatusBadge(tx.status)}</td>
+                    <td className="p-3 sm:p-4 text-center">
+                      {(tx.type === "withdrawal" || tx.type === "pix_out") && tx.status === "completed" ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedWithdrawal(tx);
+                            setShowReceipt(true);
+                          }}
+                          className="h-8 px-2 text-primary hover:text-primary/80"
+                        >
+                          <Receipt className="w-4 h-4 mr-1" />
+                          <span className="text-xs">Comprovante</span>
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">-</span>
+                      )}
+                    </td>
                   </motion.tr>
                 ))
               )}
@@ -333,10 +535,55 @@ export default function ReportsPage() {
         {/* Table Footer */}
         <div className="p-3 sm:p-4 border-t border-border">
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Mostrando {filteredTransactions.length} de {transactions.length} transações
+            Mostrando {filteredTransactions.length} de {transactions.length} transacoes
           </p>
         </div>
       </div>
+
+      {/* Modal Comprovante */}
+      {showReceipt && selectedWithdrawal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-card border border-border rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto"
+          >
+            <div className="p-4 border-b border-border flex items-center justify-between">
+              <h3 className="font-semibold text-foreground">Comprovante de Saque</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setShowReceipt(false);
+                  setSelectedWithdrawal(null);
+                }}
+              >
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="p-4">
+              <WithdrawalReceipt
+                withdrawal={{
+                  id: selectedWithdrawal.id,
+                  amount: selectedWithdrawal.amount,
+                  fee: selectedWithdrawal.fee || 0,
+                  netAmount: selectedWithdrawal.net_amount || selectedWithdrawal.amount,
+                  pixKey: selectedWithdrawal.pix_key || selectedWithdrawal.description || "-",
+                  pixKeyType: selectedWithdrawal.pix_key_type || "pix",
+                  recipientName: selectedWithdrawal.recipient_name,
+                  recipientBank: selectedWithdrawal.recipient_bank,
+                  status: selectedWithdrawal.status,
+                  createdAt: selectedWithdrawal.created_at,
+                }}
+                onClose={() => {
+                  setShowReceipt(false);
+                  setSelectedWithdrawal(null);
+                }}
+              />
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

@@ -11,27 +11,41 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { subscription } = body
+    
+    // Suportar ambos formatos: {subscription: {...}} ou {endpoint, p256dh, auth}
+    let endpoint: string
+    let p256dh: string
+    let auth: string
+    
+    if (body.subscription) {
+      endpoint = body.subscription.endpoint
+      p256dh = body.subscription.keys?.p256dh
+      auth = body.subscription.keys?.auth
+    } else {
+      endpoint = body.endpoint
+      p256dh = body.p256dh
+      auth = body.auth
+    }
 
-    if (!subscription || !subscription.endpoint || !subscription.keys) {
+    if (!endpoint || !p256dh || !auth) {
       return NextResponse.json(
-        { error: "Subscription invalida" },
+        { error: "Subscription invalida - endpoint, p256dh e auth sao obrigatorios" },
         { status: 400 }
       )
     }
 
-    // Verificar se já existe essa subscription
+    // Verificar se ja existe essa subscription
     const existing = await sql`
       SELECT id FROM push_subscriptions 
-      WHERE user_id = ${session.userId} AND endpoint = ${subscription.endpoint}
+      WHERE user_id = ${session.userId} AND endpoint = ${endpoint}
     `
 
     if (existing.length > 0) {
       // Atualizar subscription existente
       await sql`
         UPDATE push_subscriptions 
-        SET p256dh = ${subscription.keys.p256dh},
-            auth = ${subscription.keys.auth},
+        SET p256dh = ${p256dh},
+            auth = ${auth},
             user_agent = ${request.headers.get("user-agent") || null}
         WHERE id = ${existing[0].id}
       `
@@ -42,7 +56,7 @@ export async function POST(request: NextRequest) {
     // Criar nova subscription
     await sql`
       INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, user_agent)
-      VALUES (${session.userId}, ${subscription.endpoint}, ${subscription.keys.p256dh}, ${subscription.keys.auth}, ${request.headers.get("user-agent") || null})
+      VALUES (${session.userId}, ${endpoint}, ${p256dh}, ${auth}, ${request.headers.get("user-agent") || null})
     `
 
     return NextResponse.json({ success: true, message: "Subscription registrada" })

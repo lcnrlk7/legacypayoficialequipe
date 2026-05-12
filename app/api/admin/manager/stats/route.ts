@@ -1,9 +1,14 @@
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { sql } from "@/lib/db";
 
 export async function GET() {
   try {
+    // SEGURANCA: Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+
     const session = await getSession();
 
     if (!session) {
@@ -17,12 +22,12 @@ export async function GET() {
       sql`SELECT COUNT(*) as count FROM withdrawals WHERE status = 'pending'`,
     ]);
 
-    // Today's volume
+    // Today's volume (apenas depositos)
     const today = new Date().toISOString().split("T")[0];
     const volumeResult = await sql`
       SELECT COALESCE(SUM(amount), 0) as total 
       FROM transactions 
-      WHERE created_at >= ${today} AND status = 'completed'
+      WHERE created_at >= ${today} AND status = 'completed' AND type IN ('pix_in', 'deposit')
     `;
 
     // Recent KYC

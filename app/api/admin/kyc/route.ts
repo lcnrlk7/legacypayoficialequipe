@@ -1,3 +1,4 @@
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 import { sql } from "@/lib/db";
 import { NextResponse } from "next/server";
 import { list } from "@vercel/blob";
@@ -40,7 +41,11 @@ async function getBlobUrlMap(): Promise<Map<string, string>> {
 
 export async function GET() {
   try {
-    // Buscar todos os usuários
+    // Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+    
+    // Buscar todos os usuarios
     const profiles = await sql`
       SELECT id, email, name, kyc_status, created_at
       FROM profiles

@@ -3,11 +3,61 @@ import { getCurrentUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
 import { createMisticPayClient } from "@/lib/acquirers/misticpay";
 import { MedusaPayments } from "@/lib/acquirers/medusa";
+import { Venopag } from "@/lib/acquirers/venopag";
+import { getSystemFeesForUser } from "@/lib/acquirers";
+import { logNewTransaction } from "@/lib/discord-webhook";
+import { detectAttack } from "@/lib/sanitize";
+import { logAttack } from "@/lib/attack-logger";
+
+function getClientIp(request: NextRequest): string {
+  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+         request.headers.get("x-real-ip") || "unknown";
+}
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { amount, description, externalId, payerName, payerDocument, apiKey } = body;
+    const { 
+      amount, 
+      description, 
+      externalId, 
+      payerName, 
+      payerDocument, 
+      payerEmail,
+      payerPhone,
+      apiKey,
+      // Parametros UTM para tracking
+      utm_source,
+      utm_campaign,
+      utm_medium,
+      utm_content,
+      utm_term,
+      src,
+      sck,
+    } = body;
+    const ip = getClientIp(request);
+
+    // SEGURANCA: Verificar ataques em campos de texto
+    const textFields = { description, externalId, payerName, payerDocument };
+    for (const [field, value] of Object.entries(textFields)) {
+      if (typeof value === "string" && value.length > 0) {
+        const attack = detectAttack(value);
+        if (attack.detected) {
+          await logAttack({
+            attackType: attack.attackType!,
+            ipAddress: ip,
+            payload: value.substring(0, 100),
+            endpoint: "/api/pix/create",
+            severity: attack.severity || "high",
+            blocked: true,
+          });
+          return NextResponse.json(
+            { error: "Conteúdo não permitido" },
+            { status: 400 }
+          );
+        }
+      }
+    }
 
     if (!amount || amount <= 0) {
       return NextResponse.json(
@@ -26,13 +76,8 @@ export async function POST(request: NextRequest) {
       settings[s.key] = parseFloat(s.value) || settings[s.key];
     });
 
-    if (amount < settings.min_deposit) {
-      return NextResponse.json(
-        { error: `Valor mínimo: R$ ${settings.min_deposit.toFixed(2)}` },
-        { status: 400 }
-      );
-    }
-
+    // Nota: o minimo de deposito especifico da adquirente sera verificado depois de buscar o profile
+    
     if (amount > settings.max_deposit) {
       return NextResponse.json(
         { error: `Valor máximo: R$ ${settings.max_deposit.toFixed(2)}` },
@@ -45,7 +90,7 @@ export async function POST(request: NextRequest) {
     // Autenticar via API Key ou sessão
     if (apiKey) {
       const result = await sql`
-        SELECT id, name, email, cpf_cnpj, phone, is_active, kyc_status, balance, fee_percentage, route_type
+        SELECT id, name, email, cpf_cnpj, phone, is_active, kyc_status, balance, fee_percentage, route_type, acquirer_id
         FROM profiles WHERE api_key = ${apiKey}
       `;
       profile = result[0];
@@ -53,7 +98,7 @@ export async function POST(request: NextRequest) {
       const sessionUser = await getCurrentUser();
       if (sessionUser) {
         const result = await sql`
-          SELECT id, name, email, cpf_cnpj, phone, is_active, kyc_status, balance, fee_percentage, route_type
+          SELECT id, name, email, cpf_cnpj, phone, is_active, kyc_status, balance, fee_percentage, route_type, acquirer_id
           FROM profiles WHERE id = ${sessionUser.id}
         `;
         profile = result[0];
@@ -74,6 +119,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Buscar minimo de deposito da adquirente especifica do usuario
+    const userAcquirerResult = await sql`
+      SELECT p.acquirer_id, a.min_deposit as acquirer_min_deposit
+      FROM profiles p
+      LEFT JOIN acquirers a ON a.id = p.acquirer_id AND a.is_active = true
+      WHERE p.id = ${profile.id}
+    `;
+    
+    const acquirerMinDeposit = userAcquirerResult[0]?.acquirer_min_deposit;
+    const effectiveMinDeposit = acquirerMinDeposit ? Number(acquirerMinDeposit) : settings.min_deposit;
+
+    if (amount < effectiveMinDeposit) {
+      return NextResponse.json(
+        { error: `Valor mínimo: R$ ${effectiveMinDeposit.toFixed(2)}` },
+        { status: 400 }
+      );
+    }
+
     if (profile.kyc_status !== "approved") {
       return NextResponse.json(
         { error: "Você precisa completar a verificação KYC para usar esta funcionalidade." },
@@ -81,20 +144,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar adquirente baseado na rota do usuário (white = MisticPay, black = Promisse Pay)
-    const userRouteType = profile.route_type || 'black';
+    // Buscar adquirente configurada para o usuario (obrigatorio ter acquirer_id)
+    if (!profile.acquirer_id) {
+      return NextResponse.json(
+        { error: "Rota de pagamento nao configurada. Entre em contato com o suporte." },
+        { status: 400 }
+      );
+    }
+    
     const acquirerResult = await sql`
-      SELECT * FROM acquirers WHERE is_active = true AND route_type = ${userRouteType} LIMIT 1
+      SELECT * FROM acquirers WHERE id = ${profile.acquirer_id} AND is_active = true LIMIT 1
     `;
 
     if (acquirerResult.length === 0) {
       return NextResponse.json(
-        { error: "Nenhum provedor de pagamento disponível no momento." },
-        { status: 503 }
+        { error: "Rota de pagamento inativa ou invalida. Entre em contato com o suporte." },
+        { status: 400 }
       );
     }
 
     const acquirer = acquirerResult[0];
+    const userRouteType = acquirer.route_type || 'black';
     const transactionId = externalId || `lp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     
     let pixResult: { success: boolean; data?: { qrCode?: string; qrCodeBase64?: string; copyPaste?: string; transactionId?: string; fee?: number }; error?: string };
@@ -121,7 +191,7 @@ export async function POST(request: NextRequest) {
         description: description || "Depósito via PIX - LegacyPay",
         projectWebhook: webhookUrl,
       });
-    } else if (acquirer.code === 'medusa') {
+    } else if (acquirer.code === 'medusa' || acquirer.code === 'medusa_white') {
       try {
         const medusa = new MedusaPayments({
           secretKey: acquirer.api_key,
@@ -207,6 +277,84 @@ export async function POST(request: NextRequest) {
           error: error instanceof Error ? error.message : "Erro ao criar cobrança PIX com Medusa"
         };
       }
+    } else if (acquirer.code === 'venopag') {
+      // Venopag - Rota White
+      try {
+        const venopag = new Venopag({
+          clientId: acquirer.api_key,
+          clientSecret: acquirer.api_secret || "",
+        });
+
+        const webhookUrl = "https://legacypay.site/api/webhooks/venopag";
+        const customerName = profile.name || payerName || "Cliente LegacyPay";
+        const customerDocument = (payerDocument || profile.cpf_cnpj || "00000000000").replace(/\D/g, "");
+
+        const venopagResult = await venopag.createCashIn(
+          amount,
+          customerName,
+          customerDocument,
+          description || "Deposito via PIX - LegacyPay",
+          webhookUrl
+        );
+
+        if (venopagResult.ok) {
+          pixResult = {
+            success: true,
+            data: {
+              qrCode: venopagResult.copyPaste,
+              qrCodeBase64: venopagResult.qr_img,
+              copyPaste: venopagResult.copyPaste,
+              transactionId: venopagResult.request_number || venopagResult.transaction_id,
+            }
+          };
+        } else {
+          // Registrar erro
+          try {
+            await sql`
+              INSERT INTO integration_errors (integration_name, error_code, error_message, request_data, response_data, user_id, created_at)
+              VALUES (
+                'venopag',
+                'CASH_IN_ERROR',
+                ${venopagResult.error || 'Erro ao criar deposito'},
+                ${JSON.stringify({ amount, transactionId })},
+                ${JSON.stringify(venopagResult)},
+                ${profile.id},
+                NOW()
+              )
+            `;
+          } catch (logErr) {
+            console.error("Error logging integration error:", logErr);
+          }
+          
+          pixResult = {
+            success: false,
+            error: venopagResult.error || "Erro ao criar deposito com Venopag"
+          };
+        }
+      } catch (error) {
+        console.error("Venopag error:", error);
+        
+        try {
+          await sql`
+            INSERT INTO integration_errors (integration_name, error_code, error_message, request_data, user_id, created_at)
+            VALUES (
+              'venopag',
+              'EXCEPTION',
+              ${error instanceof Error ? error.message : 'Erro desconhecido'},
+              ${JSON.stringify({ amount, transactionId })},
+              ${profile.id},
+              NOW()
+            )
+          `;
+        } catch (logErr) {
+          console.error("Error logging integration error:", logErr);
+        }
+        
+        pixResult = {
+          success: false,
+          error: error instanceof Error ? error.message : "Erro ao criar cobranca PIX com Venopag"
+        };
+      }
     } else {
       return NextResponse.json(
         { error: "Adquirente não suportado" },
@@ -221,33 +369,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calcular taxa baseado na taxa do USUÁRIO (definida no perfil) ou da adquirente como fallback
-    const userFeePercentage = Number(profile.fee_percentage);
-    const acquirerFeePercentage = Number(acquirer.fee_percentage) || 0;
-    const acquirerFixedFee = Number(acquirer.fixed_fee) || 0;
+    // Buscar taxas personalizadas do usuario (ou padrao da rota se nao tiver)
+    const userFees = await getSystemFeesForUser(profile.id);
+    const feePercentage = userFees.pixPercentageFee;
+    const fixedFee = userFees.pixFixedFee;
     
-    // Usar taxa do usuário se definida, senão usar da adquirente
-    const feePercentage = userFeePercentage > 0 ? userFeePercentage : acquirerFeePercentage;
-    
-    // Taxa total = percentual + fixa da adquirente
-    const fee = (amount * (feePercentage / 100)) + acquirerFixedFee;
+    // Calcular taxa total
+    const fee = (amount * (feePercentage / 100)) + fixedFee;
     const netAmount = amount - fee;
+    
+    console.log(`[PIX Create] Usuario ${profile.email}: Taxa ${feePercentage}% + R$${fixedFee} = R$${fee.toFixed(2)} para R$${amount}`);
 
     const txId = crypto.randomUUID();
     const acquirerTxId = pixResult.data.transactionId || transactionId;
     
-    // Inserir transação (fee_percentage guardado no metadata)
+    // Inserir transação (fee_percentage guardado no metadata) com parametros UTM para tracking
     const txResult = await sql`
       INSERT INTO transactions (
         id, user_id, external_id, acquirer_transaction_id, type,
         amount, fee, net_amount, status,
-        payer_name, payer_document, description, metadata, created_at
+        payer_name, payer_document, payer_email, description, metadata,
+        utm_source, utm_campaign, utm_medium, utm_content, utm_term, utm_src, utm_sck,
+        created_at
       )
       VALUES (
         ${txId}, ${profile.id}, ${transactionId}, ${acquirerTxId},
         ${'pix_in'}, ${amount}, ${fee}, ${netAmount}, ${'pending'},
-        ${payerName || profile.name || ''}, ${payerDocument || ''}, ${description || 'Depósito via PIX'},
-        ${JSON.stringify({ qr_code: pixResult.data.qrCode || '', qr_code_base64: pixResult.data.qrCodeBase64 || '', copy_paste: pixResult.data.copyPaste || '', acquirer_id: acquirer.id, acquirer_code: acquirer.code, acquirer_fee: pixResult.data.fee || 0, fee_percentage: feePercentage })}, NOW()
+        ${payerName || profile.name || ''}, ${payerDocument || ''}, ${payerEmail || ''}, ${description || 'Depósito via PIX'},
+        ${JSON.stringify({ qr_code: pixResult.data.qrCode || '', qr_code_base64: pixResult.data.qrCodeBase64 || '', copy_paste: pixResult.data.copyPaste || '', acquirer_id: acquirer.id, acquirer_code: acquirer.code, acquirer_fee: pixResult.data.fee || 0, fee_percentage: feePercentage })},
+        ${utm_source || null}, ${utm_campaign || null}, ${utm_medium || null}, ${utm_content || null}, ${utm_term || null}, ${src || null}, ${sck || null},
+        NOW()
       )
       RETURNING *
     `;
@@ -285,6 +436,21 @@ export async function POST(request: NextRequest) {
         NOW()
       )
     `;
+    
+    // Log para Discord (usa waitUntil para garantir execucao)
+    logNewTransaction({
+      transactionId: transaction.id,
+      userName: profile.name || "N/A",
+      userEmail: profile.email || "",
+      amount: amount,
+      fee: fee,
+      netAmount: netAmount,
+      payerName: payerName || profile.name || "Cliente",
+      payerDocument: payerDocument,
+      description: description || "Deposito via PIX",
+      route: userRouteType,
+      status: "pending",
+    });
 
     return NextResponse.json({
       success: true,

@@ -2,63 +2,128 @@ import { sql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { createPixPayment, getSystemFeesForUser } from "@/lib/acquirers";
 import crypto from "crypto";
+import { logNewTransaction, logAPIUsage } from "@/lib/discord-webhook";
+
+// Funcao para extrair credenciais do request
+function extractCredentials(request: NextRequest): { clientId: string | null; clientSecret: string | null } {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader && authHeader.startsWith("Basic ")) {
+    try {
+      const base64Credentials = authHeader.slice(6);
+      const credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
+      const [clientId, clientSecret] = credentials.split(":");
+      if (clientId && clientSecret) return { clientId, clientSecret };
+    } catch { /* ignorar */ }
+  }
+  
+  const headerClientId = request.headers.get("x-client-id") || request.headers.get("client-id");
+  const headerClientSecret = request.headers.get("x-client-secret") || request.headers.get("client-secret");
+  if (headerClientId && headerClientSecret) return { clientId: headerClientId, clientSecret: headerClientSecret };
+  
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    try {
+      const token = authHeader.slice(7);
+      const decoded = Buffer.from(token, "base64").toString("utf-8");
+      const [clientId, clientSecret] = decoded.split(":");
+      if (clientId && clientSecret) return { clientId, clientSecret };
+    } catch { /* ignorar */ }
+  }
+  
+  return { clientId: null, clientSecret: null };
+}
 
 // POST - Criar cobrança PIX via integração externa
 export async function POST(request: NextRequest) {
   try {
-    // Autenticação via Basic Auth (client_id:client_secret)
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Basic ")) {
-      return NextResponse.json(
-        { 
-          success: false,
-          error: "Credenciais não fornecidas", 
-          code: "UNAUTHORIZED" 
-        },
-        { status: 401 }
-      );
-    }
-
-    const base64Credentials = authHeader.slice(6);
-    let credentials: string;
-    try {
-      credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
-    } catch {
-      return NextResponse.json(
-        { success: false, error: "Credenciais mal formatadas", code: "INVALID_CREDENTIALS" },
-        { status: 401 }
-      );
-    }
-
-    const [clientId, clientSecret] = credentials.split(":");
-
+    const { clientId, clientSecret } = extractCredentials(request);
+    
     if (!clientId || !clientSecret) {
       return NextResponse.json(
-        { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
+        { success: false, error: "Credenciais não fornecidas", code: "UNAUTHORIZED" },
         { status: 401 }
       );
     }
 
-    // Buscar usuário pelas credenciais
-    const profileResult = await sql`
-      SELECT id, name, kyc_status, route_type, balance, api_enabled, is_active
-      FROM profiles
-      WHERE client_id = ${clientId} AND client_secret = ${clientSecret}
+    let integration: Record<string, unknown> | null = null;
+    let profile: { id: string; name: string; kyc_status: string; route_type: string; balance: number; api_enabled: boolean; is_active: boolean } | null = null;
+
+    // Primeiro, tentar buscar na tabela user_integrations (cli_/sec_)
+    const integrationResult = await sql`
+      SELECT ui.id as integration_id, ui.user_id, ui.name as integration_name, ui.is_active as integration_active,
+             ui.webhook_url, ui.webhook_secret,
+             p.id as profile_id, p.name, p.kyc_status, p.route_type, p.balance, p.api_enabled, p.is_active
+      FROM user_integrations ui
+      INNER JOIN profiles p ON p.id::text = ui.user_id::text
+      WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
     `;
 
-    if (profileResult.length === 0) {
+    if (integrationResult.length > 0) {
+      integration = integrationResult[0];
+      profile = {
+        id: integration.user_id as string,
+        name: integration.name as string,
+        kyc_status: integration.kyc_status as string,
+        route_type: integration.route_type as string,
+        balance: integration.balance as number,
+        api_enabled: integration.api_enabled as boolean,
+        is_active: integration.is_active as boolean
+      };
+
+      // Verificar se a integração específica está ativa
+      if (!integration.integration_active) {
+        return NextResponse.json(
+          { success: false, error: "Esta integração está desativada", code: "INTEGRATION_DISABLED" },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Se não encontrou em user_integrations, tentar na tabela profiles (lp_/sk_)
+      const profileResult = await sql`
+        SELECT id, name, kyc_status, route_type, balance, api_enabled, is_active
+        FROM profiles
+        WHERE (client_id = ${clientId} AND client_secret = ${clientSecret})
+           OR (api_key = ${clientId} AND client_secret = ${clientSecret})
+      `;
+
+      if (profileResult.length > 0) {
+        const p = profileResult[0];
+        integration = { 
+          integration_id: p.id, 
+          user_id: p.id, 
+          integration_name: p.name,
+          integration_active: p.api_enabled 
+        };
+        profile = {
+          id: p.id as string,
+          name: p.name as string,
+          kyc_status: p.kyc_status as string,
+          route_type: p.route_type as string,
+          balance: p.balance as number,
+          api_enabled: p.api_enabled as boolean,
+          is_active: p.is_active as boolean
+        };
+
+        // Verificar se a API está habilitada
+        if (!p.api_enabled) {
+          return NextResponse.json(
+            { success: false, error: "API não está habilitada para esta conta", code: "API_DISABLED" },
+            { status: 403 }
+          );
+        }
+      }
+    }
+
+    if (!integration || !profile) {
       return NextResponse.json(
         { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
         { status: 401 }
       );
     }
 
-    const profile = profileResult[0];
-
-    // Verificar se a integração está ativa
-    if (!profile.is_active || !profile.api_enabled) {
+    // Verificar se o usuário está ativo
+    if (!profile.is_active) {
       return NextResponse.json(
-        { success: false, error: "Integração desativada", code: "INTEGRATION_DISABLED" },
+        { success: false, error: "Conta desativada", code: "ACCOUNT_DISABLED" },
         { status: 403 }
       );
     }
@@ -66,7 +131,7 @@ export async function POST(request: NextRequest) {
     // Verificar KYC do proprietário
     if (profile.kyc_status !== "approved") {
       return NextResponse.json(
-        { success: false, error: "KYC não aprovado. Complete a verificação de identidade.", code: "KYC_REQUIRED" },
+        { success: false, error: "KYC não aprovado. Complete a verificação de identidade no dashboard.", code: "KYC_REQUIRED" },
         { status: 403 }
       );
     }
@@ -83,9 +148,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (amount < 1) {
+    // Valor mínimo depende da rota: black = R$ 5,00 | white = R$ 1,00
+    const minAmount = profile.route_type === 'black' ? 5 : 1;
+    if (amount < minAmount) {
       return NextResponse.json(
-        { success: false, error: "Valor mínimo é R$ 1,00", code: "MIN_AMOUNT" },
+        { success: false, error: `Valor mínimo é R$ ${minAmount.toFixed(2).replace('.', ',')}`, code: "MIN_AMOUNT" },
         { status: 400 }
       );
     }
@@ -97,10 +164,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar taxas baseadas na rota do usuário
-    const systemFees = await getSystemFeesForUser(profile.id);
+    // Buscar taxas baseadas na rota do usuário (considera taxas personalizadas)
+    let systemFees;
+    try {
+      systemFees = await getSystemFeesForUser(profile.id);
+    } catch {
+      // Usar taxas padrão se falhar
+      systemFees = profile.route_type === 'white' 
+        ? { pixFixedFee: 1.50, pixPercentageFee: 0, withdrawalFee: 2.00 }
+        : { pixFixedFee: 0, pixPercentageFee: 4.00, withdrawalFee: 5.00 };
+    }
 
-    // Calcular taxa
+    // Calcular taxa (usar taxa personalizada do usuario ou padrao da rota)
     const feePercentage = systemFees.pixPercentageFee;
     const fixedFee = systemFees.pixFixedFee;
     const percentageFee = (amount * feePercentage) / 100;
@@ -109,46 +184,77 @@ export async function POST(request: NextRequest) {
 
     const transactionId = external_id || `int_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-    // Criar cobrança PIX
+    // Criar cobrança PIX - garantir que os dados do pagador nunca sejam undefined
+    const safePayerName = (payer?.name && String(payer.name).trim()) ? String(payer.name).trim() : "Cliente";
+    const safePayerDocument = (payer?.document && String(payer.document).trim()) ? String(payer.document).replace(/\D/g, "") : "00000000000";
+    
     const pixResponse = await createPixPayment(
       amount,
       transactionId,
       profile.id,
       description || `Pagamento via ${profile.name}`,
-      payer?.name || "Cliente",
-      payer?.document || "00000000000"
+      safePayerName,
+      safePayerDocument
     );
 
     if (!pixResponse.success) {
       return NextResponse.json(
-        { success: false, error: pixResponse.error || "Erro ao criar cobrança", code: "ACQUIRER_ERROR" },
+        { 
+          success: false, 
+          error: pixResponse.error || "Erro ao criar cobrança", 
+          code: "ACQUIRER_ERROR"
+        },
         { status: 500 }
       );
     }
 
-    // Salvar transação no banco
+    // Extrair dados do PIX - pode estar em data.* ou diretamente no objeto
+    const acquirerTransactionId = pixResponse.transactionId || pixResponse.data?.transactionId || transactionId;
+    const qrCode = pixResponse.qrCode || pixResponse.data?.qrCode || pixResponse.copyPaste || '';
+    const qrCodeBase64 = pixResponse.qrCodeBase64 || pixResponse.data?.qrCodeBase64 || '';
+    const copyPaste = pixResponse.copyPaste || pixResponse.data?.copyPaste || pixResponse.data?.pixCode || qrCode;
+
+    // Salvar transação no banco (tabela transactions sem qr_code)
     const txId = crypto.randomUUID();
-    const result = await sql`
+    const txResult = await sql`
       INSERT INTO transactions (
-        id, user_id, external_id, acquirer_transaction_id, type,
-        amount, fee, net_amount, status, description, qr_code, qr_code_base64,
-        copy_paste, payer_name, payer_document, payer_email, metadata, created_at
+        id, user_id, external_id, acquirer_transaction_id, type, amount, fee, net_amount, 
+        status, description, payer_name, payer_document, metadata, created_at
       )
       VALUES (
-        ${txId}, ${profile.id}, ${transactionId}, ${pixResponse.data?.transactionId},
-        ${'pix_in'}, ${amount}, ${fee}, ${netAmount}, ${'pending'}, ${description || `Pagamento via ${profile.name}`},
-        ${pixResponse.data?.qrCode}, ${pixResponse.data?.qrCodeBase64}, ${pixResponse.data?.copyPaste},
-        ${payer?.name}, ${payer?.document}, ${payer?.email}, ${JSON.stringify({ 
-          integration_id: profile.id, 
-          integration_name: profile.name,
-          payer,
+        ${txId}, ${profile.id}, ${transactionId}, ${acquirerTransactionId}, ${'pix_in'}, 
+        ${amount}, ${fee}, ${netAmount}, ${'pending'}, 
+        ${description || `Pagamento via ${profile.name}`},
+        ${safePayerName}, ${safePayerDocument}, 
+        ${JSON.stringify({ 
+          integration_id: integration.integration_id, 
+          integration_name: integration.integration_name,
+          acquirer_transaction_id: acquirerTransactionId,
+          payer: { name: safePayerName, document: safePayerDocument, email: payer?.email },
           route: profile.route_type
-        })}, NOW()
+        })}, 
+        NOW()
       )
-      RETURNING id, external_id, amount, fee, net_amount, status, qr_code, qr_code_base64, copy_paste, created_at
+      RETURNING id, external_id, amount, fee, net_amount, status, description, created_at
     `;
 
-    const transaction = result[0];
+    // Salvar dados do QR Code na tabela pix_charges
+    const chargeId = crypto.randomUUID();
+    await sql`
+      INSERT INTO pix_charges (
+        id, user_id, transaction_id, amount, description, 
+        qr_code, qr_code_base64, copy_paste, external_id,
+        payer_name, payer_document, status, created_at
+      )
+      VALUES (
+        ${chargeId}, ${profile.id}, ${txId}, ${amount}, 
+        ${description || `Pagamento via ${profile.name}`},
+        ${qrCode}, ${qrCodeBase64}, ${copyPaste}, ${transactionId},
+        ${safePayerName}, ${safePayerDocument}, ${'active'}, NOW()
+      )
+    `;
+
+    const transaction = txResult[0];
 
     // Registrar log de auditoria
     await sql`
@@ -168,6 +274,30 @@ export async function POST(request: NextRequest) {
         NOW()
       )
     `;
+    
+    // Log para Discord
+    logNewTransaction({
+      transactionId: transaction.id,
+      userName: profile.name,
+      userEmail: "", // API nao tem email
+      amount: amount,
+      fee: fee,
+      netAmount: netAmount,
+      payerName: safePayerName,
+      payerDocument: safePayerDocument,
+      description: description || "Via API",
+      route: profile.route_type,
+      status: "pending",
+    });
+    
+    logAPIUsage({
+      userId: profile.id,
+      userName: profile.name,
+      endpoint: "/api/v1/integration/pix",
+      method: "POST",
+      statusCode: 200,
+      amount: amount,
+    });
 
     // Retornar resposta formatada
     return NextResponse.json({
@@ -180,18 +310,19 @@ export async function POST(request: NextRequest) {
         net_amount: transaction.net_amount,
         status: transaction.status,
         pix: {
-          qr_code: transaction.qr_code,
-          qr_code_base64: transaction.qr_code_base64,
-          copy_paste: transaction.copy_paste,
+          qr_code: qrCode,
+          qr_code_base64: qrCodeBase64,
+          copy_paste: copyPaste,
         },
         expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 min
         created_at: transaction.created_at,
       },
     });
   } catch (error) {
-    console.error("[v1/integration/pix] Error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("[v1/integration/pix] Error:", errorMessage);
     return NextResponse.json(
-      { success: false, error: "Erro interno do servidor", code: "INTERNAL_ERROR" },
+      { success: false, error: errorMessage, code: "INTERNAL_ERROR" },
       { status: 500 }
     );
   }
@@ -200,33 +331,60 @@ export async function POST(request: NextRequest) {
 // GET - Consultar status de transação
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Basic ")) {
+    const { clientId, clientSecret } = extractCredentials(request);
+    
+    if (!clientId || !clientSecret) {
       return NextResponse.json(
         { success: false, error: "Credenciais não fornecidas", code: "UNAUTHORIZED" },
         { status: 401 }
       );
     }
 
-    const base64Credentials = authHeader.slice(6);
-    const credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
-    const [clientId, clientSecret] = credentials.split(":");
-
-    // Buscar usuário pelas credenciais
-    const profileResult = await sql`
-      SELECT id, api_enabled, is_active
-      FROM profiles
-      WHERE client_id = ${clientId} AND client_secret = ${clientSecret}
+    // Tentar buscar na tabela user_integrations primeiro
+    let userId: string | null = null;
+    
+    const integrationResult = await sql`
+      SELECT ui.user_id, ui.is_active as integration_active
+      FROM user_integrations ui
+      INNER JOIN profiles p ON p.id::text = ui.user_id::text
+      WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
     `;
 
-    if (profileResult.length === 0) {
+    if (integrationResult.length > 0) {
+      const integration = integrationResult[0];
+      if (!integration.integration_active) {
+        return NextResponse.json(
+          { success: false, error: "Esta integração está desativada", code: "INTEGRATION_DISABLED" },
+          { status: 403 }
+        );
+      }
+      userId = integration.user_id as string;
+    } else {
+      // Tentar na tabela profiles (lp_/sk_)
+      const profileResult = await sql`
+        SELECT id, api_enabled FROM profiles
+        WHERE (client_id = ${clientId} AND client_secret = ${clientSecret})
+           OR (api_key = ${clientId} AND client_secret = ${clientSecret})
+      `;
+      
+      if (profileResult.length > 0) {
+        const profile = profileResult[0];
+        if (!profile.api_enabled) {
+          return NextResponse.json(
+            { success: false, error: "API não está habilitada para esta conta", code: "API_DISABLED" },
+            { status: 403 }
+          );
+        }
+        userId = profile.id as string;
+      }
+    }
+
+    if (!userId) {
       return NextResponse.json(
         { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
         { status: 401 }
       );
     }
-
-    const profile = profileResult[0];
 
     // Buscar transação
     const { searchParams } = new URL(request.url);
@@ -246,7 +404,7 @@ export async function GET(request: NextRequest) {
         SELECT id, external_id, amount, fee, net_amount, status, description, 
                payer_name, payer_document, created_at, updated_at
         FROM transactions 
-        WHERE id = ${transactionId} AND user_id = ${profile.id}
+        WHERE id = ${transactionId} AND user_id = ${userId}
       `;
       transaction = result[0];
     } else {
@@ -254,7 +412,7 @@ export async function GET(request: NextRequest) {
         SELECT id, external_id, amount, fee, net_amount, status, description, 
                payer_name, payer_document, created_at, updated_at
         FROM transactions 
-        WHERE external_id = ${externalId} AND user_id = ${profile.id}
+        WHERE external_id = ${externalId} AND user_id = ${userId}
       `;
       transaction = result[0];
     }

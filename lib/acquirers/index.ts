@@ -1,6 +1,7 @@
 import { sql } from "@/lib/db";
 import { MisticPay, mapPixKeyType } from "./misticpay";
 import { MedusaPayments, MEDUSA_STATUS_MAP } from "./medusa";
+import { Venopag, VENOPAG_STATUS_MAP } from "./venopag";
 
 export interface AcquirerConfig {
   id: string;
@@ -136,11 +137,44 @@ export async function getUserRouteType(userId: string): Promise<'white' | 'black
 }
 
 /**
- * Busca a adquirente correta para um usuário específico
+ * Busca a adquirente configurada para um usuario especifico
+ * O usuario DEVE ter acquirer_id configurado pelo painel CEO
+ * Retorna null se nao tiver configurado ou se estiver inativa
  */
 export async function getAcquirerForUser(userId: string): Promise<AcquirerConfig | null> {
-  const routeType = await getUserRouteType(userId);
-  return getAcquirerByRoute(routeType);
+  try {
+    // Buscar acquirer_id do usuario
+    const userResult = await sql`
+      SELECT acquirer_id FROM profiles WHERE id = ${userId}
+    `;
+
+    if (userResult.length === 0) {
+      console.error("[Acquirer] Usuario nao encontrado:", userId);
+      return null;
+    }
+
+    const user = userResult[0];
+
+    // Usuario DEVE ter acquirer_id configurado
+    if (!user.acquirer_id) {
+      console.error("[Acquirer] Usuario sem rota configurada:", userId);
+      return null;
+    }
+
+    const acquirerResult = await sql`
+      SELECT * FROM acquirers WHERE id = ${user.acquirer_id} AND is_active = true
+    `;
+    
+    if (acquirerResult.length === 0) {
+      console.error("[Acquirer] Adquirente do usuario inativa ou nao encontrada:", user.acquirer_id);
+      return null;
+    }
+
+    return acquirerResult[0] as AcquirerConfig;
+  } catch (error) {
+    console.error("[Acquirer] Erro ao buscar adquirente do usuario:", error);
+    return null;
+  }
 }
 
 /**
@@ -185,6 +219,10 @@ export async function createPixPayment(
     return { success: false, error: "Nenhuma adquirente ativa configurada" };
   }
 
+  if (!config.api_key) {
+    return { success: false, error: "Credenciais da adquirente não configuradas" };
+  }
+
   try {
     switch (config.code) {
       case "misticpay": {
@@ -193,12 +231,18 @@ export async function createPixPayment(
           clientSecret: config.api_secret || "",
         });
 
+        // URL do webhook para receber notificações de status do depósito
+        const webhookUrl = process.env.NEXT_PUBLIC_APP_URL 
+          ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/misticpay`
+          : "https://legacypay.site/api/webhooks/misticpay";
+
         const result = await client.createPixCharge({
-          amount: amount * 100, // Converter para centavos
+          amount: amount, // MisticPay recebe valor em REAIS (ex: 4.55 = R$ 4,55)
           payerName: payerName || "Cliente",
           payerDocument: payerDocument || "00000000000",
           transactionId: externalId,
           description: description || "Pagamento PIX",
+          projectWebhook: webhookUrl, // Webhook para receber status do depósito
         });
 
         if (result.success && result.data) {
@@ -221,40 +265,148 @@ export async function createPixPayment(
           licenseKey: config.api_secret
         });
 
-        // URL fixa do webhook - SEMPRE enviar para garantir que callbacks funcionem
+        // URL do webhook para callbacks
         const webhookUrl = "https://legacypay.site/api/webhooks/medusa";
-        console.log("[Medusa] Criando PIX com postbackUrl:", webhookUrl);
+
+        // Garantir que todos os parâmetros tenham valores válidos
+        const safePayerName = (payerName && payerName.trim()) ? payerName.trim() : "Cliente LegacyPay";
+        // CPF fixo para Medusa - igual usado no painel
+        const safePayerDocument = "36009722004";
+        const safeDescription = (description && description.trim()) ? description.trim() : "Pagamento PIX - LegacyPay";
 
         const result = await client.createSimplePixPayment(
           amount * 100, // Converter para centavos
-          payerName || "Cliente",
-          payerDocument || "00000000000",
-          undefined, // email
-          description || "Pagamento PIX",
+          safePayerName,
+          safePayerDocument,
+          "cliente@legacypay.com", // email fixo
+          safeDescription,
           webhookUrl
         );
-        
-        console.log("[Medusa] PIX criado, ID:", result.id);
+
+        // IMPORTANTE: insertId é o ID numerico usado nos webhooks da Medusa
+        const medusaId = result.insertId || result.id;
+        console.log("[Medusa createPixPayment] insertId:", result.insertId, "id:", result.id, "usando:", medusaId);
 
         return {
           success: true,
-          transactionId: String(result.id),
+          transactionId: String(medusaId),
           qrCode: result.pix?.qrcode,
           copyPaste: result.pix?.qrcode,
           expiresAt: result.pix?.expirationDate,
-          amount: result.amount / 100,
+          amount: (result.amount || amount * 100) / 100,
         };
+      }
+
+      case "medusa_white": {
+        // Medusa White usa a mesma API da Medusa, mas com credenciais diferentes
+        const client = new MedusaPayments({
+          secretKey: config.api_key,
+          licenseKey: config.api_secret
+        });
+
+        const webhookUrl = "https://legacypay.site/api/webhooks/medusa";
+        const safePayerName = (payerName && payerName.trim()) ? payerName.trim() : "Cliente LegacyPay";
+        const safePayerDocument = "36009722004";
+        const safeDescription = (description && description.trim()) ? description.trim() : "Deposito PIX - LegacyPay";
+
+        const result = await client.createSimplePixPayment(
+          Math.round(amount * 100),
+          safePayerName,
+          safePayerDocument,
+          "cliente@legacypay.com",
+          safeDescription,
+          webhookUrl
+        );
+
+        const medusaId = result.insertId || result.id;
+        console.log("[Medusa White createPixPayment] insertId:", result.insertId, "id:", result.id, "usando:", medusaId);
+
+        return {
+          success: true,
+          transactionId: String(medusaId),
+          qrCode: result.pix?.qrcode,
+          copyPaste: result.pix?.qrcode,
+          expiresAt: result.pix?.expirationDate,
+          amount: (result.amount || amount * 100) / 100,
+        };
+      }
+
+      case "venopag": {
+        // Venopag - Rota White
+        const client = new Venopag({
+          clientId: config.api_key,
+          clientSecret: config.api_secret || "",
+        });
+
+        const webhookUrl = process.env.NEXT_PUBLIC_APP_URL 
+          ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/venopag`
+          : "https://legacypay.site/api/webhooks/venopag";
+
+        const safePayerName = (payerName && payerName.trim()) ? payerName.trim() : "Cliente LegacyPay";
+        const safePayerDocument = (payerDocument || "00000000000").replace(/\D/g, "");
+        const safeDescription = (description && description.trim()) ? description.trim() : "Deposito PIX - LegacyPay";
+
+        console.log(`[Venopag] Criando deposito: valor=${amount}, nome=${safePayerName}`);
+
+        const result = await client.createCashIn(
+          amount, // Venopag recebe valor em reais
+          safePayerName,
+          safePayerDocument,
+          safeDescription,
+          webhookUrl
+        );
+
+        if (result.ok) {
+          return {
+            success: true,
+            transactionId: result.request_number || result.transaction_id,
+            qrCode: result.copyPaste,
+            qrCodeBase64: result.qr_img,
+            copyPaste: result.copyPaste,
+            amount: amount,
+          };
+        }
+        return { success: false, error: result.error || "Erro ao criar deposito Venopag" };
       }
 
       default:
         return { success: false, error: `Adquirente ${config.code} não suportada` };
     }
   } catch (error) {
-    console.error(`[Acquirer] Erro ao criar pagamento:`, error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Erro ao processar pagamento"
-    };
+    const errorMessage = error instanceof Error ? error.message : "Erro ao processar pagamento";
+    console.error("[createPixPayment] Erro:", errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Converte o tipo de chave PIX do frontend para o formato da MisticPay
+ */
+function convertToMisticPayKeyType(keyType?: string): "CPF" | "CNPJ" | "EMAIL" | "TELEFONE" | "CHAVE_ALEATORIA" | null {
+  if (!keyType) return null;
+  
+  const normalized = keyType.toUpperCase().trim();
+  
+  switch (normalized) {
+    case "CPF":
+      return "CPF";
+    case "CNPJ":
+      return "CNPJ";
+    case "EMAIL":
+      return "EMAIL";
+    case "TELEFONE":
+    case "PHONE":
+    case "CELULAR":
+      return "TELEFONE";
+    case "ALEATORIA":
+    case "RANDOM":
+    case "CHAVE_ALEATORIA":
+    case "EVP":
+    case "CHAVE":
+      return "CHAVE_ALEATORIA";
+    default:
+      console.log(`[MisticPay] Tipo de chave desconhecido: ${keyType}, usando detecção automática`);
+      return null;
   }
 }
 
@@ -285,11 +437,44 @@ export async function createWithdrawal(
           clientSecret: config.api_secret || "",
         });
 
+        // MisticPay cobra R$ 0,50 de taxa por saque automaticamente
+        // Então enviamos valor + taxa para que o cliente receba o valor correto
+        // Ex: usuário quer receber R$ 80, enviamos R$ 80,50, MisticPay desconta R$ 0,50
+        const MISTICPAY_WITHDRAWAL_FEE = 0.50;
+        const amountToSend = amount + MISTICPAY_WITHDRAWAL_FEE;
+
+        // Verificar saldo disponível na MisticPay antes de tentar o saque
+        try {
+          const balanceResult = await client.getBalance();
+          console.log("[MisticPay] Saldo disponível:", balanceResult.data?.balance);
+          
+          if (balanceResult.success && balanceResult.data && balanceResult.data.balance < amountToSend) {
+            return { 
+              success: false, 
+              error: `Saldo insuficiente na MisticPay. Disponível: R$ ${balanceResult.data.balance.toFixed(2)}, Necessário: R$ ${amountToSend.toFixed(2)}` 
+            };
+          }
+        } catch (balanceError) {
+          console.error("[MisticPay] Erro ao verificar saldo:", balanceError);
+          // Continuar mesmo se não conseguir verificar o saldo
+        }
+
+        // Converter tipo de chave para formato MisticPay (CPF, CNPJ, EMAIL, TELEFONE, CHAVE_ALEATORIA)
+        const misticPayKeyType = convertToMisticPayKeyType(pixKeyType) || mapPixKeyType(pixKey);
+        
+        // URL do webhook para receber notificações de status do saque
+        const webhookUrl = process.env.NEXT_PUBLIC_APP_URL 
+          ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/misticpay`
+          : "https://legacypay.site/api/webhooks/misticpay";
+        
+        console.log(`[MisticPay] Saque: valor=${amountToSend}, pixKey=${pixKey}, tipo=${misticPayKeyType}, webhook=${webhookUrl}`);
+
         const result = await client.withdraw({
-          amount: amount * 100, // Converter para centavos
+          amount: amountToSend, // MisticPay recebe valor em REAIS, não centavos
           pixKey,
-          pixKeyType: mapPixKeyType(pixKey),
+          pixKeyType: misticPayKeyType,
           description: description || "Saque PIX",
+          projectWebhook: webhookUrl, // Webhook para receber status do saque
         });
 
         if (result.success && result.data) {
@@ -303,10 +488,32 @@ export async function createWithdrawal(
       }
 
       case "medusa": {
+        // Verificar se a licenseKey está configurada (necessária para saques)
+        if (!config.api_secret) {
+          console.error("[Medusa] License key não configurada para saques");
+          return { success: false, error: "License key da Medusa não configurada. Configure api_secret na adquirente." };
+        }
+
         const client = new MedusaPayments({
           secretKey: config.api_key,
           licenseKey: config.api_secret
         });
+
+        // Verificar saldo disponível na Medusa antes de tentar o saque
+        try {
+          const balanceCheck = await client.checkBalance();
+          console.log("[Medusa] Saldo disponível:", balanceCheck.available / 100);
+          
+          if (balanceCheck.available < (amount * 100)) {
+            return { 
+              success: false, 
+              error: `Saldo insuficiente na Medusa. Disponível: R$ ${(balanceCheck.available / 100).toFixed(2)}, Necessário: R$ ${amount.toFixed(2)}` 
+            };
+          }
+        } catch (balanceError) {
+          console.error("[Medusa] Erro ao verificar saldo:", balanceError);
+          // Continuar mesmo se não conseguir verificar o saldo
+        }
 
         // Buscar dados do usuário para o saque
         let beneficiaryName = "Cliente";
@@ -318,7 +525,7 @@ export async function createWithdrawal(
           `;
           if (userData.length > 0) {
             beneficiaryName = userData[0].name || "Cliente";
-            beneficiaryDocument = userData[0].cpf_cnpj || "00000000000";
+            beneficiaryDocument = (userData[0].cpf_cnpj || "00000000000").replace(/\D/g, "");
           }
         }
 
@@ -333,22 +540,131 @@ export async function createWithdrawal(
         const MEDUSA_WITHDRAWAL_FEE = 5.00; // Taxa fixa da Medusa para saques
         const amountToSend = amount + MEDUSA_WITHDRAWAL_FEE;
 
-        const result = await client.requestSimpleWithdrawal(
-          amountToSend * 100, // Converter para centavos
-          pixKey,
-          beneficiaryName,
-          beneficiaryDocument,
-          withdrawalWebhookUrl
-        );
+        console.log(`[Medusa] Iniciando saque: valor=${amount}, comTaxa=${amountToSend}, pixKey=${pixKey}, beneficiario=${beneficiaryName}`);
 
+        try {
+          const result = await client.requestSimpleWithdrawal(
+            amountToSend * 100, // Converter para centavos
+            pixKey,
+            beneficiaryName,
+            beneficiaryDocument,
+            withdrawalWebhookUrl
+          );
+
+          console.log("[Medusa] Saque criado com sucesso:", result);
+
+          return {
+            success: true,
+            withdrawalId: result.id,
+            status: result.status,
+          };
+  } catch (withdrawError) {
+  const errorMessage = withdrawError instanceof Error ? withdrawError.message : "Erro desconhecido ao processar saque";
+  console.error("[Medusa] Erro ao criar saque:", errorMessage);
+  return { success: false, error: errorMessage };
+  }
+  }
+  
+  case "medusa_white": {
+    // Medusa White usa a mesma API da Medusa, mas com credenciais diferentes
+    const client = new MedusaPayments({
+      secretKey: config.api_key,
+      licenseKey: config.api_secret
+    });
+
+    // Buscar dados do usuario para o saque
+    const userResult = await sql`SELECT name, cpf_cnpj FROM profiles WHERE id = ${userId}`;
+    const user = userResult[0];
+    const beneficiaryName = user?.name || "Usuario LegacyPay";
+    const beneficiaryDocument = (user?.cpf_cnpj || "00000000000").replace(/\D/g, "");
+
+    const withdrawalWebhookUrl = "https://legacypay.site/api/webhooks/medusa";
+    
+    // Medusa White taxa de saque e R$ 5,00
+    const MEDUSA_WHITE_WITHDRAWAL_FEE = 5.00;
+    const amountToSend = amount + MEDUSA_WHITE_WITHDRAWAL_FEE;
+
+    console.log(`[Medusa White] Iniciando saque: valor=${amount}, comTaxa=${amountToSend}, pixKey=${pixKey}`);
+
+    try {
+      const result = await client.requestSimpleWithdrawal(
+        amountToSend * 100,
+        pixKey,
+        beneficiaryName,
+        beneficiaryDocument,
+        withdrawalWebhookUrl
+      );
+
+      console.log("[Medusa White] Saque criado com sucesso:", result);
+
+      return {
+        success: true,
+        withdrawalId: result.id,
+        status: result.status,
+      };
+    } catch (withdrawError) {
+      const errorMessage = withdrawError instanceof Error ? withdrawError.message : "Erro desconhecido ao processar saque";
+      console.error("[Medusa White] Erro ao criar saque:", errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  case "venopag": {
+    // Venopag - Rota White
+    const client = new Venopag({
+      clientId: config.api_key,
+      clientSecret: config.api_secret || "",
+    });
+
+    // Buscar dados do usuario para o saque
+    let beneficiaryName = "Cliente LegacyPay";
+    let beneficiaryDocument = "00000000000";
+
+    if (userId) {
+      const userData = await sql`
+        SELECT name, cpf_cnpj FROM profiles WHERE id = ${userId}
+      `;
+      if (userData.length > 0) {
+        beneficiaryName = userData[0].name || "Cliente LegacyPay";
+        beneficiaryDocument = (userData[0].cpf_cnpj || "00000000000").replace(/\D/g, "");
+      }
+    }
+
+    const webhookUrl = process.env.NEXT_PUBLIC_APP_URL 
+      ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/venopag`
+      : "https://legacypay.site/api/webhooks/venopag";
+
+    // Venopag cobra 1% de taxa para saques
+    // Nossa margem adicional e 3%, total 4% para usuario
+    // A taxa da Venopag e descontada do valor, entao enviamos o valor exato
+    console.log(`[Venopag] Iniciando saque: valor=${amount}, pixKey=${pixKey}, beneficiario=${beneficiaryName}`);
+
+    try {
+      const result = await client.createSimpleCashOut(
+        amount, // Venopag recebe valor em reais
+        beneficiaryName,
+        beneficiaryDocument,
+        pixKey,
+        webhookUrl
+      );
+
+      if (result.ok) {
+        console.log("[Venopag] Saque criado com sucesso:", result);
         return {
           success: true,
-          withdrawalId: result.id,
-          status: result.status,
+          withdrawalId: result.e2e,
+          status: result.status || "pending",
         };
       }
-
-      default:
+      return { success: false, error: result.error || "Erro ao criar saque Venopag" };
+    } catch (withdrawError) {
+      const errorMessage = withdrawError instanceof Error ? withdrawError.message : "Erro desconhecido ao processar saque";
+      console.error("[Venopag] Erro ao criar saque:", errorMessage);
+      return { success: false, error: errorMessage };
+    }
+  }
+  
+  default:
         return { success: false, error: `Adquirente ${config.code} não suportada` };
     }
   } catch (error) {
@@ -414,6 +730,37 @@ export async function getTransactionStatus(
         };
       }
 
+      case "medusa_white": {
+        const client = new MedusaPayments({
+          secretKey: config.api_key,
+          licenseKey: config.api_secret
+        });
+        const result = await client.getTransaction(transactionId);
+
+        return {
+          success: true,
+          status: MEDUSA_STATUS_MAP[result.status] || result.status,
+          paidAt: result.paidAt,
+        };
+      }
+
+      case "venopag": {
+        const client = new Venopag({
+          clientId: config.api_key,
+          clientSecret: config.api_secret || "",
+        });
+
+        const result = await client.consultTransaction(transactionId);
+
+        if (result.ok) {
+          return {
+            success: true,
+            status: VENOPAG_STATUS_MAP[result.status] || result.status,
+          };
+        }
+        return { success: false, error: result.error || "Erro ao consultar transacao" };
+      }
+
       default:
         return { success: false, error: `Adquirente ${config.code} não suportada` };
     }
@@ -471,6 +818,20 @@ export async function checkAcquirerBalance(acquirerCode?: string): Promise<Balan
         };
       }
 
+      case "medusa_white": {
+        const client = new MedusaPayments({
+          secretKey: config.api_key,
+          licenseKey: config.api_secret
+        });
+        const result = await client.checkBalance();
+
+        return {
+          success: true,
+          balance: result.balance / 100,
+          available: result.available / 100,
+        };
+      }
+
       default:
         return { success: false, error: `Adquirente ${config.code} não suportada` };
     }
@@ -504,9 +865,10 @@ export async function listActiveAcquirers(): Promise<AcquirerConfig[]> {
  * Busca configurações de taxa do sistema
  */
 export interface FeeConfig {
-  pixFixedFee: number;      // Taxa fixa PIX (R$)
-  pixPercentageFee: number; // Taxa percentual PIX (%)
-  withdrawalFee: number;    // Taxa de saque (R$)
+  pixFixedFee: number;           // Taxa fixa PIX (R$)
+  pixPercentageFee: number;      // Taxa percentual PIX (%)
+  withdrawalFee: number;         // Taxa de saque (% ou R$ dependendo da adquirente)
+  withdrawalFeeIsPercentage?: boolean; // Se true, withdrawalFee é percentual
 }
 
 /**
@@ -530,51 +892,127 @@ export async function getSystemFeesByRoute(routeType: 'white' | 'black'): Promis
     const defaultWithdrawalFee = routeType === 'white' ? 2.00 : 5.00;
 
     if (acquirer) {
+      // Verificar se a taxa de saque e percentual (rotas white geralmente usam %)
+      // Convenção: se withdrawal_fee <= 10, é percentual; se > 10, é valor fixo
+      const wFee = Number(acquirer.withdrawal_fee) || defaultWithdrawalFee;
+      const isWithdrawalPercentage = routeType === 'white' && wFee <= 10;
+      
       return {
-        pixFixedFee: Number(acquirer.fixed_fee) || (routeType === 'white' ? 1.50 : 1.00),
-        pixPercentageFee: Number(acquirer.fee_percentage) || (routeType === 'white' ? 0 : 5.00),
-        withdrawalFee: Number(acquirer.withdrawal_fee) || defaultWithdrawalFee,
+        pixFixedFee: Number(acquirer.fixed_fee) || (routeType === 'white' ? 1.50 : 0),
+        pixPercentageFee: Number(acquirer.fee_percentage) || (routeType === 'white' ? 0 : 4.00),
+        withdrawalFee: wFee,
+        withdrawalFeeIsPercentage: isWithdrawalPercentage,
       };
     }
 
-    // Taxas padrão por rota se não encontrar adquirente
+    // Taxas padrao por rota se nao encontrar adquirente
+    // WHITE: 0% + R$ 1.50 fixo, 2% saque (percentual)
+    // BLACK (Medusa): 4% + R$ 0.00 fixo, R$ 5.00 saque (fixo)
     return routeType === 'white'
-      ? { pixFixedFee: 1.50, pixPercentageFee: 0, withdrawalFee: 2.00 }
-      : { pixFixedFee: 1.00, pixPercentageFee: 5.00, withdrawalFee: 5.00 };
+      ? { pixFixedFee: 1.50, pixPercentageFee: 0, withdrawalFee: 2.00, withdrawalFeeIsPercentage: true }
+      : { pixFixedFee: 0, pixPercentageFee: 4.00, withdrawalFee: 5.00, withdrawalFeeIsPercentage: false };
   } catch (error) {
     console.error("[Acquirer] Erro ao buscar taxas:", error);
     return routeType === 'white'
-      ? { pixFixedFee: 1.50, pixPercentageFee: 0, withdrawalFee: 2.00 }
-      : { pixFixedFee: 1.00, pixPercentageFee: 5.00, withdrawalFee: 5.00 };
+      ? { pixFixedFee: 1.50, pixPercentageFee: 0, withdrawalFee: 2.00, withdrawalFeeIsPercentage: true }
+      : { pixFixedFee: 0, pixPercentageFee: 4.00, withdrawalFee: 5.00, withdrawalFeeIsPercentage: false };
   }
 }
 
 /**
  * Busca taxas do sistema para um usuário específico
- * Considera taxa de saque personalizada do usuário se configurada
+ * Considera taxas personalizadas do usuário se configuradas (deposito e saque)
  */
 export async function getSystemFeesForUser(userId: string): Promise<FeeConfig> {
   try {
-    // Buscar rota e taxa personalizada do usuário
+    // Buscar rota, taxas personalizadas e adquirente especifica do usuário
+    // Prioridade: custom_fee_percentage > fee_percentage (da rota)
     const userResult = await sql`
-      SELECT route_type, withdrawal_fee FROM profiles WHERE id = ${userId}
+      SELECT route_type, fee_percentage, fixed_fee, withdrawal_fee, acquirer_id,
+             custom_fee_percentage, custom_withdrawal_fee, custom_withdrawal_fee_is_percentage
+      FROM profiles WHERE id = ${userId}
     `;
-    
-    const routeType = (userResult[0]?.route_type || 'black') as 'white' | 'black';
-    const userWithdrawalFee = userResult[0]?.withdrawal_fee;
-    
-    // Buscar taxas da rota
-    const routeFees = await getSystemFeesByRoute(routeType);
-    
-    // Se o usuário tem taxa de saque personalizada, usar ela
-    if (userWithdrawalFee !== null && userWithdrawalFee !== undefined) {
-      return {
-        ...routeFees,
-        withdrawalFee: Number(userWithdrawalFee),
+  
+  const user = userResult[0];
+  const routeType = (user?.route_type || 'black') as 'white' | 'black';
+  
+  // Se usuario tem adquirente especifica, usar taxas dela como base
+  let routeFees: FeeConfig;
+  if (user?.acquirer_id) {
+    const acquirerResult = await sql`
+      SELECT fee_percentage, fixed_fee, fee_is_percentage, withdrawal_fee, withdrawal_fee_is_percentage, min_deposit, min_withdrawal, route_type
+      FROM acquirers WHERE id = ${user.acquirer_id} AND is_active = true
+    `;
+    if (acquirerResult.length > 0) {
+      const acq = acquirerResult[0];
+      const isFeePercentage = acq.fee_is_percentage ?? true;
+      const isWithdrawalPercentage = acq.withdrawal_fee_is_percentage ?? false;
+      
+      routeFees = {
+        // Se taxa de entrada e percentual, usa fee_percentage, senao usa fixed_fee
+        pixFixedFee: isFeePercentage ? 0 : Number(acq.fixed_fee) || 0,
+        pixPercentageFee: isFeePercentage ? Number(acq.fee_percentage) || 0 : 0,
+        withdrawalFee: Number(acq.withdrawal_fee) || 0,
+        withdrawalFeeIsPercentage: isWithdrawalPercentage,
       };
+    } else {
+      routeFees = await getSystemFeesByRoute(routeType);
+    }
+  } else {
+    // Buscar taxas padrao da rota
+    routeFees = await getSystemFeesByRoute(routeType);
+  }
+    
+    // Criar objeto de taxas com valores personalizados se existirem
+    const fees: FeeConfig = {
+      pixFixedFee: routeFees.pixFixedFee,
+      pixPercentageFee: routeFees.pixPercentageFee,
+      withdrawalFee: routeFees.withdrawalFee,
+      withdrawalFeeIsPercentage: routeFees.withdrawalFeeIsPercentage,
+    };
+    
+    // PRIORIDADE DE TAXAS:
+    // 1. custom_fee_percentage / custom_withdrawal_fee (taxa personalizada do usuario)
+    // 2. fee_percentage / withdrawal_fee do profiles (legado, se custom nao existir)
+    // 3. Taxa da rota/adquirente (fallback)
+    
+    // Taxa percentual de deposito personalizada (PIX In)
+    // Prioridade: custom_fee_percentage > fee_percentage
+    const customFeePercentage = user?.custom_fee_percentage;
+    const legacyFeePercentage = user?.fee_percentage;
+    
+    if (customFeePercentage !== null && customFeePercentage !== undefined && String(customFeePercentage).trim() !== '') {
+      fees.pixPercentageFee = Number(customFeePercentage);
+      console.log(`[Acquirer] Usuario ${userId} - Usando taxa PERSONALIZADA de entrada: ${customFeePercentage}%`);
+    } else if (legacyFeePercentage !== null && legacyFeePercentage !== undefined && String(legacyFeePercentage).trim() !== '') {
+      fees.pixPercentageFee = Number(legacyFeePercentage);
+      console.log(`[Acquirer] Usuario ${userId} - Usando taxa LEGADA de entrada: ${legacyFeePercentage}%`);
     }
     
-    return routeFees;
+    // Taxa fixa de deposito personalizada (PIX In) - mantem legado por enquanto
+    const userFixedFee = user?.fixed_fee;
+    if (userFixedFee !== null && userFixedFee !== undefined && String(userFixedFee).trim() !== '') {
+      fees.pixFixedFee = Number(userFixedFee);
+    }
+    
+    // Taxa de saque personalizada (PIX Out)
+    // Prioridade: custom_withdrawal_fee > withdrawal_fee
+    const customWithdrawalFee = user?.custom_withdrawal_fee;
+    const legacyWithdrawalFee = user?.withdrawal_fee;
+    const customWithdrawalFeeIsPercentage = user?.custom_withdrawal_fee_is_percentage ?? false;
+    
+    if (customWithdrawalFee !== null && customWithdrawalFee !== undefined && String(customWithdrawalFee).trim() !== '') {
+      fees.withdrawalFee = Number(customWithdrawalFee);
+      fees.withdrawalFeeIsPercentage = customWithdrawalFeeIsPercentage;
+      console.log(`[Acquirer] Usuario ${userId} - Usando taxa PERSONALIZADA de saque: ${customWithdrawalFee}${customWithdrawalFeeIsPercentage ? '%' : ' fixo'}`);
+    } else if (legacyWithdrawalFee !== null && legacyWithdrawalFee !== undefined && String(legacyWithdrawalFee).trim() !== '') {
+      fees.withdrawalFee = Number(legacyWithdrawalFee);
+      console.log(`[Acquirer] Usuario ${userId} - Usando taxa LEGADA de saque: ${legacyWithdrawalFee}`);
+    }
+    
+    console.log(`[Acquirer] Usuario ${userId} - TAXAS FINAIS: PIX In=${fees.pixPercentageFee}%+R$${fees.pixFixedFee}, PIX Out=${fees.withdrawalFee}${fees.withdrawalFeeIsPercentage ? '%' : ' fixo'}`);
+    
+    return fees;
   } catch (error) {
     console.error("[Acquirer] Erro ao buscar taxas do usuário:", error);
     const routeType = await getUserRouteType(userId);
@@ -606,17 +1044,28 @@ export function calculatePixFees(
 /**
  * Calcula as taxas para um saque
  * Retorna o valor líquido que será enviado e a taxa cobrada
+ * Suporta taxa fixa (R$) ou percentual (%)
  */
 export function calculateWithdrawalFees(
   grossAmount: number,
   fees: FeeConfig
-): { netAmount: number; totalFee: number } {
-  const totalFee = fees.withdrawalFee;
+): { netAmount: number; totalFee: number; isPercentage: boolean } {
+  let totalFee: number;
+  
+  if (fees.withdrawalFeeIsPercentage) {
+    // Taxa percentual: calcular sobre o valor do saque
+    totalFee = grossAmount * (fees.withdrawalFee / 100);
+  } else {
+    // Taxa fixa em reais
+    totalFee = fees.withdrawalFee;
+  }
+  
   const netAmount = grossAmount - totalFee;
 
   return {
     netAmount: Math.max(0, netAmount),
     totalFee,
+    isPercentage: fees.withdrawalFeeIsPercentage || false,
   };
 }
 

@@ -10,6 +10,9 @@ import {
   CheckCircle,
   XCircle,
   TrendingUp,
+  Download,
+  Loader2,
+  Calendar,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -102,6 +105,41 @@ const getStatusLabel = (status: string) => {
 export function TransactionsContent({ transactions }: TransactionsContentProps) {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportStartDate, setExportStartDate] = useState("");
+  const [exportEndDate, setExportEndDate] = useState("");
+  const [exportStatus, setExportStatus] = useState("all");
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const params = new URLSearchParams({ type: "transactions" });
+      if (exportStartDate) params.append("startDate", exportStartDate);
+      if (exportEndDate) params.append("endDate", exportEndDate);
+      if (exportStatus) params.append("status", exportStatus);
+
+      const response = await fetch(`/api/user/export?${params.toString()}`);
+      if (!response.ok) throw new Error("Erro ao exportar");
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `transacoes_${new Date().toISOString().split("T")[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      
+      setShowExportModal(false);
+    } catch (error) {
+      console.error("Erro ao exportar:", error);
+      alert("Erro ao exportar dados");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const filteredTransactions = transactions.filter((t) => {
     const matchesSearch =
@@ -119,14 +157,114 @@ export function TransactionsContent({ transactions }: TransactionsContentProps) 
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-          Transações
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Histórico completo de suas transações
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
+            Transacoes
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Historico completo de suas transacoes
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => setShowExportModal(true)}
+          className="flex items-center gap-2"
+        >
+          <Download className="w-4 h-4" />
+          <span className="hidden sm:inline">Exportar CSV</span>
+        </Button>
       </div>
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-card border border-border rounded-2xl p-6 w-full max-w-md"
+          >
+            <h2 className="text-lg font-semibold text-foreground mb-4">
+              Exportar Transacoes
+            </h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">
+                  Data Inicial
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="date"
+                    value={exportStartDate}
+                    onChange={(e) => setExportStartDate(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">
+                  Data Final
+                </label>
+                <div className="relative">
+                  <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <input
+                    type="date"
+                    value={exportEndDate}
+                    onChange={(e) => setExportEndDate(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm text-muted-foreground mb-1 block">
+                  Status
+                </label>
+                <select
+                  value={exportStatus}
+                  onChange={(e) => setExportStatus(e.target.value)}
+                  className="w-full px-4 py-2 bg-secondary border border-border rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                >
+                  <option value="all">Todos</option>
+                  <option value="paid">Pagos</option>
+                  <option value="pending">Pendentes</option>
+                  <option value="expired">Expirados</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => setShowExportModal(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleExport}
+                disabled={exporting}
+                className="flex-1"
+              >
+                {exporting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Exportando...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Exportar
+                  </>
+                )}
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col gap-3 sm:gap-4">

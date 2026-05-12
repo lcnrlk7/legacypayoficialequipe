@@ -1,3 +1,4 @@
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 import { NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 
@@ -28,6 +29,13 @@ const formatRelativeTime = (date: string) => {
 };
 
 export async function GET() {
+  // Verificar se e admin FORA do try/catch para garantir que retorna 403
+  const admin = await verifyAdmin();
+  if (!admin) {
+    console.log("[v0] admin/stats - acesso negado");
+    return accessDeniedResponse();
+  }
+  
   try {
     const [
       totalUsersResult,
@@ -41,7 +49,7 @@ export async function GET() {
       recentUsers,
     ] = await Promise.all([
       sql`SELECT COUNT(*) as count FROM profiles`,
-      sql`SELECT COUNT(*) as count FROM kyc_documents WHERE status = 'pending'`,
+      sql`SELECT COUNT(*) as count FROM profiles WHERE kyc_status = 'pending'`,
       sql`SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE status = 'completed' AND type IN ('pix_in', 'deposit')`,
       sql`SELECT COALESCE(SUM(fee), 0) as total FROM transactions WHERE status = 'completed'`,
       sql`SELECT COUNT(*) as count FROM transactions`,

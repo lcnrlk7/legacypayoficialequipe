@@ -2,8 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, Mail, Phone, Building, Loader2, Save, CheckCircle2, Shield, Lock, Eye, EyeOff, KeyRound, X, Monitor, Smartphone, Globe, Clock, LogOut, Trash2, AlertTriangle } from "lucide-react";
+import { User, Mail, Phone, Building, Loader2, Save, CheckCircle2, Shield, Lock, Eye, EyeOff, KeyRound, X, Monitor, Smartphone, Globe, Clock, LogOut, Trash2, AlertTriangle, Bell, BellRing, Send, Calendar, Moon, Sun, Palette, Camera, ImagePlus } from "lucide-react";
+import Image from "next/image";
+import { ThemeToggleWithLabel } from "@/components/theme-toggle";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -14,6 +17,8 @@ interface Profile {
   cpf: string;
   email_verified: boolean;
   kyc_status: string;
+  avatar_url: string | null;
+  bio: string | null;
 }
 
 export default function SettingsPage() {
@@ -28,7 +33,11 @@ export default function SettingsPage() {
     cpf: "",
     email_verified: false,
     kyc_status: "pending",
+    avatar_url: null,
+    bio: null,
   });
+
+
 
   // Password change states
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -59,11 +68,46 @@ export default function SettingsPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  // Notification states
+  const [notificationsPush, setNotificationsPush] = useState(false);
+  const [notificationsEmail, setNotificationsEmail] = useState(false);
+  const [emailFrequency, setEmailFrequency] = useState<"daily" | "weekly">("daily");
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushPermission, setPushPermission] = useState<NotificationPermission>("default");
+  const [notificationLoading, setNotificationLoading] = useState(false);
+  const [notificationTestLoading, setNotificationTestLoading] = useState<string | null>(null);
+  const [notificationMessage, setNotificationMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
   const router = useRouter();
 
   useEffect(() => {
     loadProfile();
+    loadNotificationSettings();
+    checkPushSupport();
   }, []);
+
+  async function checkPushSupport() {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator && "PushManager" in window) {
+      setPushSupported(true);
+      const permission = Notification.permission;
+      setPushPermission(permission);
+    }
+  }
+
+  async function loadNotificationSettings() {
+    try {
+      const response = await fetch("/api/user/notifications/settings");
+      const data = await response.json();
+      
+      if (data.notifications_push !== undefined) {
+        setNotificationsPush(data.notifications_push);
+        setNotificationsEmail(data.notifications_email);
+        setEmailFrequency(data.notifications_email_frequency || "daily");
+      }
+    } catch (err) {
+      console.error("Erro ao carregar configuracoes de notificacao:", err);
+    }
+  }
 
   useEffect(() => {
     if (resendTimer > 0) {
@@ -85,7 +129,10 @@ export default function SettingsPage() {
           cpf: formatCPF(data.profile.cpf || ""),
           email_verified: data.profile.email_verified || false,
           kyc_status: data.profile.kyc_status || "pending",
+          avatar_url: data.profile.avatar_url || null,
+          bio: data.profile.bio || null,
         });
+
       }
     } catch (err) {
       console.error("Erro ao carregar perfil:", err);
@@ -122,6 +169,7 @@ export default function SettingsPage() {
         body: JSON.stringify({
           name: profile.name,
           phone: profile.phone.replace(/\D/g, ""),
+          bio: profile.bio,
         }),
       });
 
@@ -282,6 +330,125 @@ export default function SettingsPage() {
     setSessions(sessions.filter(s => s.id !== sessionId));
   };
 
+  // Notification functions
+  const handleTogglePush = async (enabled: boolean) => {
+    setNotificationLoading(true);
+    setNotificationMessage(null);
+    
+    try {
+      if (enabled) {
+        // Pedir permissao e registrar service worker
+        const permission = await Notification.requestPermission();
+        setPushPermission(permission);
+        
+        if (permission !== "granted") {
+          setNotificationMessage({ type: "error", text: "Permissao de notificacao negada" });
+          setNotificationLoading(false);
+          return;
+        }
+
+        // Registrar service worker
+        const registration = await navigator.serviceWorker.register("/sw.js");
+        await navigator.serviceWorker.ready;
+
+        // Obter subscription
+        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U";
+        const subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: vapidKey
+        });
+
+        // Salvar no backend
+        await fetch("/api/user/notifications/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            notifications_push: true,
+            push_subscription: subscription.toJSON()
+          })
+        });
+
+        setNotificationsPush(true);
+        setNotificationMessage({ type: "success", text: "Notificacoes push ativadas com sucesso!" });
+      } else {
+        // Desativar
+        await fetch("/api/user/notifications/settings", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ notifications_push: false })
+        });
+        setNotificationsPush(false);
+        setNotificationMessage({ type: "success", text: "Notificacoes push desativadas" });
+      }
+    } catch (err) {
+      console.error("Erro ao configurar push:", err);
+      setNotificationMessage({ type: "error", text: "Erro ao configurar notificacoes" });
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
+
+  const handleToggleEmail = async (enabled: boolean) => {
+    setNotificationLoading(true);
+    setNotificationMessage(null);
+    
+    try {
+      await fetch("/api/user/notifications/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notifications_email: enabled })
+      });
+      setNotificationsEmail(enabled);
+      setNotificationMessage({ 
+        type: "success", 
+        text: enabled ? "Relatorios por email ativados!" : "Relatorios por email desativados" 
+      });
+    } catch (err) {
+      console.error("Erro ao configurar email:", err);
+      setNotificationMessage({ type: "error", text: "Erro ao configurar email" });
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
+
+  const handleChangeFrequency = async (frequency: "daily" | "weekly") => {
+    try {
+      await fetch("/api/user/notifications/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notifications_email_frequency: frequency })
+      });
+      setEmailFrequency(frequency);
+    } catch (err) {
+      console.error("Erro ao alterar frequencia:", err);
+    }
+  };
+
+  const handleTestNotification = async (type: "push" | "email") => {
+    setNotificationTestLoading(type);
+    setNotificationMessage(null);
+    
+    try {
+      const response = await fetch("/api/user/notifications/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setNotificationMessage({ type: "success", text: data.message });
+      } else {
+        setNotificationMessage({ type: "error", text: data.error });
+      }
+    } catch (err) {
+      setNotificationMessage({ type: "error", text: "Erro ao enviar teste" });
+    } finally {
+      setNotificationTestLoading(null);
+    }
+  };
+
   // Delete account functions
   const handleDeleteAccount = async () => {
     if (deleteConfirmText !== "EXCLUIR") return;
@@ -350,19 +517,6 @@ export default function SettingsPage() {
         )}
 
         <div className="grid gap-6 max-w-xl">
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Nome Completo</label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={profile.name}
-                onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                placeholder="Seu nome completo"
-                className="pl-9 bg-secondary border-border"
-              />
-            </div>
-          </div>
-
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">Email</label>
             <div className="relative">
@@ -485,6 +639,188 @@ export default function SettingsPage() {
         </div>
       </motion.div>
 
+      {/* Notifications Settings */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.08 }}
+        className="bg-card border border-border rounded-2xl p-6"
+      >
+        <h2 className="text-lg font-semibold text-foreground mb-6 flex items-center gap-2">
+          <Bell className="w-5 h-5" />
+          Notificacoes
+        </h2>
+
+        {notificationMessage && (
+          <div className={`mb-4 p-3 rounded-lg text-sm flex items-center gap-2 ${
+            notificationMessage.type === "success" 
+              ? "bg-green-500/10 border border-green-500/20 text-green-500" 
+              : "bg-destructive/10 border border-destructive/20 text-destructive"
+          }`}>
+            {notificationMessage.type === "success" ? <CheckCircle2 className="w-4 h-4" /> : <AlertTriangle className="w-4 h-4" />}
+            {notificationMessage.text}
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {/* Push Notifications */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-secondary/50 rounded-xl gap-3">
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-xl ${notificationsPush ? "bg-green-500/10" : "bg-muted/50"}`}>
+                <BellRing className={`w-6 h-6 ${notificationsPush ? "text-green-500" : "text-muted-foreground"}`} />
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Notificacoes Push</p>
+                <p className="text-sm text-muted-foreground">
+                  Receba alertas de vendas em tempo real no navegador
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {notificationsPush && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleTestNotification("push")}
+                  disabled={notificationTestLoading === "push"}
+                >
+                  {notificationTestLoading === "push" ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-1" />
+                      Testar
+                    </>
+                  )}
+                </Button>
+              )}
+              <Button 
+                variant={notificationsPush ? "destructive" : "default"}
+                onClick={() => handleTogglePush(!notificationsPush)}
+                disabled={notificationLoading || !pushSupported}
+              >
+                {notificationLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : notificationsPush ? (
+                  "Desativar"
+                ) : (
+                  "Ativar"
+                )}
+              </Button>
+            </div>
+          </div>
+          {!pushSupported && (
+            <p className="text-xs text-muted-foreground px-4">
+              Seu navegador nao suporta notificacoes push.
+            </p>
+          )}
+          {pushPermission === "denied" && (
+            <p className="text-xs text-destructive px-4">
+              Permissao de notificacao bloqueada. Habilite nas configuracoes do navegador.
+            </p>
+          )}
+
+          {/* Email Notifications */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-secondary/50 rounded-xl gap-3">
+            <div className="flex items-center gap-4">
+              <div className={`p-3 rounded-xl ${notificationsEmail ? "bg-primary/10" : "bg-muted/50"}`}>
+                <Mail className={`w-6 h-6 ${notificationsEmail ? "text-primary" : "text-muted-foreground"}`} />
+              </div>
+              <div>
+                <p className="font-medium text-foreground">Relatorios por Email</p>
+                <p className="text-sm text-muted-foreground">
+                  Receba resumos de vendas e metricas por email
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {notificationsEmail && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleTestNotification("email")}
+                  disabled={notificationTestLoading === "email"}
+                >
+                  {notificationTestLoading === "email" ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-1" />
+                      Testar
+                    </>
+                  )}
+                </Button>
+              )}
+              <Button 
+                variant={notificationsEmail ? "destructive" : "default"}
+                onClick={() => handleToggleEmail(!notificationsEmail)}
+                disabled={notificationLoading}
+              >
+                {notificationLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : notificationsEmail ? (
+                  "Desativar"
+                ) : (
+                  "Ativar"
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {/* Email Frequency */}
+          {notificationsEmail && (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-secondary/30 rounded-xl gap-3 ml-4 sm:ml-12">
+              <div className="flex items-center gap-3">
+                <Calendar className="w-5 h-5 text-muted-foreground" />
+                <div>
+                  <p className="font-medium text-foreground text-sm">Frequencia dos Relatorios</p>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant={emailFrequency === "daily" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleChangeFrequency("daily")}
+                >
+                  Diario
+                </Button>
+                <Button 
+                  variant={emailFrequency === "weekly" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleChangeFrequency("weekly")}
+                >
+                  Semanal
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Appearance Settings */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.09 }}
+        className="bg-card border border-border rounded-2xl p-6"
+      >
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 rounded-xl bg-primary/10">
+            <Palette className="w-6 h-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">
+              Aparencia
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Personalize a interface do sistema
+            </p>
+          </div>
+        </div>
+
+        <ThemeToggleWithLabel />
+      </motion.div>
+
       {/* Security Settings */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -493,7 +829,7 @@ export default function SettingsPage() {
         className="bg-card border border-border rounded-2xl p-6"
       >
         <h2 className="text-lg font-semibold text-foreground mb-6">
-          Segurança
+          Seguranca
         </h2>
 
         <div className="space-y-4">
@@ -505,7 +841,7 @@ export default function SettingsPage() {
               <div>
                 <p className="font-medium text-foreground">Alterar Senha</p>
                 <p className="text-sm text-muted-foreground">
-                  Um código será enviado para seu email
+                  Um codigo sera enviado para seu email
                 </p>
               </div>
             </div>
@@ -517,20 +853,22 @@ export default function SettingsPage() {
 
           <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-xl opacity-60">
             <div className="flex items-center gap-3 sm:gap-4">
-              <div className="p-2.5 sm:p-3 rounded-xl bg-purple-500/10">
-                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
-              </div>
-              <div>
-                <p className="font-medium text-foreground text-sm sm:text-base">
-                  Autenticacao de Dois Fatores
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Em breve disponivel
-                </p>
-              </div>
-            </div>
-            <Button variant="outline" disabled className="text-xs sm:text-sm">Em breve</Button>
-          </div>
+  <div className="p-2.5 sm:p-3 rounded-xl bg-purple-500/10">
+  <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
+  </div>
+  <div>
+  <p className="font-medium text-foreground text-sm sm:text-base">
+  Autenticacao de Dois Fatores
+  </p>
+  <p className="text-xs sm:text-sm text-muted-foreground">
+  Proteja sua conta com codigo do app
+  </p>
+  </div>
+  </div>
+  <Link href="/dashboard/security">
+    <Button variant="outline" className="text-xs sm:text-sm">Configurar</Button>
+  </Link>
+  </div>
 
           {/* Sessoes Ativas */}
           <div className="flex items-center justify-between p-3 sm:p-4 bg-secondary/50 rounded-xl">
