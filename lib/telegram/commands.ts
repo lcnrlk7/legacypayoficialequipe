@@ -1,7 +1,8 @@
 import { neon } from "@neondatabase/serverless";
 import { sendMessage, editMessageText, answerCallbackQuery } from "./bot";
 import { logTelegramAction } from "./logs";
-import { notifyNewUserLinked } from "./notify";
+import { notifyNewUserLinked, notifyDeposit, notifyWithdrawal } from "./notify";
+import { MedusaPayments } from "@/lib/acquirers/medusa";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -15,7 +16,15 @@ const DISCORD_LINK = "https://discord.gg/ea32hgRSeM";
 const WHATSAPP = "(34) 99935-3187";
 const WHATSAPP_LINK = "https://wa.me/5534999353187";
 const SALES_CHANNEL = "https://t.me/legacypaybot";
+const SALES_CHANNEL_ID = "@legacypaybot";
 const ANNOUNCEMENTS_CHANNEL = "https://t.me/legacypayavisos";
+const ANNOUNCEMENTS_CHANNEL_ID = "@legacypayavisos";
+
+// Taxas do Bot Telegram (Medusa Black)
+const TELEGRAM_PIX_FEE_PERCENT = 5; // 5% deposito
+const TELEGRAM_PIX_FEE_FIXED = 0; // R$0 fixo deposito
+const TELEGRAM_WITHDRAWAL_FEE_PERCENT = 0; // 0% saque
+const TELEGRAM_WITHDRAWAL_FEE_FIXED = 7; // R$7 fixo saque
 
 // ══════════════════════════════════════════════════════════════════════════════
 // TECLADOS INLINE (BOTOES)
@@ -170,7 +179,7 @@ Seja bem-vindo ao bot oficial do ${BOT_NAME}!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    📊 Vendas: @legacypaybot
-   📣 Avisos: @legacypayusers
+   📣 Avisos: @legacypayavisos
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
        📱 <b>MENU PRINCIPAL</b>
@@ -626,17 +635,11 @@ async function showExtrato(chatId: number, messageId: number, user: Record<strin
 }
 
 async function showTaxas(chatId: number, messageId: number, user: Record<string, unknown>) {
-  const userFees = await sql`
-    SELECT pix_percentage_fee, pix_fixed_fee, withdrawal_percentage_fee, withdrawal_fixed_fee
-    FROM profiles WHERE id = ${user.user_id as string}
-  `;
-  
-  const systemFees = await sql`SELECT * FROM system_fees LIMIT 1`;
-  
-  const pixFee = Number(userFees[0]?.pix_percentage_fee ?? systemFees[0]?.pix_percentage_fee ?? 2.5);
-  const pixFixed = Number(userFees[0]?.pix_fixed_fee ?? systemFees[0]?.pix_fixed_fee ?? 0);
-  const wdFee = Number(userFees[0]?.withdrawal_percentage_fee ?? systemFees[0]?.withdrawal_percentage_fee ?? 2);
-  const wdFixed = Number(userFees[0]?.withdrawal_fixed_fee ?? systemFees[0]?.withdrawal_fixed_fee ?? 4);
+  // Taxas fixas do Bot Telegram
+  const pixFee = TELEGRAM_PIX_FEE_PERCENT;
+  const pixFixed = TELEGRAM_PIX_FEE_FIXED;
+  const wdFee = TELEGRAM_WITHDRAWAL_FEE_PERCENT;
+  const wdFixed = TELEGRAM_WITHDRAWAL_FEE_FIXED;
   
   await editMessageText(chatId, messageId, msgTaxas(pixFee, pixFixed, wdFee, wdFixed), { reply_markup: VOLTAR_MENU });
 }
@@ -653,20 +656,88 @@ async function handleDeposito(chatId: number, messageId: number, telegramId: num
   
   const amount = parseInt(data.replace("dep_", ""));
   
-  // Buscar taxas
-  const userFees = await sql`
-    SELECT pix_percentage_fee, pix_fixed_fee FROM profiles WHERE id = ${user.user_id as string}
-  `;
-  const systemFees = await sql`SELECT pix_percentage_fee, pix_fixed_fee FROM system_fees LIMIT 1`;
-  
-  const percentageFee = Number(userFees[0]?.pix_percentage_fee ?? systemFees[0]?.pix_percentage_fee ?? 2.5);
-  const fixedFee = Number(userFees[0]?.pix_fixed_fee ?? systemFees[0]?.pix_fixed_fee ?? 0);
+  // Taxas fixas do Telegram (5% deposito)
+  const percentageFee = TELEGRAM_PIX_FEE_PERCENT;
+  const fixedFee = TELEGRAM_PIX_FEE_FIXED;
   const fee = amount * (percentageFee / 100) + fixedFee;
   const netAmount = amount - fee;
   
-  const msg = `
+  await editMessageText(chatId, messageId, `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-          📥 <b>DEPOSITO</b> 📥
+          ⏳ <b>GERANDO PIX...</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Aguarde enquanto geramos seu PIX...
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`);
+  
+  try {
+    // Buscar adquirente Medusa Black ativa
+    const acquirer = await sql`
+      SELECT * FROM acquirers 
+      WHERE provider = 'medusa' 
+        AND is_active = true 
+        AND (name ILIKE '%black%' OR route_type = 'black')
+      LIMIT 1
+    `;
+    
+    if (!acquirer[0]) {
+      // Fallback para qualquer Medusa ativa
+      const anyMedusa = await sql`
+        SELECT * FROM acquirers WHERE provider = 'medusa' AND is_active = true LIMIT 1
+      `;
+      if (!anyMedusa[0]) {
+        throw new Error("Nenhuma adquirente Medusa configurada");
+      }
+      acquirer[0] = anyMedusa[0];
+    }
+    
+    const medusa = new MedusaPayments({
+      secretKey: acquirer[0].api_key,
+      licenseKey: acquirer[0].api_secret,
+    });
+    
+    // Buscar dados do usuario
+    const profile = await sql`SELECT name, email, document FROM profiles WHERE id = ${user.user_id as string}`;
+    
+    // Criar PIX via Medusa
+    const pixResponse = await medusa.createSimplePixPayment(
+      amount * 100, // Em centavos
+      profile[0]?.name || "Cliente",
+      profile[0]?.document || "00000000000",
+      profile[0]?.email || "cliente@legacypay.site",
+      `Deposito Telegram - ${BOT_NAME}`,
+      `${SITE_URL}/api/webhooks/medusa`
+    );
+    
+    const qrCode = pixResponse.pix?.qrcode || pixResponse.transaction?.pix?.qrcode;
+    const txId = pixResponse.insertId || pixResponse.id || pixResponse.transaction?.id;
+    
+    if (!qrCode) {
+      throw new Error("QR Code nao gerado");
+    }
+    
+    // Salvar transacao no banco
+    await sql`
+      INSERT INTO transactions (
+        user_id, type, amount, fee, net_amount, status, acquirer_id, external_id, metadata
+      ) VALUES (
+        ${user.user_id as string},
+        'pix',
+        ${amount},
+        ${fee},
+        ${netAmount},
+        'pending',
+        ${acquirer[0].id},
+        ${String(txId)},
+        ${JSON.stringify({ source: 'telegram', telegram_id: telegramId })}
+      )
+    `;
+    
+    await editMessageText(chatId, messageId, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+          📥 <b>PIX GERADO!</b> 📥
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    💵 Valor: <b>R$ ${formatCurrency(amount)}</b>
@@ -674,20 +745,43 @@ async function handleDeposito(chatId: number, messageId: number, telegramId: num
    ✅ Voce recebe: <b>R$ ${formatCurrency(netAmount)}</b>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      📋 <b>CODIGO COPIA E COLA</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Para gerar o PIX, acesse o painel:
+<code>${qrCode}</code>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   ⏰ Valido por 30 minutos
+   ⚡ Credito automatico apos pagamento
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`, { reply_markup: VOLTAR_MENU });
+    
+    await logTelegramAction(telegramId, user.user_id as string, "DEPOSIT_GENERATED", "depositar", { amount, txId });
+    
+  } catch (error) {
+    console.error("[Telegram] Erro ao gerar PIX:", error);
+    
+    await editMessageText(chatId, messageId, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       ❌ <b>ERRO AO GERAR PIX</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Ocorreu um erro ao gerar o PIX.
+Por favor, tente novamente ou
+acesse o painel web.
 
 🌐 ${SITE_URL}/dashboard/wallet
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-   ⚡ PIX gerado instantaneamente
-   ✅ Credito automatico apos pagamento
-
+      📞 <b>SUPORTE</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`;
-  
-  await editMessageText(chatId, messageId, msg, { reply_markup: VOLTAR_COM_LINKS });
+💬 Discord: ${DISCORD_LINK}
+📱 WhatsApp: ${WHATSAPP}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`, { reply_markup: VOLTAR_MENU });
+  }
 }
 
 async function handleSaque(chatId: number, messageId: number, telegramId: number, data: string, user: Record<string, unknown> | null) {
@@ -704,6 +798,12 @@ async function handleSaque(chatId: number, messageId: number, telegramId: number
   } else {
     amount = parseInt(data.replace("saq_", ""));
   }
+  
+  // Taxas fixas do Telegram (R$7 fixo saque)
+  const percentageFee = TELEGRAM_WITHDRAWAL_FEE_PERCENT;
+  const fixedFee = TELEGRAM_WITHDRAWAL_FEE_FIXED;
+  const fee = amount * (percentageFee / 100) + fixedFee;
+  const netAmount = amount - fee;
   
   if (amount > balance) {
     await editMessageText(chatId, messageId, `
@@ -723,31 +823,24 @@ async function handleSaque(chatId: number, messageId: number, telegramId: number
     return;
   }
   
-  if (amount <= 0) {
+  if (amount <= 0 || netAmount <= 0) {
     await editMessageText(chatId, messageId, `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
        ❌ <b>VALOR INVALIDO</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   Voce precisa ter saldo para sacar.
+   Valor minimo para saque: R$ ${formatCurrency(fixedFee + 1)}
+   (Taxa fixa de R$ ${formatCurrency(fixedFee)})
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `, { reply_markup: VOLTAR_MENU });
     return;
   }
   
-  // Buscar taxas
-  const userFees = await sql`
-    SELECT withdrawal_percentage_fee, withdrawal_fixed_fee FROM profiles WHERE id = ${user.user_id as string}
-  `;
-  const systemFees = await sql`SELECT withdrawal_percentage_fee, withdrawal_fixed_fee FROM system_fees LIMIT 1`;
+  // Iniciar fluxo de saque - pedir chave PIX
+  setState(telegramId, "awaiting_pix_key", { amount, fee, netAmount });
   
-  const percentageFee = Number(userFees[0]?.withdrawal_percentage_fee ?? systemFees[0]?.withdrawal_percentage_fee ?? 2);
-  const fixedFee = Number(userFees[0]?.withdrawal_fixed_fee ?? systemFees[0]?.withdrawal_fixed_fee ?? 4);
-  const fee = amount * (percentageFee / 100) + fixedFee;
-  const netAmount = amount - fee;
-  
-  const msg = `
+  await editMessageText(chatId, messageId, `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           📤 <b>SAQUE</b> 📤
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -757,20 +850,14 @@ async function handleSaque(chatId: number, messageId: number, telegramId: number
    ✅ Voce recebe: <b>R$ ${formatCurrency(netAmount)}</b>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Para solicitar o saque, acesse o painel:
-
-🌐 ${SITE_URL}/dashboard/wallet
-
+      📱 <b>DIGITE SUA CHAVE PIX</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   ⚡ Saques processados em minutos
-   ✅ Direto na sua chave PIX
+Envie sua chave PIX para receber:
+(CPF, Email, Telefone ou Chave Aleatoria)
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`;
-  
-  await editMessageText(chatId, messageId, msg, { reply_markup: VOLTAR_COM_LINKS });
+`, { reply_markup: VOLTAR_MENU });
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -792,6 +879,173 @@ async function handleStateMessage(
     case "awaiting_code":
       await handleCodeInput(chatId, telegramId, text, firstName, state);
       break;
+      
+    case "awaiting_pix_key":
+      await handlePixKeyInput(chatId, telegramId, text, state);
+      break;
+  }
+}
+
+async function handlePixKeyInput(
+  chatId: number,
+  telegramId: number,
+  pixKey: string,
+  state: { step: string; data: Record<string, unknown> }
+) {
+  const user = await getLinkedUser(telegramId);
+  if (!user) {
+    clearState(telegramId);
+    await sendMessage(chatId, msgContaNaoVinculada(), { reply_markup: VOLTAR_COM_LINKS });
+    return;
+  }
+  
+  const { amount, fee, netAmount } = state.data as { amount: number; fee: number; netAmount: number };
+  
+  // Verificar saldo novamente
+  if (Number(user.balance) < amount) {
+    clearState(telegramId);
+    await sendMessage(chatId, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       ❌ <b>SALDO INSUFICIENTE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Seu saldo mudou enquanto processava.
+Por favor, tente novamente.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`, { reply_markup: VOLTAR_MENU });
+    return;
+  }
+  
+  await sendMessage(chatId, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       ⏳ <b>PROCESSANDO SAQUE...</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Aguarde enquanto processamos seu saque...
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`);
+  
+  try {
+    // Buscar adquirente Medusa Black ativa
+    const acquirer = await sql`
+      SELECT * FROM acquirers 
+      WHERE provider = 'medusa' 
+        AND is_active = true 
+        AND (name ILIKE '%black%' OR route_type = 'black')
+      LIMIT 1
+    `;
+    
+    if (!acquirer[0]) {
+      const anyMedusa = await sql`
+        SELECT * FROM acquirers WHERE provider = 'medusa' AND is_active = true LIMIT 1
+      `;
+      if (!anyMedusa[0]) {
+        throw new Error("Nenhuma adquirente Medusa configurada");
+      }
+      acquirer[0] = anyMedusa[0];
+    }
+    
+    const medusa = new MedusaPayments({
+      secretKey: acquirer[0].api_key,
+      licenseKey: acquirer[0].api_secret,
+    });
+    
+    // Buscar dados do usuario
+    const profile = await sql`SELECT name, document FROM profiles WHERE id = ${user.user_id as string}`;
+    
+    // Debitar saldo
+    await sql`
+      UPDATE profiles SET balance = balance - ${amount} WHERE id = ${user.user_id as string}
+    `;
+    
+    // Criar saque no banco
+    const withdrawal = await sql`
+      INSERT INTO withdrawals (
+        user_id, amount, fee, net_amount, pix_key, status, acquirer_id, metadata
+      ) VALUES (
+        ${user.user_id as string},
+        ${amount},
+        ${fee},
+        ${netAmount},
+        ${pixKey.trim()},
+        'processing',
+        ${acquirer[0].id},
+        ${JSON.stringify({ source: 'telegram', telegram_id: telegramId })}
+      )
+      RETURNING id
+    `;
+    
+    // Solicitar saque via Medusa
+    const withdrawalResponse = await medusa.requestSimpleWithdrawal(
+      netAmount * 100, // Em centavos
+      pixKey.trim(),
+      profile[0]?.name || "Cliente",
+      profile[0]?.document || "00000000000",
+      `${SITE_URL}/api/webhooks/medusa`
+    );
+    
+    // Atualizar saque com ID externo
+    await sql`
+      UPDATE withdrawals 
+      SET external_id = ${withdrawalResponse.id}, status = 'completed'
+      WHERE id = ${withdrawal[0].id}
+    `;
+    
+    clearState(telegramId);
+    
+    // Notificar no canal de vendas
+    await notifyWithdrawal(user.user_id as string, amount, fee, "completed");
+    
+    await sendMessage(chatId, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       ✅ <b>SAQUE APROVADO!</b> ✅
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   💵 Valor: <b>R$ ${formatCurrency(amount)}</b>
+   📊 Taxa: R$ ${formatCurrency(fee)}
+   ✅ Enviado: <b>R$ ${formatCurrency(netAmount)}</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   📱 Chave PIX: ${pixKey.substring(0, 10)}***
+   
+   ⚡ O valor sera creditado em instantes!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`, { reply_markup: MENU_PRINCIPAL });
+    
+    await logTelegramAction(telegramId, user.user_id as string, "WITHDRAWAL_COMPLETED", "sacar", { amount, netAmount, pixKey: pixKey.substring(0, 10) + "***" });
+    
+  } catch (error) {
+    console.error("[Telegram] Erro ao processar saque:", error);
+    
+    // Estornar saldo em caso de erro
+    await sql`
+      UPDATE profiles SET balance = balance + ${amount} WHERE id = ${user.user_id as string}
+    `;
+    
+    clearState(telegramId);
+    
+    await sendMessage(chatId, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     ❌ <b>ERRO NO SAQUE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Ocorreu um erro ao processar seu saque.
+Seu saldo foi estornado.
+
+Por favor, tente novamente ou entre
+em contato com o suporte.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      📞 <b>SUPORTE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💬 Discord: ${DISCORD_LINK}
+📱 WhatsApp: ${WHATSAPP}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`, { reply_markup: MENU_PRINCIPAL });
   }
 }
 
@@ -800,7 +1054,7 @@ async function handleEmailInput(chatId: number, telegramId: number, email: strin
   
   if (!emailLower.includes("@") || !emailLower.includes(".")) {
     await sendMessage(chatId, `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━��━━━━━━━━━━━━━━━━━━━━━━━
        ❌ <b>EMAIL INVALIDO</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -952,7 +1206,7 @@ Sua conta foi vinculada com sucesso.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    📊 Vendas: @legacypaybot
-   📣 Avisos: @legacypayusers
+   📣 Avisos: @legacypayavisos
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `, { reply_markup: MENU_PRINCIPAL });
