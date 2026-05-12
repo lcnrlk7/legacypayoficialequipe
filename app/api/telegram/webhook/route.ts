@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { handleTextMessage, handleCallback } from "@/lib/telegram/commands";
+import { handleMessage, handleCallback } from "@/lib/telegram/commands";
 import type { TelegramUpdate } from "@/lib/telegram/bot";
 
 export async function POST(request: NextRequest) {
@@ -17,11 +17,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ ok: true });
       }
       
-      await handleTextMessage(
+      await handleMessage(
         chat.id,
         from.id,
         text,
-        from.first_name
+        from.first_name,
+        from.username
       );
     }
     
