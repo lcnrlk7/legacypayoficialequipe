@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { sendMessage, sendPhoto, editMessageText, answerCallbackQuery } from "./bot";
 import { getSystemFeesForUser } from "@/lib/acquirers";
 import { getMedusaPayments } from "@/lib/acquirers/medusa";
+import { logTelegramAction } from "./logs";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -14,7 +15,8 @@ const BOT_NAME = "LegacyPay";
 const SITE_URL = "https://legacypay.com.br";
 const DISCORD_LINK = "https://discord.gg/ea32hgRSeM";
 const WHATSAPP_LINK = "https://wa.me/5534999353187";
-const TELEGRAM_CHANNEL = "https://t.me/legacypayusers";
+const SALES_CHANNEL = "https://t.me/legacypaybot";
+const ANNOUNCEMENTS_CHANNEL = "https://t.me/legacypayusers";
 
 // ═══════════════════════════════════════════════════════════════
 // ESTADO TEMPORARIO
@@ -90,6 +92,10 @@ const MAIN_MENU_KEYBOARD = {
     ],
     [
       { text: "🌐 Painel Web", url: `${SITE_URL}/dashboard` },
+    ],
+    [
+      { text: "📢 Vendas", url: SALES_CHANNEL },
+      { text: "📣 Avisos", url: ANNOUNCEMENTS_CHANNEL },
     ],
     [
       { text: "💬 Discord", url: DISCORD_LINK },
@@ -174,6 +180,12 @@ export async function handleStart(chatId: number, telegramId: number, firstName:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Selecione uma opcao abaixo:
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📢 <b>SIGA NOSSOS CANAIS:</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Vendas: ${SALES_CHANNEL}
+📣 Avisos: ${ANNOUNCEMENTS_CHANNEL}
     `, { reply_markup: MAIN_MENU_KEYBOARD });
     return;
   }
@@ -193,6 +205,11 @@ Selecione uma opcao abaixo:
 ✅ Suporte 24 horas
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📢 <b>SIGA NOSSOS CANAIS:</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Vendas: ${SALES_CHANNEL}
+📣 Avisos: ${ANNOUNCEMENTS_CHANNEL}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 📝 Para comecar, vamos vincular sua conta.
 
@@ -201,6 +218,10 @@ Selecione uma opcao abaixo:
     reply_markup: {
       inline_keyboard: [
         [{ text: "📝 Criar Conta", url: `${SITE_URL}/register` }],
+        [
+          { text: "📢 Canal Vendas", url: SALES_CHANNEL },
+          { text: "📣 Canal Avisos", url: ANNOUNCEMENTS_CHANNEL },
+        ],
         [
           { text: "💬 Discord", url: DISCORD_LINK },
           { text: "📱 WhatsApp", url: WHATSAPP_LINK },
