@@ -1,7 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import bcrypt from "bcryptjs";
 import { sendMessage, editMessageText, answerCallbackQuery } from "./bot";
-import { createPixCharge } from "@/lib/acquirers";
 import { getSystemFeesForUser } from "@/lib/acquirers";
 
 const sql = neon(process.env.DATABASE_URL!);
@@ -148,34 +147,39 @@ async function generatePixDeposit(chatId: number, telegramId: number, user: Reco
     const fee = amount * (fees.pixPercentageFee / 100) + fees.pixFixedFee;
     const netAmount = amount - fee;
     
-    // Criar cobranca PIX
-    const pixResult = await createPixCharge({
-      userId: user.user_id as string,
-      amount,
-      description: `Deposito via Telegram`,
-    });
+    // Buscar API key do usuario para gerar PIX
+    const userApiKey = await sql`
+      SELECT api_key FROM profiles WHERE id = ${user.user_id as string}
+    `;
     
-    if (!pixResult.success) {
-      await sendMessage(chatId, "Erro ao gerar PIX. Tente novamente mais tarde.");
+    if (!userApiKey[0]?.api_key) {
+      await sendMessage(chatId, `
+⚠️ <b>Deposito via Telegram indisponivel</b>
+
+Para depositar, acesse o painel web:
+https://legacypay.com.br/dashboard/wallet
+
+Ou gere sua API Key no painel para usar o deposito via Telegram.
+      `);
       return;
     }
     
+    // Por enquanto, mostrar instrucoes de deposito
     await sendMessage(chatId, `
-✅ <b>PIX Gerado com Sucesso!</b>
+💰 <b>Deposito</b>
 
-<b>Valor:</b> R$ ${amount.toFixed(2)}
-<b>Taxa:</b> R$ ${fee.toFixed(2)} (${fees.pixPercentageFee}%)
+<b>Valor solicitado:</b> R$ ${amount.toFixed(2)}
+<b>Taxa estimada:</b> R$ ${fee.toFixed(2)} (${fees.pixPercentageFee}%)
 <b>Voce recebe:</b> R$ ${netAmount.toFixed(2)}
 
-<b>Codigo Copia e Cola:</b>
-<code>${pixResult.qrCode || pixResult.pixCode}</code>
+Para depositar, acesse o painel:
+👉 https://legacypay.com.br/dashboard/wallet
 
-⏱️ Valido por 30 minutos.
-Voce sera notificado quando o pagamento for confirmado.
+Em breve o deposito via Telegram estara disponivel!
     `);
   } catch (error) {
     console.error("Erro ao gerar PIX:", error);
-    await sendMessage(chatId, "Erro ao gerar PIX. Tente novamente mais tarde.");
+    await sendMessage(chatId, "Erro ao processar. Tente novamente mais tarde.");
   }
 }
 
@@ -267,16 +271,33 @@ export async function handleExtrato(chatId: number, telegramId: number) {
     message += "Nenhuma transacao encontrada.";
   } else {
     // Combinar e ordenar
-    const all = [
-      ...transactions.map(t => ({ ...t, tipo: "deposito" })),
-      ...withdrawals.map(w => ({ ...w, type: "saque", tipo: "saque" })),
-    ].sort((a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime()).slice(0, 10);
+    interface TransactionItem {
+      created_at: string;
+      status: string;
+      amount: number;
+      tipo: string;
+    }
+    
+    const all: TransactionItem[] = [
+      ...transactions.map((t: Record<string, unknown>) => ({ 
+        created_at: t.created_at as string,
+        status: t.status as string,
+        amount: Number(t.amount),
+        tipo: "deposito" 
+      })),
+      ...withdrawals.map((w: Record<string, unknown>) => ({ 
+        created_at: w.created_at as string,
+        status: w.status as string,
+        amount: Number(w.amount),
+        tipo: "saque" 
+      })),
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10);
     
     all.forEach(t => {
       const emoji = t.tipo === "deposito" ? "💰" : "💸";
       const status = t.status === "completed" ? "✅" : t.status === "pending" ? "⏳" : "❌";
-      const date = new Date(t.created_at as string).toLocaleDateString("pt-BR");
-      message += `${emoji} R$ ${Number(t.amount).toFixed(2)} - ${status} - ${date}\n`;
+      const date = new Date(t.created_at).toLocaleDateString("pt-BR");
+      message += `${emoji} R$ ${t.amount.toFixed(2)} - ${status} - ${date}\n`;
     });
   }
   
