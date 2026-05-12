@@ -96,7 +96,7 @@ O bot do LegacyPay foi atualizado!
    ✅ Menu com botoes interativos
    ✅ Depositos via PIX (5% taxa)
    ✅ Saques instantaneos (R$7 fixo)
-   ✅ Rota Medusa Black
+   ✅ Rota sem complicacoes
    ✅ Consulta de saldo/extrato
    ✅ Notificacoes em tempo real
 
@@ -143,7 +143,7 @@ O bot do LegacyPay foi atualizado!
   console.log("Canais:");
   console.log("  - Vendas/Depositos/Saques: @legacypaybot");
   console.log("  - Avisos: @legacypayavisos");
-  console.log("\nTaxas (Medusa Black):");
+  console.log("\nTaxas:");
   console.log("  - Deposito: 5%");
   console.log("  - Saque: R$7,00 fixo");
   console.log("\nWebhook: https://www.legacypay.site/api/telegram/webhook");

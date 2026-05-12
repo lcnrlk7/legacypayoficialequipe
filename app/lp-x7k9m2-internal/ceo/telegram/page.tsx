@@ -379,7 +379,7 @@ export default function TelegramPage() {
             <div className="bg-card border border-border rounded-2xl p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Percent className="w-5 h-5 text-primary" />
-                Taxas do Bot (Rota Medusa Black)
+                Taxas do Bot
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
@@ -685,7 +685,7 @@ export default function TelegramPage() {
             <div className="bg-card border border-border rounded-2xl p-6">
               <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Percent className="w-5 h-5 text-primary" />
-                Taxas (Medusa Black)
+                Taxas do Bot
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 bg-muted/50 rounded-xl">

@@ -16,7 +16,7 @@ const WHATSAPP_LINK = "https://wa.me/5534999353187";
 const SALES_CHANNEL = "https://t.me/legacypaybot";
 const ANNOUNCEMENTS_CHANNEL = "https://t.me/legacypayavisos";
 
-// Taxas do Bot Telegram (Medusa Black)
+// Taxas do Bot Telegram
 const TELEGRAM_PIX_FEE_PERCENT = 5;
 const TELEGRAM_WITHDRAWAL_FEE_FIXED = 7;
 
@@ -190,7 +190,7 @@ function msgSaldo(email: string, name: string, balance: number): string {
    📥 Depositar: /depositar
    📤 Sacar: /sacar
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━���━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
 }
 
@@ -428,7 +428,7 @@ async function handleEmailInput(chatId: number, telegramId: number, email: strin
    Digite um email valido.
    Exemplo: seuemail@gmail.com
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━��━━━━
 `, { reply_markup: CANCELAR });
     return;
   }
