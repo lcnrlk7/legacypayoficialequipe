@@ -11,8 +11,10 @@ const sql = neon(process.env.DATABASE_URL!);
 // ═══════════════════════════════════════════════════════════════
 
 const BOT_NAME = "LegacyPay";
-const SUPPORT_LINK = "https://t.me/legacypayusers";
 const SITE_URL = "https://legacypay.com.br";
+const DISCORD_LINK = "https://discord.gg/ea32hgRSeM";
+const WHATSAPP_LINK = "https://wa.me/5534999353187";
+const TELEGRAM_CHANNEL = "https://t.me/legacypayusers";
 
 // ═══════════════════════════════════════════════════════════════
 // ESTADO TEMPORARIO
@@ -87,7 +89,11 @@ const MAIN_MENU_KEYBOARD = {
       { text: "❓ Ajuda", callback_data: "menu_ajuda" },
     ],
     [
-      { text: "🌐 Acessar Painel Web", url: `${SITE_URL}/dashboard` },
+      { text: "🌐 Painel Web", url: `${SITE_URL}/dashboard` },
+    ],
+    [
+      { text: "💬 Discord", url: DISCORD_LINK },
+      { text: "📱 WhatsApp", url: WHATSAPP_LINK },
     ],
   ],
 };
@@ -195,7 +201,10 @@ Selecione uma opcao abaixo:
     reply_markup: {
       inline_keyboard: [
         [{ text: "📝 Criar Conta", url: `${SITE_URL}/register` }],
-        [{ text: "❓ Suporte", url: SUPPORT_LINK }],
+        [
+          { text: "💬 Discord", url: DISCORD_LINK },
+          { text: "📱 WhatsApp", url: WHATSAPP_LINK },
+        ],
       ],
     },
   });
@@ -609,18 +618,22 @@ export async function handleAjuda(chatId: number) {
 
 📞 Suporte 24 horas
 🌐 Site: ${SITE_URL}
-💬 Grupo: ${SUPPORT_LINK}
+💬 Discord: ${DISCORD_LINK}
+📱 WhatsApp: ${WHATSAPP_LINK}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  `, { 
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: "💬 Falar com Suporte", url: SUPPORT_LINK }],
-        [{ text: "🌐 Acessar Painel Web", url: `${SITE_URL}/dashboard` }],
-        [{ text: "🔙 Voltar ao Menu", callback_data: "back_menu" }],
-      ],
-    },
-  });
+`, {
+reply_markup: {
+inline_keyboard: [
+[
+  { text: "💬 Discord", url: DISCORD_LINK },
+  { text: "📱 WhatsApp", url: WHATSAPP_LINK },
+],
+[{ text: "🌐 Painel Web", url: `${SITE_URL}/dashboard` }],
+[{ text: "🔙 Voltar ao Menu", callback_data: "back_menu" }],
+],
+},
+});
 }
 
 // ═══════════════════════════════════════════════════════════════
