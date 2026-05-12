@@ -273,3 +273,223 @@ export async function notifyNewUserLinked(email: string, telegramUsername: strin
   
   await sendToChannel(settings.sales_channel_id, message);
 }
+
+// ========================================
+// SISTEMA DE LEMBRETES E NOTIFICACOES
+// ========================================
+
+// Enviar mensagem direta para usuario do bot
+export async function sendBotUserMessage(telegramId: number, message: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return false;
+  
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: telegramId,
+        text: message,
+        parse_mode: "HTML",
+      }),
+    });
+    
+    const data = await res.json();
+    return data.ok;
+  } catch (error) {
+    console.error("[Telegram] Erro ao enviar mensagem para usuario:", error);
+    return false;
+  }
+}
+
+// Lembrete de PIX pendente (nao pago)
+export async function sendPendingPixReminder(telegramId: number, amount: number, pixCode: string, minutesPending: number) {
+  const message = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⏰ <b>LEMBRETE: PIX PENDENTE</b> ⏰
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Ola! Notamos que voce ainda nao pagou seu PIX.
+
+💵 <b>Valor:</b> R$ ${amount.toFixed(2)}
+⏳ <b>Tempo:</b> ${minutesPending} minutos
+
+📋 <b>Codigo Copia e Cola:</b>
+<code>${pixCode}</code>
+
+⚠️ O PIX expira em breve!
+Pague agora para garantir seu deposito.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 Dica: Copie o codigo acima e cole no app do seu banco.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+  
+  return await sendBotUserMessage(telegramId, message);
+}
+
+// Lembrete de inatividade
+export async function sendInactivityReminder(telegramId: number, username: string, daysSinceLastActivity: number) {
+  const message = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👋 <b>SENTIMOS SUA FALTA!</b> 👋
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Ola${username ? ", " + username : ""}! 
+
+Faz <b>${daysSinceLastActivity} dias</b> que voce nao usa o LegacyPay.
+
+🎁 Que tal fazer um deposito hoje?
+
+✅ Depositos instantaneos
+✅ Saques rapidos
+✅ Taxas baixas
+✅ Suporte 24/7
+
+📱 Use /depositar para comecar!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ <b>LegacyPay</b> - Sempre aqui para voce!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+  
+  return await sendBotUserMessage(telegramId, message);
+}
+
+// Alerta de saldo baixo
+export async function sendLowBalanceAlert(telegramId: number, currentBalance: number, threshold: number) {
+  const message = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️ <b>SALDO BAIXO</b> ⚠️
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Seu saldo esta abaixo de R$ ${threshold.toFixed(2)}!
+
+💰 <b>Saldo atual:</b> R$ ${currentBalance.toFixed(2)}
+
+Faca um deposito para continuar usando todos os recursos.
+
+📱 Use /depositar para adicionar saldo.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+  
+  return await sendBotUserMessage(telegramId, message);
+}
+
+// Notificacao de promocao
+export async function sendPromoNotification(telegramId: number, promoTitle: string, promoDescription: string, promoCode?: string) {
+  const codeSection = promoCode ? `\n🎟️ <b>Codigo:</b> <code>${promoCode}</code>\n` : "";
+  
+  const message = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎉 <b>${promoTitle}</b> 🎉
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${promoDescription}
+${codeSection}
+📱 Aproveite agora mesmo!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚡ <b>LegacyPay</b> - Oportunidade limitada!
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+  
+  return await sendBotUserMessage(telegramId, message);
+}
+
+// Lembrete de PIX expirando (ultimo aviso)
+export async function sendPixExpiringWarning(telegramId: number, amount: number, pixCode: string, minutesLeft: number) {
+  const message = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🚨 <b>ULTIMO AVISO: PIX EXPIRANDO!</b> 🚨
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ Seu PIX vai expirar em <b>${minutesLeft} minutos</b>!
+
+💵 <b>Valor:</b> R$ ${amount.toFixed(2)}
+
+📋 <b>Codigo Copia e Cola:</b>
+<code>${pixCode}</code>
+
+Pague AGORA ou sera necessario gerar um novo!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+  
+  return await sendBotUserMessage(telegramId, message);
+}
+
+// Buscar transacoes pendentes do bot para enviar lembretes
+export async function getPendingBotTransactions(minutesOld: number) {
+  const cutoffTime = new Date(Date.now() - minutesOld * 60 * 1000);
+  
+  const result = await sql`
+    SELECT bt.*, bu.telegram_id, bu.username, bu.first_name
+    FROM bot_transactions bt
+    JOIN bot_users bu ON bt.bot_user_id = bu.id
+    WHERE bt.status = 'pending' 
+      AND bt.type = 'deposit'
+      AND bt.created_at <= ${cutoffTime.toISOString()}
+      AND bt.created_at >= ${new Date(Date.now() - 60 * 60 * 1000).toISOString()}
+      AND (bt.reminder_sent IS NULL OR bt.reminder_sent = false)
+  `;
+  
+  return result;
+}
+
+// Marcar transacao como lembrete enviado
+export async function markReminderSent(transactionId: string) {
+  await sql`
+    UPDATE bot_transactions 
+    SET reminder_sent = true, reminder_sent_at = NOW()
+    WHERE id = ${transactionId}
+  `;
+}
+
+// Buscar usuarios inativos do bot
+export async function getInactiveBotUsers(daysInactive: number) {
+  const cutoffDate = new Date(Date.now() - daysInactive * 24 * 60 * 60 * 1000);
+  
+  const result = await sql`
+    SELECT bu.*
+    FROM bot_users bu
+    WHERE bu.is_active = true
+      AND bu.updated_at <= ${cutoffDate.toISOString()}
+      AND (bu.last_reminder_at IS NULL OR bu.last_reminder_at <= ${new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()})
+  `;
+  
+  return result;
+}
+
+// Marcar usuario como lembrete de inatividade enviado
+export async function markInactivityReminderSent(botUserId: string) {
+  await sql`
+    UPDATE bot_users 
+    SET last_reminder_at = NOW()
+    WHERE id = ${botUserId}
+  `;
+}
+
+// Buscar usuarios com saldo baixo
+export async function getLowBalanceUsers(threshold: number) {
+  const result = await sql`
+    SELECT bu.*
+    FROM bot_users bu
+    WHERE bu.is_active = true
+      AND bu.balance > 0
+      AND bu.balance <= ${threshold}
+      AND (bu.low_balance_alert_at IS NULL OR bu.low_balance_alert_at <= ${new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()})
+  `;
+  
+  return result;
+}
+
+// Marcar alerta de saldo baixo enviado
+export async function markLowBalanceAlertSent(botUserId: string) {
+  await sql`
+    UPDATE bot_users 
+    SET low_balance_alert_at = NOW()
+    WHERE id = ${botUserId}
+  `;
+}
