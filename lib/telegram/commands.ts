@@ -416,7 +416,7 @@ function msgAjuda(): string {
          📞 <b>SUPORTE 24H</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   ��� Discord: ${DISCORD_LINK}
+   ���� Discord: ${DISCORD_LINK}
    📱 WhatsApp: ${WHATSAPP}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -619,30 +619,39 @@ async function processDeposit(chatId: number, telegramId: number, amount: number
 `);
   
   try {
-    // Buscar Medusa ativa (por nome)
+    // Buscar Medusa Black especificamente
     const acquirer = await sql`
       SELECT * FROM acquirers 
-      WHERE name ILIKE '%medusa%' AND is_active = true
-      ORDER BY priority ASC
+      WHERE name ILIKE '%medusa%black%' AND is_active = true
       LIMIT 1
     `;
     
     if (!acquirer[0]) {
-      throw new Error("Gateway indisponivel");
+      // Fallback para qualquer Medusa ativa
+      const fallback = await sql`
+        SELECT * FROM acquirers 
+        WHERE name ILIKE '%medusa%' AND is_active = true
+        LIMIT 1
+      `;
+      if (!fallback[0]) {
+        throw new Error("Gateway indisponivel");
+      }
+      acquirer[0] = fallback[0];
     }
-    
-    console.log("[Bot] Usando acquirer:", acquirer[0].name);
     
     const medusa = new MedusaPayments({
       secretKey: acquirer[0].api_key,
       licenseKey: acquirer[0].api_secret,
     });
     
-    // Criar PIX
+    // CPF fixo para o bot do Telegram
+    const CPF_FIXO_BOT = "63909654002";
+    
+    // Criar PIX com CPF fixo
     const pixResponse = await medusa.createSimplePixPayment(
       amount * 100,
       user.first_name as string || "Cliente",
-      "00000000000",
+      CPF_FIXO_BOT,
       `bot_${telegramId}@legacypay.site`,
       `Deposito Bot - ${telegramId}`,
       `${SITE_URL}/api/webhooks/telegram-pix`
