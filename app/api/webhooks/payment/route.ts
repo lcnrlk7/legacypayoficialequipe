@@ -123,6 +123,11 @@ export async function POST(request: NextRequest) {
             INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_value)
             VALUES (${withdrawal.user_id}, 'WITHDRAWAL_COMPLETED', 'withdrawal', ${withdrawal.id}, ${JSON.stringify({ amount: withdrawal.net_amount, status: 'completed' })})
           `;
+          
+          // Notificar no Telegram
+          const wdFee = Number(withdrawal.amount) - Number(withdrawal.net_amount);
+          await notifyWithdrawal(withdrawal.user_id, Number(withdrawal.amount), wdFee, "completed");
+          await notifyUserTransaction(withdrawal.user_id, "withdrawal", Number(withdrawal.net_amount), "completed");
         }
         break;
       }
@@ -155,6 +160,9 @@ export async function POST(request: NextRequest) {
             INSERT INTO user_notifications (user_id, title, message, type)
             VALUES (${withdrawal.user_id}, 'Saque Falhou', ${`Seu saque de R$ ${withdrawal.amount.toFixed(2)} falhou. O valor foi devolvido ao seu saldo.`}, 'error')
           `;
+          
+          // Notificar no Telegram
+          await notifyUserTransaction(withdrawal.user_id, "withdrawal", Number(withdrawal.amount), "rejected");
         }
         break;
       }
