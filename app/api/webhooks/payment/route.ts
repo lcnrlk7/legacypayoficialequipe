@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { notifyTransactionApproved } from "@/lib/push-notifications";
+import { notifyDeposit, notifyWithdrawal, notifyUserTransaction } from "@/lib/telegram/notify";
 
 export async function POST(request: NextRequest) {
   try {
@@ -59,6 +60,11 @@ export async function POST(request: NextRequest) {
           `;
 
           await notifyTransactionApproved(transaction.user_id, Number(transaction.amount), Number(transaction.net_amount), transaction.id);
+          
+          // Notificar no Telegram
+          const fee = Number(transaction.amount) - Number(transaction.net_amount);
+          await notifyDeposit(transaction.user_id, Number(transaction.amount), fee);
+          await notifyUserTransaction(transaction.user_id, "deposit", Number(transaction.net_amount), "completed");
         }
         break;
       }
