@@ -22,6 +22,7 @@ interface MedusaCustomer {
 
 interface MedusaItem {
   title: string;
+  description?: string;
   quantity: number;
   tangible: boolean;
   unitPrice: number;
@@ -143,16 +144,24 @@ export class MedusaPayments {
       },
     });
 
-    const data = await response.json();
+    const responseText = await response.text();
 
-    if (!response.ok) {
-      console.error("[MedusaPayments] API Error:", data);
-      throw new Error(
-        data.message || data.error || "Erro na API Medusa Payments"
-      );
+    let data: T;
+    try {
+      data = JSON.parse(responseText) as T;
+    } catch {
+      console.error("[MedusaPayments] Erro ao parsear JSON:", responseText.substring(0, 200));
+      throw new Error(`Erro ao processar resposta da API Medusa`);
     }
 
-    return data as T;
+    if (!response.ok) {
+      const errorData = data as { message?: string; error?: string };
+      const errorMessage = errorData.message || errorData.error || `Erro na API Medusa (${response.status})`;
+      console.error("[MedusaPayments] API Error:", errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    return data;
   }
 
   /**
@@ -205,27 +214,32 @@ export class MedusaPayments {
     amount: number,
     payerName: string,
     payerDocument: string,
-    payerEmail: string,
+    payerEmail?: string,
     description?: string,
     postbackUrl?: string
   ): Promise<MedusaTransactionResponse> {
     // Limpar documento - remover caracteres não numéricos
-    const cleanDoc = payerDocument.replace(/\D/g, "");
+    const cleanDoc = (payerDocument || "00000000000").replace(/\D/g, "");
     const docType = cleanDoc.length > 11 ? "cnpj" : "cpf";
 
+    // Garantir que name e email nunca sejam undefined
+    const safeName = (payerName || "Cliente").trim() || "Cliente";
+    const safeEmail = (payerEmail || "cliente@legacypay.site").trim() || "cliente@legacypay.site";
+
     const customer: MedusaCustomer = {
-      name: payerName.trim(),
-      email: payerEmail.trim(),
+      name: safeName,
+      email: safeEmail,
       phone: "+5511999999999", // Telefone fixo para Medusa
       document: {
         type: docType,
-        number: cleanDoc,
+        number: cleanDoc || "00000000000",
       },
     };
 
     const items: MedusaItem[] = [
       {
-        title: description || "Pagamento PIX",
+        title: description && description.trim() ? description.trim() : "Deposito via PIX - LegacyPay",
+        description: description && description.trim() ? description.trim() : "Deposito via PIX - LegacyPay",
         quantity: 1,
         tangible: false,
         unitPrice: amount,

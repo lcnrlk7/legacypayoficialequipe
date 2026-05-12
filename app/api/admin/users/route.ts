@@ -1,9 +1,15 @@
 import { sql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 
 export async function GET(request: NextRequest) {
+  // Verificar se e admin (fora do try/catch para garantir 403)
+  const admin = await verifyAdmin();
+  if (!admin) return accessDeniedResponse();
+  
   try {
+    
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search");
     const id = searchParams.get("id");
@@ -28,7 +34,11 @@ export async function GET(request: NextRequest) {
     }
 
     const users = await sql`
-      SELECT * FROM profiles ORDER BY created_at DESC
+      SELECT p.*, 
+        CASE WHEN tfa.is_enabled = true THEN true ELSE false END as has_2fa
+      FROM profiles p
+      LEFT JOIN two_factor_auth tfa ON tfa.user_id = p.id
+      ORDER BY p.created_at DESC
     `;
 
     return NextResponse.json({ users: users || [] });
@@ -38,9 +48,14 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// Criar novo usuário
+// Criar novo usuario
 export async function POST(request: NextRequest) {
+  // Verificar se e admin (fora do try/catch para garantir 403)
+  const admin = await verifyAdmin();
+  if (!admin) return accessDeniedResponse();
+  
   try {
+    
     const body = await request.json();
     const { email, password, name, phone, cpf_cnpj, is_admin, route_type, fee_percentage, daily_limit } = body;
 
@@ -93,7 +108,12 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: Request) {
+  // Verificar se e admin (fora do try/catch para garantir 403)
+  const admin = await verifyAdmin();
+  if (!admin) return accessDeniedResponse();
+  
   try {
+    
     const body = await request.json();
     const { userId, action, data } = body;
 
@@ -107,8 +127,12 @@ export async function PUT(request: Request) {
       if (data.kyc_status !== undefined) {
         await sql`UPDATE profiles SET kyc_status = ${data.kyc_status}, updated_at = NOW() WHERE id = ${userId}`;
       }
+      // Taxa personalizada de entrada (deposito) - salvar em custom_fee_percentage
       if (data.fee_percentage !== undefined) {
-        await sql`UPDATE profiles SET fee_percentage = ${data.fee_percentage}, updated_at = NOW() WHERE id = ${userId}`;
+        await sql`UPDATE profiles SET custom_fee_percentage = ${data.fee_percentage}, updated_at = NOW() WHERE id = ${userId}`;
+      }
+      if (data.custom_fee_percentage !== undefined) {
+        await sql`UPDATE profiles SET custom_fee_percentage = ${data.custom_fee_percentage}, updated_at = NOW() WHERE id = ${userId}`;
       }
       if (data.fixed_fee !== undefined) {
         await sql`UPDATE profiles SET fixed_fee = ${data.fixed_fee}, updated_at = NOW() WHERE id = ${userId}`;
@@ -122,11 +146,24 @@ export async function PUT(request: Request) {
       if (data.daily_limit !== undefined) {
         await sql`UPDATE profiles SET daily_limit = ${data.daily_limit}, updated_at = NOW() WHERE id = ${userId}`;
       }
+      // Taxa personalizada de saque - salvar em custom_withdrawal_fee
       if (data.withdrawal_fee !== undefined) {
-        await sql`UPDATE profiles SET withdrawal_fee = ${data.withdrawal_fee}, updated_at = NOW() WHERE id = ${userId}`;
+        await sql`UPDATE profiles SET custom_withdrawal_fee = ${data.withdrawal_fee}, updated_at = NOW() WHERE id = ${userId}`;
+      }
+      if (data.custom_withdrawal_fee !== undefined) {
+        await sql`UPDATE profiles SET custom_withdrawal_fee = ${data.custom_withdrawal_fee}, updated_at = NOW() WHERE id = ${userId}`;
+      }
+      if (data.custom_withdrawal_fee_is_percentage !== undefined) {
+        await sql`UPDATE profiles SET custom_withdrawal_fee_is_percentage = ${data.custom_withdrawal_fee_is_percentage}, updated_at = NOW() WHERE id = ${userId}`;
       }
       if (data.is_active !== undefined) {
         await sql`UPDATE profiles SET is_active = ${data.is_active}, updated_at = NOW() WHERE id = ${userId}`;
+      }
+      
+      // Atualizar acquirer_id - aceita null, string vazia ou UUID valido
+      if (data.acquirer_id !== undefined) {
+        const acquirerId = data.acquirer_id && data.acquirer_id.trim() !== '' ? data.acquirer_id : null;
+        await sql`UPDATE profiles SET acquirer_id = ${acquirerId}, updated_at = NOW() WHERE id = ${userId}`;
       }
 
       return NextResponse.json({ success: true });

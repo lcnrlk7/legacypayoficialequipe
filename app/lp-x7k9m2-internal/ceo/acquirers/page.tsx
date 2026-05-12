@@ -12,7 +12,13 @@ import {
   Loader2,
   DollarSign,
   TrendingUp,
-  Trash2
+  Trash2,
+  Activity,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  RefreshCw,
+  ArrowUpDown,
 } from "lucide-react";
 
 interface Acquirer {
@@ -23,14 +29,24 @@ interface Acquirer {
   api_key: string;
   api_secret: string;
   is_active: boolean;
-  priority: number;
   success_rate: number;
   total_transactions: number;
   total_volume: number;
   fee_percentage: number;
+  fixed_fee: number;
+  fee_is_percentage: boolean;
+  withdrawal_fee: number;
+  withdrawal_fee_is_percentage: boolean;
+  min_deposit: number;
+  min_withdrawal: number;
+  route_type: "white" | "black";
   min_amount: number;
   max_amount: number;
   created_at: string;
+  health_status?: "online" | "degraded" | "offline";
+  last_health_check?: string;
+  avg_response_time?: number;
+  failure_count_today?: number;
 }
 
 export default function AcquirersPage() {
@@ -38,6 +54,8 @@ export default function AcquirersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingAcquirer, setEditingAcquirer] = useState<Acquirer | null>(null);
+  const [checkingHealth, setCheckingHealth] = useState<string | null>(null);
+  const [addingVenopag, setAddingVenopag] = useState(false);
   const [form, setForm] = useState({
     name: "",
     code: "",
@@ -45,7 +63,12 @@ export default function AcquirersPage() {
     api_key: "",
     api_secret: "",
     fee_percentage: 2.5,
-    priority: 0,
+    withdrawal_fee: 0,
+    min_deposit: 1,
+    min_withdrawal: 10,
+    max_withdrawal: 10000,
+    daily_limit: 10000,
+    route_type: "white" as "white" | "black",
   });
   const [isSaving, setIsSaving] = useState(false);
 
@@ -67,6 +90,70 @@ export default function AcquirersPage() {
     }
   }
 
+  async function checkHealth(acquirerId: string) {
+    setCheckingHealth(acquirerId);
+    try {
+      const response = await fetch("/api/admin/acquirers/health", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ acquirerId }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        loadAcquirers();
+      }
+    } catch (error) {
+      console.error("Error checking health:", error);
+    } finally {
+      setCheckingHealth(null);
+    }
+  }
+
+  async function addVenopag() {
+    setAddingVenopag(true);
+    try {
+      const response = await fetch("/api/admin/add-venopag");
+      const data = await response.json();
+      if (data.success) {
+        alert("Venopag adicionada com sucesso!");
+        loadAcquirers();
+      } else {
+        alert("Erro ao adicionar Venopag: " + (data.error || "Erro desconhecido"));
+      }
+    } catch (error) {
+      console.error("Error adding Venopag:", error);
+      alert("Erro ao adicionar Venopag");
+    } finally {
+      setAddingVenopag(false);
+    }
+  }
+
+  function getHealthIcon(status?: string) {
+    switch (status) {
+      case "online":
+        return <CheckCircle className="w-4 h-4 text-green-400" />;
+      case "degraded":
+        return <AlertTriangle className="w-4 h-4 text-yellow-400" />;
+      case "offline":
+        return <XCircle className="w-4 h-4 text-red-400" />;
+      default:
+        return <Activity className="w-4 h-4 text-muted-foreground" />;
+    }
+  }
+
+  function getHealthLabel(status?: string) {
+    switch (status) {
+      case "online":
+        return "Online";
+      case "degraded":
+        return "Degradado";
+      case "offline":
+        return "Offline";
+      default:
+        return "Desconhecido";
+    }
+  }
+
   async function saveAcquirer() {
     setIsSaving(true);
     try {
@@ -84,7 +171,10 @@ export default function AcquirersPage() {
               api_key: form.api_key,
               api_secret: form.api_secret,
               fee_percentage: form.fee_percentage,
-              priority: form.priority,
+              withdrawal_fee: form.withdrawal_fee,
+              min_deposit: form.min_deposit,
+              min_withdrawal: form.min_withdrawal,
+              route_type: form.route_type,
             },
           }),
         });
@@ -142,7 +232,12 @@ export default function AcquirersPage() {
       api_key: "",
       api_secret: "",
       fee_percentage: 2.5,
-      priority: acquirers.length,
+      withdrawal_fee: 0,
+      min_deposit: 1,
+      min_withdrawal: 10,
+      max_withdrawal: 10000,
+      daily_limit: 10000,
+      route_type: "white",
     });
     setShowModal(true);
   }
@@ -156,7 +251,12 @@ export default function AcquirersPage() {
       api_key: acquirer.api_key || "",
       api_secret: acquirer.api_secret || "",
       fee_percentage: acquirer.fee_percentage || 2.5,
-      priority: acquirer.priority,
+      withdrawal_fee: acquirer.withdrawal_fee || 0,
+      min_deposit: acquirer.min_deposit || 1,
+      min_withdrawal: acquirer.min_withdrawal || 10,
+      max_withdrawal: (acquirer as any).max_withdrawal || 10000,
+      daily_limit: (acquirer as any).daily_limit || 10000,
+      route_type: acquirer.route_type || "white",
     });
     setShowModal(true);
   }
@@ -171,7 +271,12 @@ export default function AcquirersPage() {
       api_key: "",
       api_secret: "",
       fee_percentage: 2.5,
-      priority: 0,
+      withdrawal_fee: 0,
+      min_deposit: 1,
+      min_withdrawal: 10,
+      max_withdrawal: 10000,
+      daily_limit: 10000,
+      route_type: "white",
     });
   }
 
@@ -200,17 +305,29 @@ export default function AcquirersPage() {
             Gerencie os gateways de pagamento
           </p>
         </div>
-        <button
-          onClick={openAddModal}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Adicionar Adquirente
-        </button>
+        <div className="flex items-center gap-3">
+          {!acquirers.find(a => a.code === 'venopag') && (
+            <button
+              onClick={addVenopag}
+              disabled={addingVenopag}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
+            >
+              {addingVenopag ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
+              Adicionar Venopag
+            </button>
+          )}
+          <button
+            onClick={openAddModal}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Adicionar Adquirente
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="glass rounded-xl p-4">
           <p className="text-2xl font-bold text-white">{acquirers.length}</p>
           <p className="text-sm text-muted-foreground">Total</p>
@@ -274,6 +391,17 @@ export default function AcquirersPage() {
                       >
                         {acquirer.is_active ? "Ativo" : "Inativo"}
                       </span>
+                      {/* Health Status */}
+                      <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        acquirer.health_status === "online" ? "bg-green-400/10 text-green-400" :
+                        acquirer.health_status === "degraded" ? "bg-yellow-400/10 text-yellow-400" :
+                        acquirer.health_status === "offline" ? "bg-red-400/10 text-red-400" :
+                        "bg-muted text-muted-foreground"
+                      }`}>
+                        {getHealthIcon(acquirer.health_status)}
+                        {getHealthLabel(acquirer.health_status)}
+                      </span>
+
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">
                       {acquirer.api_url}
@@ -282,16 +410,47 @@ export default function AcquirersPage() {
                       <span className="text-muted-foreground">
                         Código: <span className="text-white font-mono">{acquirer.code}</span>
                       </span>
-                      <span className="text-muted-foreground">
-                        Prioridade: <span className="text-white">{acquirer.priority}</span>
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        acquirer.route_type === "white" 
+                          ? "bg-blue-500/10 text-blue-400" 
+                          : "bg-purple-500/10 text-purple-400"
+                      }`}>
+                        {acquirer.route_type === "white" ? "WHITE" : "BLACK"}
                       </span>
                       <span className="text-muted-foreground">
-                        Taxa: <span className="text-primary">{acquirer.fee_percentage || 2.5}%</span>
+                        Taxa Entrada: <span className="text-primary">{acquirer.fee_is_percentage ? `${acquirer.fee_percentage || 0}%` : `R$ ${Number(acquirer.fixed_fee || 0).toFixed(2)}`}</span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        Taxa Saque: <span className="text-green-400">{acquirer.withdrawal_fee_is_percentage ? `${acquirer.withdrawal_fee || 0}%` : `R$ ${Number(acquirer.withdrawal_fee || 0).toFixed(2)}`}</span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        Min. Dep: <span className="text-white">R$ {Number(acquirer.min_deposit || 1).toFixed(2)}</span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        Min. Saque: <span className="text-white">R$ {Number(acquirer.min_withdrawal || 10).toFixed(2)}</span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        Max. Saque: <span className="text-yellow-400">R$ {Number((acquirer as any).max_withdrawal || 10000).toLocaleString('pt-BR')}</span>
+                      </span>
+                      <span className="text-muted-foreground">
+                        Limite Diario: <span className="text-yellow-400">R$ {Number((acquirer as any).daily_limit || 10000).toLocaleString('pt-BR')}</span>
                       </span>
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => checkHealth(acquirer.id)}
+                    disabled={checkingHealth === acquirer.id}
+                    className="p-2 rounded-lg hover:bg-secondary transition-colors text-muted-foreground hover:text-primary disabled:opacity-50"
+                    title="Verificar Status"
+                  >
+                    {checkingHealth === acquirer.id ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-5 h-5" />
+                    )}
+                  </button>
                   <button
                     onClick={() => toggleAcquirer(acquirer)}
                     className={`p-2 rounded-lg transition-colors ${
@@ -414,10 +573,23 @@ export default function AcquirersPage() {
                   className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                 />
               </div>
+              <div>
+                <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                  Tipo de Rota
+                </label>
+                <select
+                  value={form.route_type}
+                  onChange={(e) => setForm({ ...form, route_type: e.target.value as "white" | "black" })}
+                  className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
+                >
+                  <option value="white">WHITE - Gateway Premium</option>
+                  <option value="black">BLACK - Gateway Express</option>
+                </select>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                    Taxa (%)
+                    Taxa Entrada (%)
                   </label>
                   <input
                     type="number"
@@ -433,21 +605,87 @@ export default function AcquirersPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium text-muted-foreground mb-2 block">
-                    Prioridade
+                    Taxa Saque (%)
                   </label>
                   <input
                     type="number"
-                    value={form.priority}
+                    value={form.withdrawal_fee}
                     onChange={(e) =>
-                      setForm({ ...form, priority: Number(e.target.value) })
+                      setForm({ ...form, withdrawal_fee: Number(e.target.value) })
                     }
                     placeholder="0"
                     min="0"
+                    step="0.1"
                     className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Menor número = maior prioridade
-                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Min. Deposito (R$)
+                  </label>
+                  <input
+                    type="number"
+                    value={form.min_deposit}
+                    onChange={(e) =>
+                      setForm({ ...form, min_deposit: Number(e.target.value) })
+                    }
+                    placeholder="1"
+                    min="0"
+                    step="1"
+                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Min. Saque (R$)
+                  </label>
+                  <input
+                    type="number"
+                    value={form.min_withdrawal}
+                    onChange={(e) =>
+                      setForm({ ...form, min_withdrawal: Number(e.target.value) })
+                    }
+                    placeholder="10"
+                    min="0"
+                    step="1"
+                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Limite por Saque (R$)
+                  </label>
+                  <input
+                    type="number"
+                    value={form.max_withdrawal}
+                    onChange={(e) =>
+                      setForm({ ...form, max_withdrawal: Number(e.target.value) })
+                    }
+                    placeholder="10000"
+                    min="0"
+                    step="100"
+                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">
+                    Limite Diario (R$)
+                  </label>
+                  <input
+                    type="number"
+                    value={form.daily_limit}
+                    onChange={(e) =>
+                      setForm({ ...form, daily_limit: Number(e.target.value) })
+                    }
+                    placeholder="10000"
+                    min="0"
+                    step="100"
+                    className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
+                  />
                 </div>
               </div>
             </div>

@@ -160,9 +160,34 @@ export async function registerUser(
     const clientId = `lp_${crypto.randomUUID().replace(/-/g, '')}`
     const clientSecret = `sk_${crypto.randomUUID().replace(/-/g, '')}${crypto.randomUUID().replace(/-/g, '')}`
 
+    // Buscar adquirente padrao (Medusa - rota black) para novos usuarios
+    const acquirerResult = await sql`
+      SELECT id, fee_percentage, withdrawal_fee FROM acquirers 
+      WHERE code = 'medusa' AND is_active = true 
+      LIMIT 1
+    `;
+    
+    // Se Medusa nao existir, busca qualquer black ativa
+    let defaultAcquirer = acquirerResult[0];
+    if (!defaultAcquirer) {
+      const fallbackResult = await sql`
+        SELECT id, fee_percentage, withdrawal_fee FROM acquirers 
+        WHERE route_type = 'black' AND is_active = true 
+        LIMIT 1
+      `;
+      defaultAcquirer = fallbackResult[0];
+    }
+    
+    const defaultAcquirerId = defaultAcquirer?.id || null;
+    const defaultFeePercentage = defaultAcquirer ? Number(defaultAcquirer.fee_percentage) : 4.00;
+    const defaultWithdrawalFee = defaultAcquirer ? Number(defaultAcquirer.withdrawal_fee) : 5.00;
+
+    // Avatar padrao aleatorio (1-8)
+    const randomAvatar = `/avatars/avatar-${Math.floor(Math.random() * 8) + 1}.jpg`;
+
     const result = await sql`
-      INSERT INTO profiles (id, email, password_hash, name, phone, cpf_cnpj, kyc_status, api_key, client_id, client_secret, is_admin, is_active, balance, route_type, created_at, updated_at)
-      VALUES (${id}, ${email}, ${hashedPassword}, ${name}, ${phone || null}, ${document || null}, 'pending', ${clientId}, ${clientId}, ${clientSecret}, false, true, 0, 'black', NOW(), NOW())
+      INSERT INTO profiles (id, email, password_hash, name, phone, cpf_cnpj, kyc_status, api_key, client_id, client_secret, is_admin, is_active, balance, route_type, fee_percentage, withdrawal_fee, acquirer_id, avatar_url, created_at, updated_at)
+      VALUES (${id}, ${email}, ${hashedPassword}, ${name}, ${phone || null}, ${document || null}, 'pending', ${clientId}, ${clientId}, ${clientSecret}, false, true, 0, 'black', ${defaultFeePercentage}, ${defaultWithdrawalFee}, ${defaultAcquirerId}, ${randomAvatar}, NOW(), NOW())
       RETURNING id, email, name, phone, cpf_cnpj as document, 'cpf' as document_type, 'user' as role, kyc_status, created_at, api_key, client_secret as api_secret, webhook_url
     `
 

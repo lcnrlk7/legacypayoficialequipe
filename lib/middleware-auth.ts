@@ -76,19 +76,30 @@ export async function handleAuth(request: NextRequest) {
     '/',
     '/auth/login',
     '/auth/register',
+    '/auth/forgot-password',
+    '/auth/reset-password',
     '/docs',
     '/api/auth/login',
     '/api/auth/register',
     '/api/auth/send-code',
     '/api/auth/verify-code',
+    '/api/auth/forgot-password',
+    '/api/auth/reset-password',
     '/api/auth/password-reset',
-    '/api/v1', // Public API with API key auth (matches /api/v1 and /api/v1/*)
+    '/api/auth/team/login',
     '/api/webhooks',
   ]
+  
+  // Public API prefixes - qualquer rota que comece com esses prefixos é pública
+  const publicApiPrefixes = [
+    '/api/v1/',
+    '/api/webhooks/',
+    '/api/setup/',
+    '/api/cron/',
+  ]
 
-  const isPublicPath = publicPaths.some(path => 
-    pathname === path || pathname.startsWith(path)
-  )
+  const isPublicPath = publicPaths.some(path => pathname === path || pathname.startsWith(path + '/')) ||
+    publicApiPrefixes.some(prefix => pathname.startsWith(prefix))
 
   // Static files and assets
   if (
@@ -105,12 +116,20 @@ export async function handleAuth(request: NextRequest) {
   }
 
   // Protected paths
-  const protectedPaths = ['/dashboard', '/admin', '/lp-x7k9m2-internal']
+  const protectedPaths = ['/dashboard', '/admin']
   const isProtectedPath = protectedPaths.some(path => pathname.startsWith(path))
+  
+  // Rotas internas protegidas (exceto a página de login)
+  const isInternalProtectedPath = pathname.startsWith('/lp-x7k9m2-internal/') && pathname !== '/lp-x7k9m2-internal'
 
-  if (isProtectedPath) {
+  // Página de login do admin é pública
+  if (pathname === '/lp-x7k9m2-internal') {
+    return response
+  }
+
+  if (isProtectedPath || isInternalProtectedPath) {
     // Para rotas do painel interno, verificar primeiro token de equipe
-    if (pathname.startsWith('/admin') || pathname.startsWith('/lp-x7k9m2-internal')) {
+    if (pathname.startsWith('/admin') || isInternalProtectedPath) {
       const teamUser = await verifyTeamToken(request)
       
       if (!teamUser) {

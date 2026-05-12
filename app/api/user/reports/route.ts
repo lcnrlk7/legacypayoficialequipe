@@ -18,6 +18,27 @@ export async function GET() {
       SELECT * FROM withdrawals WHERE user_id = ${user.id} ORDER BY created_at DESC
     `;
 
+    // Buscar transferencias internas (enviadas e recebidas)
+    const transfersSent = await sql`
+      SELECT t.*, 
+        receiver.name as receiver_name, 
+        receiver.email as receiver_email
+      FROM internal_transfers t
+      JOIN profiles receiver ON t.receiver_id = receiver.id
+      WHERE t.sender_id = ${user.id}
+      ORDER BY t.created_at DESC
+    `;
+
+    const transfersReceived = await sql`
+      SELECT t.*, 
+        sender.name as sender_name, 
+        sender.email as sender_email
+      FROM internal_transfers t
+      JOIN profiles sender ON t.sender_id = sender.id
+      WHERE t.receiver_id = ${user.id}
+      ORDER BY t.created_at DESC
+    `;
+
     const allTransactions = [
       ...transactions.map((tx: Record<string, unknown>) => ({
         id: tx.id,
@@ -26,7 +47,7 @@ export async function GET() {
         fee: Number(tx.fee) || 0,
         net_amount: Number(tx.net_amount) || Number(tx.amount) - Number(tx.fee) || 0,
         status: tx.status || "pending",
-        description: tx.description || "Transação PIX",
+        description: tx.description || "Transacao PIX",
         created_at: tx.created_at,
         payer_name: tx.payer_name,
         external_id: tx.external_id,
@@ -41,7 +62,37 @@ export async function GET() {
         description: wd.description || "Saque PIX",
         created_at: wd.created_at,
         payer_name: wd.recipient_name,
-        external_id: wd.pix_key,
+        external_id: wd.external_id,
+        pix_key: wd.pix_key,
+        pix_key_type: wd.pix_key_type,
+        recipient_name: wd.recipient_name,
+        recipient_bank: wd.recipient_bank,
+      })),
+      // Transferencias enviadas
+      ...transfersSent.map((tf: Record<string, unknown>) => ({
+        id: tf.id,
+        type: "transfer_out",
+        amount: Number(tf.amount) || 0,
+        fee: 0,
+        net_amount: Number(tf.amount) || 0,
+        status: tf.status || "completed",
+        description: tf.description || `Transferencia para ${tf.receiver_name}`,
+        created_at: tf.created_at,
+        payer_name: tf.receiver_name,
+        external_id: null,
+      })),
+      // Transferencias recebidas
+      ...transfersReceived.map((tf: Record<string, unknown>) => ({
+        id: tf.id,
+        type: "transfer_in",
+        amount: Number(tf.amount) || 0,
+        fee: 0,
+        net_amount: Number(tf.amount) || 0,
+        status: tf.status || "completed",
+        description: tf.description || `Transferencia de ${tf.sender_name}`,
+        created_at: tf.created_at,
+        payer_name: tf.sender_name,
+        external_id: null,
       })),
     ].sort((a, b) => new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime());
 

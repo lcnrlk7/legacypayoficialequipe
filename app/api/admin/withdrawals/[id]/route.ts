@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { mapPixKeyType } from "@/lib/acquirers/misticpay";
 import { getAcquirerForUser, createWithdrawal } from "@/lib/acquirers";
+import { notifyWithdrawalCompleted, notifyWithdrawalFailed } from "@/lib/notifications";
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
+import { logWithdrawalStatusUpdate, logAdminAction } from "@/lib/discord-webhook";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+    
     const { id } = await params;
     const body = await request.json();
     const { action, reason } = body;
@@ -51,21 +58,44 @@ export async function PATCH(
         WHERE id = ${id}
       `;
 
-      const markPaidAmount = Number(withdrawal.amount) || 0;
+      const markPaidGross = Number(withdrawal.amount) || 0;
+      const markPaidFee = Number(withdrawal.fee) || 0;
+      const markPaidNet = Number(withdrawal.net_amount) || markPaidGross - markPaidFee;
+      const markPaidPixKey = withdrawal.pix_key || "";
       
-      await sql`
-        INSERT INTO user_notifications (id, user_id, title, message, type, created_at)
-        VALUES (${crypto.randomUUID()}, ${withdrawal.user_id}, ${'Saque Concluído'}, ${`Seu saque de R$ ${markPaidAmount.toFixed(2)} foi processado e concluído.`}, ${'success'}, NOW())
-      `;
+      // Enviar notificacao com push
+      await notifyWithdrawalCompleted(withdrawal.user_id, markPaidGross, markPaidNet, markPaidFee, markPaidPixKey);
+      console.log(`[Admin Withdrawal] Push notification enviado para usuario ${withdrawal.user_id}`);
 
       try {
         await sql`
           INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, new_value, created_at)
-          VALUES (${crypto.randomUUID()}, ${withdrawal.user_id}, ${'WITHDRAWAL_COMPLETED'}, ${'withdrawal'}, ${id}, ${JSON.stringify({ amount: markPaidAmount })}, NOW())
+          VALUES (${crypto.randomUUID()}, ${withdrawal.user_id}, ${'WITHDRAWAL_COMPLETED'}, ${'withdrawal'}, ${id}, ${JSON.stringify({ amount: markPaidGross })}, NOW())
         `;
       } catch (auditError) {
         console.error("Error creating audit log:", auditError);
       }
+      
+      // Log para Discord
+      logWithdrawalStatusUpdate({
+        withdrawalId: id,
+        userName: withdrawal.profile_name || "N/A",
+        userEmail: withdrawal.profile_email || "",
+        amount: markPaidGross,
+        netAmount: markPaidNet,
+        oldStatus: withdrawal.status,
+        newStatus: "completed",
+        pixKey: markPaidPixKey,
+        adminName: admin.name || "Admin",
+      });
+      
+      logAdminAction({
+        adminName: admin.name || "Admin",
+        adminEmail: admin.email || "",
+        action: "Saque Marcado como Pago",
+        target: `${withdrawal.profile_name} (${withdrawal.profile_email})`,
+        details: `Valor: R$ ${markPaidNet.toFixed(2)}`,
+      });
 
       return NextResponse.json({
         success: true,
@@ -149,6 +179,27 @@ export async function PATCH(
       } catch (auditError) {
         console.error("Error creating audit log:", auditError);
       }
+      
+      // Log para Discord
+      logWithdrawalStatusUpdate({
+        withdrawalId: id,
+        userName: withdrawal.profile_name || "N/A",
+        userEmail: withdrawal.profile_email || "",
+        amount: approveSuccessAmount,
+        netAmount: Number(withdrawal.net_amount) || 0,
+        oldStatus: "pending",
+        newStatus: "processing",
+        pixKey: withdrawal.pix_key || "",
+        adminName: admin.name || "Admin",
+      });
+      
+      logAdminAction({
+        adminName: admin.name || "Admin",
+        adminEmail: admin.email || "",
+        action: "Saque Aprovado",
+        target: `${withdrawal.profile_name} (${withdrawal.profile_email})`,
+        details: `Valor: R$ ${(Number(withdrawal.net_amount) || 0).toFixed(2)} | Acquirer ID: ${acquirerWithdrawalId}`,
+      });
 
       return NextResponse.json({
         success: true,
@@ -176,14 +227,12 @@ export async function PATCH(
         WHERE id = ${id}
       `;
 
-      // Criar notificação para o usuário
+      // Enviar notificacao com push para o usuario
       try {
-        await sql`
-          INSERT INTO user_notifications (id, user_id, title, message, type, created_at)
-          VALUES (${crypto.randomUUID()}, ${withdrawal.user_id}, ${'Saque Rejeitado'}, ${`Seu saque de R$ ${withdrawalAmount.toFixed(2)} foi rejeitado. ${reason ? `Motivo: ${reason}` : ""} O valor foi devolvido ao seu saldo.`}, ${'error'}, NOW())
-        `;
+        await notifyWithdrawalFailed(withdrawal.user_id, withdrawalAmount, reason || "Rejeitado pelo administrador");
+        console.log(`[Admin Withdrawal] Push notification de rejeicao enviado para usuario ${withdrawal.user_id}`);
       } catch (notifError) {
-        console.error("Error creating rejection notification:", notifError);
+        console.error("[Admin Withdrawal] Error sending rejection notification:", notifError);
       }
 
       // Criar log de auditoria
@@ -195,6 +244,27 @@ export async function PATCH(
       } catch (auditError) {
         console.error("Error creating audit log:", auditError);
       }
+      
+      // Log para Discord
+      logWithdrawalStatusUpdate({
+        withdrawalId: id,
+        userName: withdrawal.profile_name || "N/A",
+        userEmail: withdrawal.profile_email || "",
+        amount: withdrawalAmount,
+        netAmount: Number(withdrawal.net_amount) || 0,
+        oldStatus: "pending",
+        newStatus: "rejected",
+        pixKey: withdrawal.pix_key || "",
+        adminName: admin.name || "Admin",
+      });
+      
+      logAdminAction({
+        adminName: admin.name || "Admin",
+        adminEmail: admin.email || "",
+        action: "Saque Rejeitado",
+        target: `${withdrawal.profile_name} (${withdrawal.profile_email})`,
+        details: `Valor: R$ ${withdrawalAmount.toFixed(2)} | Motivo: ${reason || "Nao informado"}`,
+      });
 
       return NextResponse.json({
         success: true,

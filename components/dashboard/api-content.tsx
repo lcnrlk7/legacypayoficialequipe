@@ -173,10 +173,10 @@ export function ApiContent({ profile, userId }: ApiContentProps) {
           </div>
         </div>
 
-        <Link href="/docs">
+        <Link href="/dashboard/integration">
           <Button className="mt-6 bg-primary hover:bg-primary/90 text-primary-foreground">
             <FileCode className="w-4 h-4 mr-2" />
-            Ver Documentação Completa
+            Ver Documentacao Completa
             <ExternalLink className="w-4 h-4 ml-2" />
           </Button>
         </Link>

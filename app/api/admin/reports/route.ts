@@ -1,3 +1,4 @@
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 
@@ -57,21 +58,24 @@ export async function GET() {
 
     // Calcular estatísticas
     const completedTx = allTransactions.filter((tx) => tx.status === "completed");
+    // Volume apenas de depositos (pix_in, deposit) - saques NAO contam no volume
+    const depositTx = completedTx.filter((tx) => tx.type === "pix_in" || tx.type === "deposit");
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
     const todayTx = completedTx.filter((tx) => new Date(tx.created_at as string) >= today);
+    const todayDepositTx = todayTx.filter((tx) => tx.type === "pix_in" || tx.type === "deposit");
     const uniqueUsers = new Set(allTransactions.map((tx) => tx.user_id));
 
     const stats = {
       total_transactions: allTransactions.length,
-      total_volume: completedTx.reduce((acc, tx) => acc + tx.amount, 0),
+      total_volume: depositTx.reduce((acc, tx) => acc + tx.amount, 0), // Apenas depositos
       total_fees_collected: completedTx.reduce((acc, tx) => acc + tx.fee, 0),
       pending_count: allTransactions.filter((tx) => tx.status === "pending").length,
       completed_count: completedTx.length,
       cancelled_count: allTransactions.filter((tx) => tx.status === "cancelled" || tx.status === "failed").length,
       users_count: uniqueUsers.size,
-      today_volume: todayTx.reduce((acc, tx) => acc + tx.amount, 0),
+      today_volume: todayDepositTx.reduce((acc, tx) => acc + tx.amount, 0), // Apenas depositos
       today_fees: todayTx.reduce((acc, tx) => acc + tx.fee, 0),
     };
 

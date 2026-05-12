@@ -467,36 +467,54 @@ export default function KYCPage() {
               </div>
 
               {/* Ações */}
-              {selectedUser.kyc_status !== "approved" && selectedUser.documents.length > 0 && (
+              {selectedUser.kyc_status !== "approved" && (
                 <>
-                  <div>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Motivo da Rejeição (se aplicável)
-                    </p>
-                    <textarea
-                      value={rejectionReason}
-                      onChange={(e) => setRejectionReason(e.target.value)}
-                      placeholder="Informe o motivo caso rejeite a verificação..."
-                      className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 resize-none h-24"
-                    />
-                  </div>
+                  {selectedUser.documents.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Motivo da Rejeicao (se aplicavel)
+                      </p>
+                      <textarea
+                        value={rejectionReason}
+                        onChange={(e) => setRejectionReason(e.target.value)}
+                        placeholder="Informe o motivo caso rejeite a verificacao..."
+                        className="w-full px-4 py-3 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 resize-none h-24"
+                      />
+                    </div>
+                  )}
+
+                  {selectedUser.documents.length === 0 && (
+                    <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="w-5 h-5 text-yellow-400 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-medium text-yellow-400">Aprovacao sem documentos</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Este usuario nao enviou documentos. Ao aprovar, ele tera acesso completo a plataforma.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="flex gap-3">
-                    <button
-                      onClick={() => rejectUser(selectedUser)}
-                      disabled={actionLoading}
-                      className="flex-1 px-4 py-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <XCircle className="w-5 h-5" />}
-                      Rejeitar
-                    </button>
+                    {selectedUser.documents.length > 0 && (
+                      <button
+                        onClick={() => rejectUser(selectedUser)}
+                        disabled={actionLoading}
+                        className="flex-1 px-4 py-3 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <XCircle className="w-5 h-5" />}
+                        Rejeitar
+                      </button>
+                    )}
                     <button
                       onClick={() => approveUser(selectedUser)}
                       disabled={actionLoading}
-                      className="flex-1 px-4 py-3 rounded-xl bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={`${selectedUser.documents.length > 0 ? 'flex-1' : 'w-full'} px-4 py-3 rounded-xl bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed`}
                     >
                       {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <CheckCircle className="w-5 h-5" />}
-                      Aprovar Usuário
+                      {selectedUser.documents.length === 0 ? "Aprovar sem Documentos" : "Aprovar Usuario"}
                     </button>
                   </div>
                 </>

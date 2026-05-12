@@ -5,20 +5,20 @@ import { motion } from "framer-motion";
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  Key,
   Clock,
-  Copy,
   Calendar,
   ChevronDown,
   CheckCircle,
   XCircle,
-  Wallet,
   TrendingUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { RewardsProgress } from "./rewards-progress";
-import { UserNotificationsBanner } from "./user-notifications-banner";
+import { SalesChart } from "./sales-chart";
+import { StatsCards } from "./stats-cards";
+import { GoalsRoadmap } from "./goals-roadmap";
+import { BannerCarousel } from "./banner-carousel";
+import { CustomizableWidgets } from "./customizable-widgets";
 import { useProfile } from "@/components/profile-provider";
 
 export interface Profile {
@@ -170,7 +170,7 @@ export function DashboardContent({
   transactions,
   pixKeys,
 }: DashboardContentProps) {
-  const { profile: contextProfile, updateBalance } = useProfile();
+  const { profile: contextProfile, updateBalance, updateTotalRevenue } = useProfile();
   const [periodFilter, setPeriodFilter] = useState<PeriodFilter>("month");
   const [showPeriodDropdown, setShowPeriodDropdown] = useState(false);
 
@@ -192,9 +192,18 @@ export function DashboardContent({
   const currentBalance = contextProfile?.balance ?? serverProfile?.balance ?? 0;
   const profile = serverProfile ? { ...serverProfile, balance: Number(currentBalance) } : null;
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
+  // Calcular faturamento TOTAL acumulado (para metas) - independente do filtro de periodo
+  const lifetimeTotalRevenue = useMemo(() => {
+    const allDeposits = transactions.filter(
+      (t) => ["deposit", "transfer_in", "pix_in"].includes(t.type) && t.status === "completed"
+    );
+    return allDeposits.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
+  }, [transactions]);
+
+  // Sincronizar o faturamento total com o contexto global (para o header usar)
+  useEffect(() => {
+    updateTotalRevenue(lifetimeTotalRevenue);
+  }, [lifetimeTotalRevenue, updateTotalRevenue]);
 
   const { totalReceivedGross, totalReceivedNet, totalSent, filteredTransactions } = useMemo(() => {
     const { start, end } = getDateRange(periodFilter);
@@ -204,7 +213,7 @@ export function DashboardContent({
       return txDate >= start && txDate <= end;
     });
 
-    // Calcular valor bruto (amount) e líquido (net_amount ou amount - fee)
+    // Calcular valor bruto (amount) e liquido (net_amount ou amount - fee)
     const completedDeposits = filtered.filter(
       (t) => ["deposit", "transfer_in", "pix_in"].includes(t.type) && t.status === "completed"
     );
@@ -212,18 +221,18 @@ export function DashboardContent({
     const receivedGross = completedDeposits.reduce((sum, t) => sum + (Number(t.amount) || 0), 0);
     
     const receivedNet = completedDeposits.reduce((sum, t) => {
-      // Se tem net_amount, usa ele; senão calcula: amount - fee
+      // Se tem net_amount, usa ele; senao calcula: amount - fee
       const netValue = t.net_amount !== undefined 
         ? Number(t.net_amount) 
         : (Number(t.amount) || 0) - (Number(t.fee) || 0);
       return sum + (netValue || 0);
     }, 0);
 
-    // Calcular valor líquido dos saques (net_amount = valor que o usuário recebeu, sem taxas)
+    // Calcular valor liquido dos saques (net_amount = valor que o usuario recebeu, sem taxas)
     const sent = filtered
       .filter((t) => ["withdrawal", "transfer_out", "pix_out"].includes(t.type) && t.status === "completed")
       .reduce((sum, t) => {
-        // Se tem net_amount, usa ele; senão calcula: amount - fee
+        // Se tem net_amount, usa ele; senao calcula: amount - fee
         const netValue = t.net_amount !== undefined 
           ? Number(t.net_amount) 
           : (Number(t.amount) || 0) - (Number(t.fee) || 0);
@@ -239,10 +248,7 @@ export function DashboardContent({
   }, [transactions, periodFilter]);
 
   return (
-    <div className="space-y-4 sm:space-y-6 lg:space-y-8 overflow-x-hidden">
-      {/* Notifications Banner */}
-      {profile && <UserNotificationsBanner userId={profile.id} />}
-
+    <div data-onboarding="dashboard" className="space-y-4 sm:space-y-6 lg:space-y-8 overflow-x-hidden">
       {/* Welcome */}
       <div>
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
@@ -252,18 +258,27 @@ export function DashboardContent({
           Bem-vindo ao seu painel de controle
         </p>
       </div>
+
+      {/* Banner Carousel */}
+      <BannerCarousel />
+
+      {/* Customizable Widgets */}
+      <CustomizableWidgets
+        balance={profile?.balance || 0}
+        totalReceived={totalReceivedGross}
+        totalSent={totalSent}
+        pendingCount={filteredTransactions.filter(t => t.status === 'pending').length}
+        savedPixKeys={pixKeys.map(k => ({ id: k.id, key_value: k.key_value, key_type: k.key_type }))}
+      />
       
-      {/* Rewards Progress */}
-      {profile && (
-        <RewardsProgress 
-          totalRevenue={profile.total_revenue || totalReceivedGross} 
-          userId={profile.id} 
-        />
-      )}
+      {/* Sales Chart */}
+      <div data-onboarding="sales-chart">
+        <SalesChart transactions={transactions} />
+      </div>
 
       {/* Period Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h2 className="text-base sm:text-lg font-semibold text-foreground">Resumo Financeiro</h2>
+        <h2 className="text-base sm:text-lg font-semibold text-foreground">Metricas</h2>
         <div className="relative">
           <button
             onClick={() => setShowPeriodDropdown(!showPeriodDropdown)}
@@ -295,162 +310,23 @@ export function DashboardContent({
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-3 sm:p-6 overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Wallet className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
-            </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground">Saldo</span>
-          </div>
-          <p className="text-sm sm:text-2xl font-bold text-primary truncate">
-            {formatCurrency(profile?.balance || 0)}
-          </p>
-          <p className="text-[10px] sm:text-sm text-green-500 mt-0.5 sm:mt-1">Disponível para saque</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-3 sm:p-6 overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-blue-500/10 flex items-center justify-center flex-shrink-0">
-              <ArrowDownLeft className="w-4 h-4 sm:w-6 sm:h-6 text-blue-500" />
-            </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground truncate ml-1">Bruto</span>
-          </div>
-          <p className="text-sm sm:text-2xl font-bold text-foreground truncate">
-            {formatCurrency(totalReceivedGross)}
-          </p>
-          <p className="text-[10px] sm:text-sm text-blue-500 mt-0.5 sm:mt-1 truncate">{periodLabels[periodFilter]}</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-3 sm:p-6 overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-green-500/10 flex items-center justify-center flex-shrink-0">
-              <ArrowDownLeft className="w-4 h-4 sm:w-6 sm:h-6 text-green-500" />
-            </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground truncate ml-1">Líquido</span>
-          </div>
-          <p className="text-sm sm:text-2xl font-bold text-foreground truncate">
-            {formatCurrency(totalReceivedNet)}
-          </p>
-          <p className="text-[10px] sm:text-sm text-green-500 mt-0.5 sm:mt-1 truncate">{periodLabels[periodFilter]}</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-3 sm:p-6 overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-red-500/10 flex items-center justify-center flex-shrink-0">
-              <ArrowUpRight className="w-4 h-4 sm:w-6 sm:h-6 text-red-500" />
-            </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground truncate ml-1">Enviado</span>
-          </div>
-          <p className="text-sm sm:text-2xl font-bold text-foreground truncate">
-            {formatCurrency(totalSent)}
-          </p>
-          <p className="text-[10px] sm:text-sm text-red-500 mt-0.5 sm:mt-1 truncate">{periodLabels[periodFilter]}</p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-3 sm:p-6 overflow-hidden"
-        >
-          <div className="flex items-center justify-between mb-2 sm:mb-4">
-            <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg sm:rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <Key className="w-4 h-4 sm:w-6 sm:h-6 text-primary" />
-            </div>
-            <span className="text-[10px] sm:text-xs text-muted-foreground">Chaves</span>
-          </div>
-          <p className="text-sm sm:text-2xl font-bold text-foreground">{pixKeys.length}</p>
-          <p className="text-[10px] sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">Chaves PIX</p>
-        </motion.div>
+      <div data-onboarding="stats-cards">
+        <StatsCards
+        balance={profile?.balance || 0}
+        blockedBalance={0}
+        transactions={filteredTransactions}
+        periodFilter={periodLabels[periodFilter]}
+        allTransactions={transactions}
+        />
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* API Key */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="lg:col-span-2 bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6"
-        >
-          <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">
-            Sua Chave API
-          </h2>
-          <div className="flex items-center gap-2 sm:gap-3 bg-secondary rounded-lg sm:rounded-xl p-3 sm:p-4">
-            <code className="flex-1 text-xs sm:text-sm text-muted-foreground font-mono truncate">
-              {profile?.api_key || "Carregando..."}
-            </code>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => copyToClipboard(profile?.api_key || "")}
-              className="flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
-            >
-              <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
-            </Button>
-          </div>
-          <p className="text-[10px] sm:text-xs text-muted-foreground mt-2 sm:mt-3">
-            Use esta chave para autenticar suas requisições à API. Mantenha-a em segredo!
-          </p>
-          <Link href="/docs">
-            <Button variant="link" className="text-primary p-0 mt-2 text-xs sm:text-sm">
-              Ver documentação da API
-            </Button>
-          </Link>
-        </motion.div>
-
-        {/* Quick Actions */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6"
-        >
-          <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">
-            Ações Rápidas
-          </h2>
-          <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 sm:gap-3">
-            <Link href="/dashboard/wallet" className="block">
-              <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground justify-center lg:justify-start text-xs sm:text-sm h-9 sm:h-10">
-                <ArrowDownLeft className="w-4 h-4 lg:mr-2" />
-                <span className="hidden lg:inline">Depositar</span>
-              </Button>
-            </Link>
-            <Link href="/dashboard/wallet" className="block">
-              <Button variant="outline" className="w-full justify-center lg:justify-start text-xs sm:text-sm h-9 sm:h-10">
-                <ArrowUpRight className="w-4 h-4 lg:mr-2" />
-                <span className="hidden lg:inline">Sacar</span>
-              </Button>
-            </Link>
-            <Link href="/dashboard/pix-keys" className="block">
-              <Button variant="outline" className="w-full justify-center lg:justify-start text-xs sm:text-sm h-9 sm:h-10">
-                <Key className="w-4 h-4 lg:mr-2" />
-                <span className="hidden lg:inline">Gerenciar Chaves</span>
-              </Button>
-            </Link>
-          </div>
-        </motion.div>
-      </div>
+      {/* Goals Roadmap */}
+      {profile && (
+        <GoalsRoadmap
+          totalRevenue={lifetimeTotalRevenue}
+          userId={profile.id}
+        />
+      )}
 
       {/* Recent Transactions */}
       <motion.div

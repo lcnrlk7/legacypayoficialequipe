@@ -198,6 +198,49 @@ export default function KYCPage() {
     );
   }
 
+  // Se KYC ja esta aprovado, mostrar apenas mensagem de sucesso
+  if (kycStatus === "approved") {
+    return (
+      <div className="space-y-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+              Verificação KYC
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Sua conta está totalmente verificada
+            </p>
+          </div>
+          {getOverallStatusBadge()}
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <Card className="border-green-500/20 bg-green-500/5">
+            <CardContent className="p-8">
+              <div className="flex flex-col items-center text-center gap-4">
+                <div className="p-4 rounded-full bg-green-500/20">
+                  <CheckCircle2 className="w-12 h-12 text-green-500" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-foreground mb-2">
+                    Verificação Concluída!
+                  </h3>
+                  <p className="text-muted-foreground max-w-md">
+                    Sua identidade foi verificada com sucesso. Você tem acesso completo 
+                    a todas as funcionalidades da LegacyPay, incluindo saques e transferências.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Header */}

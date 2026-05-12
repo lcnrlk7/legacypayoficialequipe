@@ -1,10 +1,10 @@
 import { sql } from "@/lib/db"
 import { getSession } from "@/lib/auth"
-import { NextResponse } from "next/server"
+import { NextResponse, NextRequest } from "next/server"
 import crypto from "crypto"
 
-// Testar webhook do usuario
-export async function POST() {
+// Testar webhook de uma integracao
+export async function POST(request: NextRequest) {
   try {
     const session = await getSession()
 
@@ -12,16 +12,49 @@ export async function POST() {
       return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
     }
 
-    const profiles = await sql`
-      SELECT webhook_url, webhook_secret FROM profiles WHERE id = ${session.userId}
-    `
-    const profile = profiles[0]
+    const body = await request.json()
+    const { integration_id } = body
 
-    if (!profile?.webhook_url) {
-      return NextResponse.json(
-        { error: "Webhook URL nao configurada" },
-        { status: 400 }
-      )
+    let webhookUrl: string
+    let webhookSecret: string
+
+    if (integration_id) {
+      // Buscar da integracao especifica (tabela user_integrations)
+      const integrations = await sql`
+        SELECT webhook_url, webhook_secret FROM user_integrations 
+        WHERE id = ${integration_id} AND user_id = ${session.userId}
+      `
+      const integration = integrations[0]
+
+      if (!integration) {
+        return NextResponse.json({ error: "Integracao nao encontrada" }, { status: 404 })
+      }
+
+      if (!integration.webhook_url) {
+        return NextResponse.json(
+          { success: false, message: "Webhook URL nao configurada para esta integracao" },
+          { status: 400 }
+        )
+      }
+
+      webhookUrl = integration.webhook_url
+      webhookSecret = integration.webhook_secret
+    } else {
+      // Fallback: buscar do profile
+      const profiles = await sql`
+        SELECT webhook_url, webhook_secret FROM profiles WHERE id = ${session.userId}
+      `
+      const profile = profiles[0]
+
+      if (!profile?.webhook_url) {
+        return NextResponse.json(
+          { success: false, message: "Webhook URL nao configurada" },
+          { status: 400 }
+        )
+      }
+
+      webhookUrl = profile.webhook_url
+      webhookSecret = profile.webhook_secret
     }
 
     // Criar payload de teste
@@ -44,7 +77,7 @@ export async function POST() {
 
     // Gerar assinatura
     const signature = crypto
-      .createHmac("sha256", profile.webhook_secret || "")
+      .createHmac("sha256", webhookSecret || "")
       .update(JSON.stringify(testPayload))
       .digest("hex")
 
@@ -57,7 +90,7 @@ export async function POST() {
     let responseBody = ""
 
     try {
-      webhookResponse = await fetch(profile.webhook_url, {
+      webhookResponse = await fetch(webhookUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -90,9 +123,9 @@ export async function POST() {
       success,
       message: success 
         ? "Webhook recebeu a requisicao com sucesso!" 
-        : "Webhook nao respondeu corretamente",
+        : webhookError ? `Erro: ${webhookError}` : `Webhook retornou status ${responseStatus}`,
       data: {
-        webhook_url: profile.webhook_url,
+        webhook_url: webhookUrl,
         response_time_ms: responseTime,
         response_status: responseStatus || null,
         response_body: responseBody || null,

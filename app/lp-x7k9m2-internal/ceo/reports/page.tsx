@@ -164,7 +164,10 @@ export default function AdminReportsPage() {
   });
 
   const filteredStats = {
-    volume: filteredTransactions.filter(tx => tx.status === "completed").reduce((acc, tx) => acc + tx.amount, 0),
+    // Volume apenas de depositos (pix_in, deposit) - saques NAO contam no volume
+    volume: filteredTransactions
+      .filter(tx => tx.status === "completed" && (tx.type === "pix_in" || tx.type === "deposit"))
+      .reduce((acc, tx) => acc + tx.amount, 0),
     fees: filteredTransactions.filter(tx => tx.status === "completed").reduce((acc, tx) => acc + tx.fee, 0),
     count: filteredTransactions.length,
   };

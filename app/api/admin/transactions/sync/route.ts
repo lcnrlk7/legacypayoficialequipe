@@ -1,3 +1,4 @@
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { createMisticPayClient } from "@/lib/acquirers/misticpay";
@@ -10,6 +11,10 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   try {
+    // SEGURANCA: Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+
     // Buscar transações pendentes
     const pendingTx = await sql`
       SELECT t.*, p.balance as user_balance
@@ -41,6 +46,10 @@ export async function GET() {
 
     for (const tx of pendingTx) {
       try {
+    // SEGURANCA: Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+
         const checkId = tx.acquirer_transaction_id || tx.external_id;
         
         if (!checkId) {
@@ -139,6 +148,10 @@ export async function GET() {
  */
 export async function POST(request: Request) {
   try {
+    // SEGURANCA: Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+
     const { transactionId, action } = await request.json();
 
     if (!transactionId) {

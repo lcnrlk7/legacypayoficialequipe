@@ -1,10 +1,16 @@
 import { sql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { notifyAdminDeposit } from "@/lib/notifications";
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    // Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+    
     const body = await request.json();
     const { userId, operation, amount, newBalance, reason } = body;
 
@@ -76,27 +82,26 @@ export async function POST(request: NextRequest) {
       console.error("Error creating audit log:", logError);
     }
 
-    // Criar notificação para o usuário
+    // Criar notificação e enviar push para o usuário
     try {
-      const notificationId = crypto.randomUUID();
-      const notificationTitle = operation === 'add' 
-        ? 'Crédito Recebido!' 
-        : 'Débito em sua conta';
-      const notificationMessage = operation === 'add'
-        ? `Você recebeu um crédito de R$ ${Number(amount).toFixed(2)}. ${reason ? `Motivo: ${reason}` : ''}`
-        : `Foi debitado R$ ${Number(amount).toFixed(2)} da sua conta. ${reason ? `Motivo: ${reason}` : ''}`;
-
-      await sql`
-        INSERT INTO user_notifications (id, user_id, title, message, type, created_at)
-        VALUES (
-          ${notificationId},
-          ${userId},
-          ${notificationTitle},
-          ${notificationMessage},
-          ${operation === 'add' ? 'success' : 'warning'},
-          NOW()
-        )
-      `;
+      if (operation === 'add') {
+        // Enviar notificacao com push para credito
+        await notifyAdminDeposit(userId, Number(amount));
+      } else {
+        // Para debito, criar notificacao simples
+        const notificationId = crypto.randomUUID();
+        await sql`
+          INSERT INTO user_notifications (id, user_id, title, message, type, created_at)
+          VALUES (
+            ${notificationId},
+            ${userId},
+            'Debito em sua conta',
+            ${`Foi debitado R$ ${Number(amount).toFixed(2)} da sua conta. ${reason ? `Motivo: ${reason}` : ''}`},
+            'warning',
+            NOW()
+          )
+        `;
+      }
     } catch (notifError) {
       console.error("Error creating notification:", notifError);
     }
@@ -116,9 +121,13 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET para buscar histórico de alterações de saldo de um usuário
+// GET para buscar historico de alteracoes de saldo de um usuario
 export async function GET(request: NextRequest) {
   try {
+    // Verificar se e admin
+    const admin = await verifyAdmin();
+    if (!admin) return accessDeniedResponse();
+    
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
 
