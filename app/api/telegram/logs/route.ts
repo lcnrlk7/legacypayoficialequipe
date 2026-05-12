@@ -10,89 +10,67 @@ export async function GET(request: NextRequest) {
     const limit = Number(searchParams.get("limit")) || 50;
     const offset = Number(searchParams.get("offset")) || 0;
     
-    const [logsData, stats, users, transactions, settings, webhookInfo] = await Promise.all([
+    const [logsData, stats, botUsers, botTransactions, settings, webhookInfo] = await Promise.all([
       getTelegramLogs(limit, offset),
       getTelegramStats(),
+      // Usuarios do bot (tabela independente)
       sql`
-        SELECT 
-          tu.*,
-          p.name,
-          p.email,
-          p.balance
-        FROM telegram_users tu
-        JOIN profiles p ON tu.user_id = p.id
-        WHERE tu.is_active = true
-        ORDER BY tu.created_at DESC
+        SELECT * FROM bot_users
+        ORDER BY updated_at DESC
+        LIMIT 100
       `,
-      // Transacoes do Telegram (ultimos 30 dias)
+      // Transacoes do bot (tabela independente)
       sql`
-        SELECT 
-          t.id,
-          t.user_id,
-          t.type,
-          t.amount,
-          t.fee,
-          t.net_amount,
-          t.status,
-          t.created_at,
-          p.name as user_name,
-          p.email as user_email
-        FROM transactions t
-        JOIN profiles p ON t.user_id = p.id
-        WHERE t.metadata->>'source' = 'telegram'
-          AND t.created_at > NOW() - INTERVAL '30 days'
-        ORDER BY t.created_at DESC
-        LIMIT 50
+        SELECT * FROM bot_transactions
+        ORDER BY created_at DESC
+        LIMIT 100
       `,
       // Configuracoes
       sql`SELECT * FROM telegram_settings LIMIT 1`,
-      // Info do webhook (buscar do Telegram)
+      // Info do webhook
       getWebhookInfo()
     ]);
     
-    // Calcular estatisticas de transacoes
-    const telegramTransactions = await sql`
+    // Estatisticas das tabelas do bot
+    const botStats = await sql`
       SELECT 
-        COUNT(*) FILTER (WHERE type = 'pix' AND status = 'completed') as total_deposits,
-        COUNT(*) FILTER (WHERE type = 'withdrawal' AND status = 'completed') as total_withdrawals,
-        COALESCE(SUM(net_amount) FILTER (WHERE type = 'pix' AND status = 'completed'), 0) as total_deposit_amount,
-        COALESCE(SUM(net_amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed'), 0) as total_withdrawal_amount,
-        COALESCE(SUM(fee) FILTER (WHERE status = 'completed'), 0) as total_fees
-      FROM transactions
-      WHERE metadata->>'source' = 'telegram'
+        (SELECT COUNT(*) FROM bot_users) as total_users,
+        (SELECT COUNT(*) FROM bot_users WHERE updated_at >= CURRENT_DATE) as users_today,
+        (SELECT COALESCE(SUM(balance), 0) FROM bot_users) as total_balance,
+        (SELECT COALESCE(SUM(total_deposited), 0) FROM bot_users) as total_deposited,
+        (SELECT COALESCE(SUM(total_withdrawn), 0) FROM bot_users) as total_withdrawn
     `;
     
     // Transacoes de hoje
-    const todayTransactions = await sql`
+    const todayStats = await sql`
       SELECT 
-        COUNT(*) FILTER (WHERE type = 'pix' AND status = 'completed') as deposits_today,
+        COUNT(*) FILTER (WHERE type = 'deposit' AND status = 'completed') as deposits_today,
         COUNT(*) FILTER (WHERE type = 'withdrawal' AND status = 'completed') as withdrawals_today,
-        COALESCE(SUM(net_amount) FILTER (WHERE type = 'pix' AND status = 'completed'), 0) as deposit_amount_today,
-        COALESCE(SUM(net_amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed'), 0) as withdrawal_amount_today,
+        COALESCE(SUM(amount) FILTER (WHERE type = 'deposit' AND status = 'completed'), 0) as deposit_amount_today,
+        COALESCE(SUM(amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed'), 0) as withdrawal_amount_today,
         COALESCE(SUM(fee) FILTER (WHERE status = 'completed'), 0) as fees_today
-      FROM transactions
-      WHERE metadata->>'source' = 'telegram'
-        AND created_at >= CURRENT_DATE
+      FROM bot_transactions
+      WHERE created_at >= CURRENT_DATE
+    `;
+    
+    // Totais gerais
+    const totalStats = await sql`
+      SELECT 
+        COUNT(*) FILTER (WHERE type = 'deposit' AND status = 'completed') as total_deposits,
+        COUNT(*) FILTER (WHERE type = 'withdrawal' AND status = 'completed') as total_withdrawals,
+        COALESCE(SUM(amount) FILTER (WHERE type = 'deposit' AND status = 'completed'), 0) as total_deposit_amount,
+        COALESCE(SUM(amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed'), 0) as total_withdrawal_amount,
+        COALESCE(SUM(fee), 0) as total_fees,
+        COALESCE(SUM(net_amount) FILTER (WHERE type = 'deposit' AND status = 'completed'), 0) as total_net_deposits,
+        COALESCE(SUM(net_amount) FILTER (WHERE type = 'withdrawal' AND status = 'completed'), 0) as total_net_withdrawals
+      FROM bot_transactions
     `;
     
     // Saques pendentes
     const pendingWithdrawals = await sql`
-      SELECT 
-        w.id,
-        w.user_id,
-        w.amount,
-        w.fee,
-        w.net_amount,
-        w.pix_key,
-        w.status,
-        w.created_at,
-        p.name as user_name,
-        p.email as user_email
-      FROM withdrawals w
-      JOIN profiles p ON w.user_id = p.id
-      WHERE w.metadata->>'source' = 'telegram'
-        AND w.status IN ('pending', 'processing')
-      ORDER BY w.created_at DESC
+      SELECT * FROM bot_transactions
+      WHERE type = 'withdrawal' AND status IN ('pending', 'processing')
+      ORDER BY created_at DESC
     `;
     
     return NextResponse.json({
@@ -101,11 +79,12 @@ export async function GET(request: NextRequest) {
       total_logs: logsData.total,
       stats: {
         ...stats,
-        ...telegramTransactions[0],
-        ...todayTransactions[0],
+        ...botStats[0],
+        ...todayStats[0],
+        ...totalStats[0],
       },
-      users,
-      transactions,
+      users: botUsers,
+      transactions: botTransactions,
       pending_withdrawals: pendingWithdrawals,
       settings: settings[0] || null,
       webhook: webhookInfo,

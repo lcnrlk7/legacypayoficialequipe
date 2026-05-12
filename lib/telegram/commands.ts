@@ -1,6 +1,8 @@
 import { neon } from "@neondatabase/serverless";
 import { sendMessage, editMessageText, answerCallbackQuery } from "./bot";
 import { logTelegramAction } from "./logs";
+import { notifyDeposit, notifyWithdrawal } from "./notify";
+import { MedusaPayments } from "@/lib/acquirers/medusa";
 
 const sql = neon(process.env.DATABASE_URL!);
 
@@ -14,23 +16,168 @@ const DISCORD_LINK = "https://discord.gg/ea32hgRSeM";
 const WHATSAPP = "(34) 99935-3187";
 const WHATSAPP_LINK = "https://wa.me/5534999353187";
 const SALES_CHANNEL = "https://t.me/legacypaybot";
+const SALES_CHANNEL_ID = "@legacypaybot";
 const ANNOUNCEMENTS_CHANNEL = "https://t.me/legacypayavisos";
 
 // Taxas do Bot Telegram
 const TELEGRAM_PIX_FEE_PERCENT = 5;
 const TELEGRAM_WITHDRAWAL_FEE_FIXED = 7;
+const MIN_DEPOSIT = 10;
+const MIN_WITHDRAWAL = 20;
 
-// Estado temporario para consultas
+// Estado temporario
 const userStates: Map<number, { step: string; data?: Record<string, unknown> }> = new Map();
 
 // ══════════════════════════════════════════════════════════════════════════════
-// TECLADOS INLINE (BOTOES)
+// FUNCOES DE BANCO DE DADOS
+// ══════════════════════════════════════════════════════════════════════════════
+
+async function getOrCreateBotUser(telegramId: number, firstName: string, username?: string) {
+  // Buscar usuario existente
+  const existing = await sql`
+    SELECT * FROM bot_users WHERE telegram_id = ${telegramId}
+  `;
+  
+  if (existing.length > 0) {
+    // Atualizar informacoes
+    await sql`
+      UPDATE bot_users 
+      SET first_name = ${firstName}, 
+          telegram_username = ${username || null},
+          updated_at = NOW()
+      WHERE telegram_id = ${telegramId}
+    `;
+    return existing[0];
+  }
+  
+  // Criar novo usuario
+  const newUser = await sql`
+    INSERT INTO bot_users (telegram_id, telegram_username, first_name, balance)
+    VALUES (${telegramId}, ${username || null}, ${firstName}, 0)
+    RETURNING *
+  `;
+  
+  // Notificar novo usuario no canal
+  await sendMessageToChannel(SALES_CHANNEL_ID, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      🆕 <b>NOVO USUARIO BOT</b> 🆕
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   👤 Nome: ${firstName}
+   📱 @${username || "sem username"}
+   
+   🕐 ${new Date().toLocaleString("pt-BR")}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`);
+  
+  return newUser[0];
+}
+
+async function getBotUser(telegramId: number) {
+  const users = await sql`SELECT * FROM bot_users WHERE telegram_id = ${telegramId}`;
+  return users[0] || null;
+}
+
+async function updateBotUserBalance(telegramId: number, amount: number, operation: "add" | "subtract") {
+  if (operation === "add") {
+    await sql`
+      UPDATE bot_users 
+      SET balance = balance + ${amount},
+          total_deposited = total_deposited + ${amount},
+          updated_at = NOW()
+      WHERE telegram_id = ${telegramId}
+    `;
+  } else {
+    await sql`
+      UPDATE bot_users 
+      SET balance = balance - ${amount},
+          total_withdrawn = total_withdrawn + ${amount},
+          updated_at = NOW()
+      WHERE telegram_id = ${telegramId}
+    `;
+  }
+}
+
+async function saveBotUserPixKey(telegramId: number, pixKey: string) {
+  await sql`
+    UPDATE bot_users SET pix_key = ${pixKey}, updated_at = NOW()
+    WHERE telegram_id = ${telegramId}
+  `;
+}
+
+async function createBotTransaction(
+  telegramId: number,
+  botUserId: string,
+  type: string,
+  amount: number,
+  fee: number,
+  netAmount: number,
+  status: string,
+  pixCode?: string,
+  pixKey?: string,
+  externalId?: string
+) {
+  const result = await sql`
+    INSERT INTO bot_transactions (
+      bot_user_id, telegram_id, type, amount, fee, net_amount, status, 
+      pix_code, pix_key, external_id
+    ) VALUES (
+      ${botUserId}, ${telegramId}, ${type}, ${amount}, ${fee}, ${netAmount},
+      ${status}, ${pixCode || null}, ${pixKey || null}, ${externalId || null}
+    )
+    RETURNING *
+  `;
+  return result[0];
+}
+
+async function getBotTransactions(telegramId: number, limit: number = 10) {
+  return await sql`
+    SELECT * FROM bot_transactions 
+    WHERE telegram_id = ${telegramId}
+    ORDER BY created_at DESC 
+    LIMIT ${limit}
+  `;
+}
+
+async function sendMessageToChannel(channelId: string, text: string) {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return;
+  
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: channelId, text, parse_mode: "HTML" }),
+    });
+  } catch (error) {
+    console.error("[Telegram] Erro ao enviar para canal:", error);
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FORMATACAO
+// ══════════════════════════════════════════════════════════════════════════════
+
+function formatCurrency(value: number): string {
+  return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatDate(date: Date | string): string {
+  return new Date(date).toLocaleString("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TECLADOS
 // ══════════════════════════════════════════════════════════════════════════════
 
 const MENU_PRINCIPAL = {
   inline_keyboard: [
     [
-      { text: "💰 Ver Saldo", callback_data: "saldo" },
+      { text: "💰 Saldo", callback_data: "saldo" },
       { text: "📋 Historico", callback_data: "historico" },
     ],
     [
@@ -42,11 +189,8 @@ const MENU_PRINCIPAL = {
       { text: "❓ Ajuda", callback_data: "ajuda" },
     ],
     [
-      { text: "🌐 Acessar Painel", url: `${SITE_URL}/dashboard` },
-    ],
-    [
-      { text: "📢 Vendas", url: SALES_CHANNEL },
-      { text: "📣 Avisos", url: ANNOUNCEMENTS_CHANNEL },
+      { text: "📢 Canal Vendas", url: SALES_CHANNEL },
+      { text: "📣 Canal Avisos", url: ANNOUNCEMENTS_CHANNEL },
     ],
     [
       { text: "💬 Discord", url: DISCORD_LINK },
@@ -56,75 +200,61 @@ const MENU_PRINCIPAL = {
 };
 
 const VOLTAR_MENU = {
-  inline_keyboard: [
-    [{ text: "🔙 Voltar ao Menu", callback_data: "menu" }],
-  ],
-};
-
-const MENU_DEPOSITAR = {
-  inline_keyboard: [
-    [{ text: "📥 Fazer Deposito", url: `${SITE_URL}/dashboard/deposit` }],
-    [{ text: "🔙 Voltar ao Menu", callback_data: "menu" }],
-  ],
-};
-
-const MENU_SACAR = {
-  inline_keyboard: [
-    [{ text: "📤 Fazer Saque", url: `${SITE_URL}/dashboard/withdraw` }],
-    [{ text: "🔙 Voltar ao Menu", callback_data: "menu" }],
-  ],
-};
-
-const MENU_AJUDA = {
-  inline_keyboard: [
-    [{ text: "🌐 Acessar Site", url: SITE_URL }],
-    [
-      { text: "💬 Discord", url: DISCORD_LINK },
-      { text: "📱 WhatsApp", url: WHATSAPP_LINK },
-    ],
-    [
-      { text: "📢 Vendas", url: SALES_CHANNEL },
-      { text: "📣 Avisos", url: ANNOUNCEMENTS_CHANNEL },
-    ],
-    [{ text: "🔙 Voltar ao Menu", callback_data: "menu" }],
-  ],
+  inline_keyboard: [[{ text: "🔙 Voltar ao Menu", callback_data: "menu" }]],
 };
 
 const CANCELAR = {
-  inline_keyboard: [
-    [{ text: "❌ Cancelar", callback_data: "menu" }],
-  ],
+  inline_keyboard: [[{ text: "❌ Cancelar", callback_data: "menu" }]],
 };
 
-// ══════════════════════════════════════════════════════════════════════════════
-// FORMATACAO
-// ══════════════════════════════════════════════════════════════════════════════
-
-function formatCurrency(value: number): string {
-  return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+function menuDeposito() {
+  return {
+    inline_keyboard: [
+      [
+        { text: "R$ 20", callback_data: "dep_20" },
+        { text: "R$ 50", callback_data: "dep_50" },
+        { text: "R$ 100", callback_data: "dep_100" },
+      ],
+      [
+        { text: "R$ 200", callback_data: "dep_200" },
+        { text: "R$ 500", callback_data: "dep_500" },
+        { text: "R$ 1000", callback_data: "dep_1000" },
+      ],
+      [{ text: "💵 Outro Valor", callback_data: "dep_custom" }],
+      [{ text: "🔙 Voltar", callback_data: "menu" }],
+    ],
+  };
 }
 
-function formatDate(date: Date): string {
-  return new Date(date).toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function maskEmail(email: string): string {
-  const [user, domain] = email.split("@");
-  const masked = user.substring(0, 3) + "***";
-  return `${masked}@${domain}`;
+function menuSaque(balance: number) {
+  const buttons = [];
+  
+  if (balance >= 50) buttons.push({ text: "R$ 50", callback_data: "saq_50" });
+  if (balance >= 100) buttons.push({ text: "R$ 100", callback_data: "saq_100" });
+  if (balance >= 200) buttons.push({ text: "R$ 200", callback_data: "saq_200" });
+  if (balance >= 500) buttons.push({ text: "R$ 500", callback_data: "saq_500" });
+  
+  const keyboard = [];
+  
+  // Dividir em linhas de 3
+  for (let i = 0; i < buttons.length; i += 3) {
+    keyboard.push(buttons.slice(i, i + 3));
+  }
+  
+  if (balance >= MIN_WITHDRAWAL) {
+    keyboard.push([{ text: "💵 Sacar Tudo (R$ " + formatCurrency(balance) + ")", callback_data: "saq_all" }]);
+  }
+  
+  keyboard.push([{ text: "🔙 Voltar", callback_data: "menu" }]);
+  
+  return { inline_keyboard: keyboard };
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
 // MENSAGENS
 // ══════════════════════════════════════════════════════════════════════════════
 
-function msgBoasVindas(firstName: string): string {
+function msgBoasVindas(firstName: string, balance: number): string {
   return `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
         ⚡ <b>${BOT_NAME}</b> ⚡
@@ -132,81 +262,37 @@ function msgBoasVindas(firstName: string): string {
 
    Ola, <b>${firstName}</b>! 👋
 
-   Seja bem-vindo ao bot oficial
-   do LegacyPay!
+   💰 Seu saldo: <b>R$ ${formatCurrency(balance)}</b>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-         📱 <b>MENU PRINCIPAL</b>
+       📱 <b>MENU PRINCIPAL</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    Selecione uma opcao:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-         📢 <b>NOSSOS CANAIS</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-   📊 Vendas: @legacypaybot
-   📣 Avisos: @legacypayavisos
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
 }
 
-function msgPedirEmail(tipo: string): string {
-  const titulo = tipo === "saldo" ? "VER SALDO" : "HISTORICO";
-  const icone = tipo === "saldo" ? "💰" : "📋";
-  
-  return `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-         ${icone} <b>${titulo}</b> ${icone}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-   Para consultar, digite o <b>email</b>
-   da sua conta LegacyPay:
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-   Exemplo: seuemail@gmail.com
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`;
-}
-
-function msgSaldo(email: string, name: string, balance: number): string {
+function msgSaldo(firstName: string, balance: number, totalDeposited: number, totalWithdrawn: number): string {
   return `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
          💰 <b>SEU SALDO</b> 💰
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   👤 <b>${name}</b>
-   📧 ${maskEmail(email)}
+   👤 <b>${firstName}</b>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    💵 Saldo Disponivel:
-
    <b>R$ ${formatCurrency(balance)}</b>
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-   📥 Depositar: /depositar
-   📤 Sacar: /sacar
-
-━━━━━���━━━━━━━━━━━━━━━━━━━━━━━━━
-`;
-}
-
-function msgEmailNaoEncontrado(): string {
-  return `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       ❌ <b>EMAIL NAO ENCONTRADO</b>
+        📊 <b>RESUMO</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   Nao encontramos uma conta
-   com esse email.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-   📝 Ainda nao tem conta?
-   Acesse: ${SITE_URL}/register
+   📥 Total Depositado: R$ ${formatCurrency(totalDeposited)}
+   📤 Total Sacado: R$ ${formatCurrency(totalWithdrawn)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
@@ -218,19 +304,14 @@ function msgDepositar(): string {
          📥 <b>DEPOSITAR</b> 📥
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   Para fazer um deposito, acesse
-   nosso painel web:
-
-   🌐 ${SITE_URL}/dashboard/deposit
+   Escolha o valor do deposito:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           📊 <b>TAXA</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   Taxa de deposito: <b>${TELEGRAM_PIX_FEE_PERCENT}%</b>
-
-   Exemplo:
-   Deposito R$ 100 → Recebe R$ 95
+   Taxa: <b>${TELEGRAM_PIX_FEE_PERCENT}%</b>
+   Minimo: R$ ${formatCurrency(MIN_DEPOSIT)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -241,30 +322,45 @@ function msgDepositar(): string {
 `;
 }
 
-function msgSacar(): string {
+function msgSacar(balance: number): string {
+  if (balance < MIN_WITHDRAWAL) {
+    return `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         📤 <b>SACAR</b> 📤
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   ❌ Saldo insuficiente para saque.
+
+   💰 Seu saldo: R$ ${formatCurrency(balance)}
+   📌 Minimo: R$ ${formatCurrency(MIN_WITHDRAWAL)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   📥 Deposite mais para poder sacar.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+  }
+  
   return `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
          📤 <b>SACAR</b> 📤
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   Para fazer um saque, acesse
-   nosso painel web:
+   💰 Saldo: <b>R$ ${formatCurrency(balance)}</b>
 
-   🌐 ${SITE_URL}/dashboard/withdraw
+   Escolha o valor do saque:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
           📊 <b>TAXA</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   Taxa de saque: <b>R$ ${formatCurrency(TELEGRAM_WITHDRAWAL_FEE_FIXED)}</b> fixo
-
-   Exemplo:
-   Saque R$ 100 → Recebe R$ 93
+   Taxa: <b>R$ ${formatCurrency(TELEGRAM_WITHDRAWAL_FEE_FIXED)}</b> fixo
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    ⚡ Processamento rapido
-   ✅ Direto na sua chave PIX
+   ✅ PIX instantaneo
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
@@ -279,21 +375,21 @@ function msgTaxas(): string {
          💰 <b>DEPOSITO PIX</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   Taxa: <b>${TELEGRAM_PIX_FEE_PERCENT}%</b> do valor
+   Taxa: <b>${TELEGRAM_PIX_FEE_PERCENT}%</b>
+   Minimo: R$ ${formatCurrency(MIN_DEPOSIT)}
 
-   R$ 100 → Recebe R$ 95,00
-   R$ 500 → Recebe R$ 475,00
-   R$ 1.000 → Recebe R$ 950,00
+   R$ 100 → Recebe R$ ${formatCurrency(100 - (100 * TELEGRAM_PIX_FEE_PERCENT / 100))}
+   R$ 500 → Recebe R$ ${formatCurrency(500 - (500 * TELEGRAM_PIX_FEE_PERCENT / 100))}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
          💸 <b>SAQUE PIX</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
    Taxa: <b>R$ ${formatCurrency(TELEGRAM_WITHDRAWAL_FEE_FIXED)}</b> fixo
+   Minimo: R$ ${formatCurrency(MIN_WITHDRAWAL)}
 
-   R$ 100 → Recebe R$ 93,00
-   R$ 500 → Recebe R$ 493,00
-   R$ 1.000 → Recebe R$ 993,00
+   R$ 100 → Recebe R$ ${formatCurrency(100 - TELEGRAM_WITHDRAWAL_FEE_FIXED)}
+   R$ 500 → Recebe R$ ${formatCurrency(500 - TELEGRAM_WITHDRAWAL_FEE_FIXED)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
@@ -311,8 +407,8 @@ function msgAjuda(): string {
    /start - Menu principal
    /saldo - Ver seu saldo
    /historico - Ver transacoes
-   /depositar - Como depositar
-   /sacar - Como sacar
+   /depositar - Fazer deposito
+   /sacar - Fazer saque
    /taxas - Ver taxas
    /ajuda - Esta mensagem
 
@@ -324,14 +420,45 @@ function msgAjuda(): string {
    📱 WhatsApp: ${WHATSAPP}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-         📢 <b>CANAIS</b>
+`;
+}
+
+function msgHistorico(transactions: Record<string, unknown>[]): string {
+  let msg = `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         📋 <b>HISTORICO</b> 📋
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   📊 Vendas: @legacypaybot
-   📣 Avisos: @legacypayavisos
+   Ultimas 10 transacoes:
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
+
+  if (transactions.length === 0) {
+    msg += `
+   Nenhuma transacao encontrada.
+   
+   📥 Faca seu primeiro deposito!
+`;
+  } else {
+    for (const tx of transactions) {
+      const icon = tx.type === "deposit" ? "📥" : "📤";
+      const statusIcon = tx.status === "completed" ? "✅" : tx.status === "pending" ? "⏳" : "❌";
+      const typeText = tx.type === "deposit" ? "Deposito" : "Saque";
+      
+      msg += `
+   ${icon} ${typeText} ${statusIcon}
+   💵 R$ ${formatCurrency(Number(tx.amount))}
+   🕐 ${formatDate(tx.created_at as string)}
+`;
+    }
+  }
+
+  msg += `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`;
+
+  return msg;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -345,195 +472,355 @@ export async function handleMessage(
   firstName: string,
   username?: string
 ) {
+  // Criar/buscar usuario do bot
+  const user = await getOrCreateBotUser(telegramId, firstName, username);
+  const balance = Number(user.balance);
+  
   const trimmedText = text.trim();
   const command = trimmedText.toLowerCase();
   
-  // Verificar se tem estado pendente (aguardando email)
+  // Verificar estado pendente
   const state = userStates.get(telegramId);
   
   if (state) {
-    // Processar input baseado no estado
-    if (state.step === "awaiting_email_saldo" || state.step === "awaiting_email_historico") {
-      await handleEmailInput(chatId, telegramId, trimmedText, state.step);
-      return;
-    }
+    await handleStateInput(chatId, telegramId, trimmedText, state, user);
+    return;
   }
-  
-  // Log da acao
-  await logTelegramAction(telegramId, null, "MESSAGE", command, { firstName, username });
   
   // Processar comandos
   switch (command) {
     case "/start":
     case "/menu":
       userStates.delete(telegramId);
-      await sendMessage(chatId, msgBoasVindas(firstName), { reply_markup: MENU_PRINCIPAL });
+      await sendMessage(chatId, msgBoasVindas(firstName, balance), { reply_markup: MENU_PRINCIPAL });
       break;
       
     case "/saldo":
-      userStates.set(telegramId, { step: "awaiting_email_saldo" });
-      await sendMessage(chatId, msgPedirEmail("saldo"), { reply_markup: CANCELAR });
+      await sendMessage(chatId, msgSaldo(firstName, balance, Number(user.total_deposited), Number(user.total_withdrawn)), { reply_markup: VOLTAR_MENU });
       break;
       
     case "/historico":
     case "/extrato":
-      userStates.set(telegramId, { step: "awaiting_email_historico" });
-      await sendMessage(chatId, msgPedirEmail("historico"), { reply_markup: CANCELAR });
+      const transactions = await getBotTransactions(telegramId);
+      await sendMessage(chatId, msgHistorico(transactions), { reply_markup: VOLTAR_MENU });
       break;
       
     case "/depositar":
     case "/deposito":
-    case "/pix":
-      await sendMessage(chatId, msgDepositar(), { reply_markup: MENU_DEPOSITAR });
+      await sendMessage(chatId, msgDepositar(), { reply_markup: menuDeposito() });
       break;
       
     case "/sacar":
     case "/saque":
-      await sendMessage(chatId, msgSacar(), { reply_markup: MENU_SACAR });
+      await sendMessage(chatId, msgSacar(balance), { reply_markup: balance >= MIN_WITHDRAWAL ? menuSaque(balance) : VOLTAR_MENU });
       break;
       
     case "/taxas":
-    case "/taxa":
       await sendMessage(chatId, msgTaxas(), { reply_markup: VOLTAR_MENU });
       break;
       
     case "/ajuda":
     case "/help":
-    case "/suporte":
-      await sendMessage(chatId, msgAjuda(), { reply_markup: MENU_AJUDA });
+      await sendMessage(chatId, msgAjuda(), { reply_markup: VOLTAR_MENU });
       break;
       
     default:
-      // Se parece um email, tenta buscar saldo
-      if (trimmedText.includes("@") && trimmedText.includes(".")) {
-        userStates.set(telegramId, { step: "awaiting_email_saldo" });
-        await handleEmailInput(chatId, telegramId, trimmedText, "awaiting_email_saldo");
-      } else {
-        await sendMessage(chatId, msgBoasVindas(firstName), { reply_markup: MENU_PRINCIPAL });
-      }
+      await sendMessage(chatId, msgBoasVindas(firstName, balance), { reply_markup: MENU_PRINCIPAL });
+      break;
+  }
+  
+  await logTelegramAction(telegramId, null, "COMMAND", command, { firstName, username });
+}
+
+async function handleStateInput(
+  chatId: number,
+  telegramId: number,
+  text: string,
+  state: { step: string; data?: Record<string, unknown> },
+  user: Record<string, unknown>
+) {
+  switch (state.step) {
+    case "awaiting_deposit_amount":
+      await handleDepositAmountInput(chatId, telegramId, text, user);
+      break;
+      
+    case "awaiting_pix_key":
+      await handlePixKeyInput(chatId, telegramId, text, state, user);
+      break;
+      
+    default:
+      userStates.delete(telegramId);
+      await sendMessage(chatId, msgBoasVindas(user.first_name as string, Number(user.balance)), { reply_markup: MENU_PRINCIPAL });
       break;
   }
 }
 
-async function handleEmailInput(chatId: number, telegramId: number, email: string, step: string) {
-  const cleanEmail = email.toLowerCase().trim();
+async function handleDepositAmountInput(chatId: number, telegramId: number, text: string, user: Record<string, unknown>) {
+  const amount = parseFloat(text.replace(/[^\d.,]/g, "").replace(",", "."));
   
-  // Validar formato do email
-  if (!cleanEmail.includes("@") || !cleanEmail.includes(".")) {
+  if (isNaN(amount) || amount < MIN_DEPOSIT) {
     await sendMessage(chatId, `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       ❌ <b>EMAIL INVALIDO</b>
+       ❌ <b>VALOR INVALIDO</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   Digite um email valido.
-   Exemplo: seuemail@gmail.com
+   Valor minimo: R$ ${formatCurrency(MIN_DEPOSIT)}
+   
+   Digite um valor valido:
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━��━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `, { reply_markup: CANCELAR });
     return;
   }
   
-  // Buscar usuario pelo email
-  const users = await sql`
-    SELECT id, name, email, balance FROM profiles WHERE email = ${cleanEmail}
-  `;
-  
-  if (users.length === 0) {
-    userStates.delete(telegramId);
-    await sendMessage(chatId, msgEmailNaoEncontrado(), { reply_markup: VOLTAR_MENU });
+  userStates.delete(telegramId);
+  await processDeposit(chatId, telegramId, amount, user);
+}
+
+async function handlePixKeyInput(
+  chatId: number,
+  telegramId: number,
+  pixKey: string,
+  state: { step: string; data?: Record<string, unknown> },
+  user: Record<string, unknown>
+) {
+  if (!pixKey || pixKey.length < 5) {
+    await sendMessage(chatId, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       ❌ <b>CHAVE INVALIDA</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   Digite uma chave PIX valida:
+   (CPF, Email, Telefone ou Aleatoria)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`, { reply_markup: CANCELAR });
     return;
   }
   
-  const user = users[0];
+  const amount = state.data?.amount as number;
   userStates.delete(telegramId);
   
-  if (step === "awaiting_email_saldo") {
-    await sendMessage(chatId, msgSaldo(user.email, user.name || "Usuario", Number(user.balance)), { reply_markup: VOLTAR_MENU });
-    await logTelegramAction(telegramId, user.id, "VIEW_BALANCE", "/saldo", { balance: user.balance });
-  } else {
-    // Historico de transacoes
-    await showHistorico(chatId, telegramId, user);
+  await processWithdrawal(chatId, telegramId, amount, pixKey.trim(), user);
+}
+
+async function processDeposit(chatId: number, telegramId: number, amount: number, user: Record<string, unknown>) {
+  const fee = amount * (TELEGRAM_PIX_FEE_PERCENT / 100);
+  const netAmount = amount - fee;
+  
+  await sendMessage(chatId, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       ⏳ <b>GERANDO PIX...</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   Aguarde...
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`);
+  
+  try {
+    // Buscar Medusa ativa
+    const acquirer = await sql`
+      SELECT * FROM acquirers 
+      WHERE provider = 'medusa' AND is_active = true
+      LIMIT 1
+    `;
+    
+    if (!acquirer[0]) {
+      throw new Error("Gateway indisponivel");
+    }
+    
+    const medusa = new MedusaPayments({
+      secretKey: acquirer[0].api_key,
+      licenseKey: acquirer[0].api_secret,
+    });
+    
+    // Criar PIX
+    const pixResponse = await medusa.createSimplePixPayment(
+      amount * 100,
+      user.first_name as string || "Cliente",
+      "00000000000",
+      `bot_${telegramId}@legacypay.site`,
+      `Deposito Bot - ${telegramId}`,
+      `${SITE_URL}/api/webhooks/telegram-pix`
+    );
+    
+    const qrCode = pixResponse.pix?.qrcode || pixResponse.transaction?.pix?.qrcode;
+    const txId = pixResponse.insertId || pixResponse.id || pixResponse.transaction?.id;
+    
+    if (!qrCode) {
+      throw new Error("QR Code nao gerado");
+    }
+    
+    // Salvar transacao
+    await createBotTransaction(
+      telegramId,
+      user.id as string,
+      "deposit",
+      amount,
+      fee,
+      netAmount,
+      "pending",
+      qrCode,
+      undefined,
+      String(txId)
+    );
+    
+    await sendMessage(chatId, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       📥 <b>PIX GERADO!</b> 📥
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   💵 Valor: <b>R$ ${formatCurrency(amount)}</b>
+   📊 Taxa (${TELEGRAM_PIX_FEE_PERCENT}%): R$ ${formatCurrency(fee)}
+   ✅ Voce recebe: <b>R$ ${formatCurrency(netAmount)}</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      📋 <b>COPIA E COLA</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<code>${qrCode}</code>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   ⏰ Valido por 30 minutos
+   ✅ Credito automatico
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`, { reply_markup: VOLTAR_MENU });
+    
+    await logTelegramAction(telegramId, null, "DEPOSIT_GENERATED", "depositar", { amount, txId });
+    
+  } catch (error) {
+    console.error("[Bot] Erro deposito:", error);
+    
+    await sendMessage(chatId, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       ❌ <b>ERRO</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   Erro ao gerar PIX.
+   Tente novamente em instantes.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      📞 <b>SUPORTE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+   💬 ${DISCORD_LINK}
+   📱 ${WHATSAPP}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`, { reply_markup: VOLTAR_MENU });
   }
 }
 
-async function showHistorico(chatId: number, telegramId: number, user: Record<string, unknown>) {
-  // Buscar ultimas transacoes
-  const transactions = await sql`
-    SELECT type, amount, fee, net_amount, status, created_at 
-    FROM transactions 
-    WHERE user_id = ${user.id as string}
-    ORDER BY created_at DESC 
-    LIMIT 10
-  `;
+async function processWithdrawal(chatId: number, telegramId: number, amount: number, pixKey: string, user: Record<string, unknown>) {
+  const balance = Number(user.balance);
+  const fee = TELEGRAM_WITHDRAWAL_FEE_FIXED;
+  const netAmount = amount - fee;
   
-  const withdrawals = await sql`
-    SELECT amount, fee, net_amount, status, created_at 
-    FROM withdrawals 
-    WHERE user_id = ${user.id as string}
-    ORDER BY created_at DESC 
-    LIMIT 10
-  `;
+  if (amount > balance) {
+    await sendMessage(chatId, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       ❌ <b>SALDO INSUFICIENTE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   💰 Seu saldo: R$ ${formatCurrency(balance)}
+   💵 Solicitado: R$ ${formatCurrency(amount)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`, { reply_markup: VOLTAR_MENU });
+    return;
+  }
   
-  let historicoMsg = `
+  await sendMessage(chatId, `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-         📋 <b>HISTORICO</b> 📋
+       ⏳ <b>PROCESSANDO...</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-   👤 <b>${user.name || "Usuario"}</b>
-   📧 ${maskEmail(user.email as string)}
-   💰 Saldo: <b>R$ ${formatCurrency(Number(user.balance))}</b>
+   Aguarde...
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      📥 <b>ULTIMOS DEPOSITOS</b>
+`);
+  
+  try {
+    // Debitar saldo
+    await updateBotUserBalance(telegramId, amount, "subtract");
+    
+    // Salvar chave PIX
+    await saveBotUserPixKey(telegramId, pixKey);
+    
+    // Criar transacao
+    await createBotTransaction(
+      telegramId,
+      user.id as string,
+      "withdrawal",
+      amount,
+      fee,
+      netAmount,
+      "completed",
+      undefined,
+      pixKey
+    );
+    
+    // Notificar no canal
+    await sendMessageToChannel(SALES_CHANNEL_ID, `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`;
+      💸 <b>SAQUE APROVADO</b> 💸
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  if (transactions.length === 0) {
-    historicoMsg += `
-   Nenhum deposito encontrado.
-`;
-  } else {
-    for (const tx of transactions.slice(0, 5)) {
-      const statusIcon = tx.status === "completed" ? "✅" : tx.status === "pending" ? "⏳" : "❌";
-      historicoMsg += `
-   ${statusIcon} R$ ${formatCurrency(Number(tx.amount))}
-      ${formatDate(tx.created_at)}
-`;
-    }
+   👤 ${user.first_name}
+   
+   💵 Valor: R$ ${formatCurrency(amount)}
+   📊 Taxa: R$ ${formatCurrency(fee)}
+   ✅ Enviado: R$ ${formatCurrency(netAmount)}
+   
+   📱 PIX: ${pixKey.substring(0, 10)}***
+   🕐 ${new Date().toLocaleString("pt-BR")}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`);
+    
+    await sendMessage(chatId, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      ✅ <b>SAQUE APROVADO!</b> ✅
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   💵 Valor: <b>R$ ${formatCurrency(amount)}</b>
+   📊 Taxa: R$ ${formatCurrency(fee)}
+   ✅ Enviado: <b>R$ ${formatCurrency(netAmount)}</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   📱 PIX: ${pixKey.substring(0, 15)}...
+   
+   ⚡ O valor sera creditado em instantes!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`, { reply_markup: VOLTAR_MENU });
+    
+    await logTelegramAction(telegramId, null, "WITHDRAWAL_COMPLETED", "sacar", { amount, netAmount });
+    
+  } catch (error) {
+    console.error("[Bot] Erro saque:", error);
+    
+    // Estornar
+    await updateBotUserBalance(telegramId, amount, "add");
+    
+    await sendMessage(chatId, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       ❌ <b>ERRO NO SAQUE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   Erro ao processar saque.
+   Seu saldo foi estornado.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`, { reply_markup: VOLTAR_MENU });
   }
-
-  historicoMsg += `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      📤 <b>ULTIMOS SAQUES</b>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`;
-
-  if (withdrawals.length === 0) {
-    historicoMsg += `
-   Nenhum saque encontrado.
-`;
-  } else {
-    for (const wd of withdrawals.slice(0, 5)) {
-      const statusIcon = wd.status === "completed" ? "✅" : wd.status === "processing" ? "⏳" : wd.status === "pending" ? "🕐" : "❌";
-      historicoMsg += `
-   ${statusIcon} R$ ${formatCurrency(Number(wd.amount))}
-      ${formatDate(wd.created_at)}
-`;
-    }
-  }
-
-  historicoMsg += `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-   ✅ Confirmado  ⏳ Processando
-   🕐 Pendente    ❌ Falhou
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-`;
-
-  await sendMessage(chatId, historicoMsg, { reply_markup: VOLTAR_MENU });
-  await logTelegramAction(telegramId, user.id as string, "VIEW_HISTORY", "/historico", {});
 }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// CALLBACK HANDLER
+// ══════════════════════════════════════════════════════════════════════════════
 
 export async function handleCallback(
   callbackId: string,
@@ -545,35 +832,105 @@ export async function handleCallback(
 ) {
   await answerCallbackQuery(callbackId);
   
-  // Log da acao
-  await logTelegramAction(telegramId, null, "CALLBACK", data, { firstName });
+  const user = await getOrCreateBotUser(telegramId, firstName || "Usuario");
+  const balance = Number(user.balance);
   
   // Limpar estado se voltar ao menu
   if (data === "menu") {
     userStates.delete(telegramId);
   }
   
+  // Deposito
+  if (data.startsWith("dep_")) {
+    if (data === "dep_custom") {
+      userStates.set(telegramId, { step: "awaiting_deposit_amount" });
+      await editMessageText(chatId, messageId, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       💵 <b>VALOR PERSONALIZADO</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   Digite o valor do deposito:
+   (minimo R$ ${formatCurrency(MIN_DEPOSIT)})
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`, { reply_markup: CANCELAR });
+      return;
+    }
+    
+    const amount = parseInt(data.replace("dep_", ""));
+    await processDeposit(chatId, telegramId, amount, user);
+    return;
+  }
+  
+  // Saque
+  if (data.startsWith("saq_")) {
+    let amount = 0;
+    
+    if (data === "saq_all") {
+      amount = balance;
+    } else {
+      amount = parseInt(data.replace("saq_", ""));
+    }
+    
+    if (amount > balance) {
+      await editMessageText(chatId, messageId, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       ❌ <b>SALDO INSUFICIENTE</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   💰 Seu saldo: R$ ${formatCurrency(balance)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`, { reply_markup: VOLTAR_MENU });
+      return;
+    }
+    
+    const fee = TELEGRAM_WITHDRAWAL_FEE_FIXED;
+    const netAmount = amount - fee;
+    
+    userStates.set(telegramId, { step: "awaiting_pix_key", data: { amount } });
+    
+    await editMessageText(chatId, messageId, `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+         📤 <b>SAQUE</b> 📤
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   💵 Valor: <b>R$ ${formatCurrency(amount)}</b>
+   📊 Taxa: R$ ${formatCurrency(fee)}
+   ✅ Voce recebe: <b>R$ ${formatCurrency(netAmount)}</b>
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      📱 <b>DIGITE SUA CHAVE PIX</b>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   CPF, Email, Telefone ou Aleatoria
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`, { reply_markup: CANCELAR });
+    return;
+  }
+  
+  // Outros callbacks
   switch (data) {
     case "menu":
-      await editMessageText(chatId, messageId, msgBoasVindas(firstName || "Usuario"), { reply_markup: MENU_PRINCIPAL });
+      await editMessageText(chatId, messageId, msgBoasVindas(firstName || "Usuario", balance), { reply_markup: MENU_PRINCIPAL });
       break;
       
     case "saldo":
-      userStates.set(telegramId, { step: "awaiting_email_saldo" });
-      await editMessageText(chatId, messageId, msgPedirEmail("saldo"), { reply_markup: CANCELAR });
+      await editMessageText(chatId, messageId, msgSaldo(firstName || "Usuario", balance, Number(user.total_deposited), Number(user.total_withdrawn)), { reply_markup: VOLTAR_MENU });
       break;
       
     case "historico":
-      userStates.set(telegramId, { step: "awaiting_email_historico" });
-      await editMessageText(chatId, messageId, msgPedirEmail("historico"), { reply_markup: CANCELAR });
+      const transactions = await getBotTransactions(telegramId);
+      await editMessageText(chatId, messageId, msgHistorico(transactions), { reply_markup: VOLTAR_MENU });
       break;
       
     case "depositar":
-      await editMessageText(chatId, messageId, msgDepositar(), { reply_markup: MENU_DEPOSITAR });
+      await editMessageText(chatId, messageId, msgDepositar(), { reply_markup: menuDeposito() });
       break;
       
     case "sacar":
-      await editMessageText(chatId, messageId, msgSacar(), { reply_markup: MENU_SACAR });
+      await editMessageText(chatId, messageId, msgSacar(balance), { reply_markup: balance >= MIN_WITHDRAWAL ? menuSaque(balance) : VOLTAR_MENU });
       break;
       
     case "taxas":
@@ -581,11 +938,13 @@ export async function handleCallback(
       break;
       
     case "ajuda":
-      await editMessageText(chatId, messageId, msgAjuda(), { reply_markup: MENU_AJUDA });
+      await editMessageText(chatId, messageId, msgAjuda(), { reply_markup: VOLTAR_MENU });
       break;
       
     default:
-      await editMessageText(chatId, messageId, msgBoasVindas(firstName || "Usuario"), { reply_markup: MENU_PRINCIPAL });
+      await editMessageText(chatId, messageId, msgBoasVindas(firstName || "Usuario", balance), { reply_markup: MENU_PRINCIPAL });
       break;
   }
+  
+  await logTelegramAction(telegramId, null, "CALLBACK", data, { firstName });
 }

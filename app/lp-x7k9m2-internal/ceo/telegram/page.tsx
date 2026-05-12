@@ -11,12 +11,9 @@ import {
   CheckCircle,
   XCircle,
   ExternalLink,
-  Megaphone,
   Wallet,
   ArrowDownCircle,
   ArrowUpCircle,
-  Link,
-  Eye,
   Clock,
   Bell,
   Zap,
@@ -26,8 +23,35 @@ import {
   Copy,
   Check,
   Search,
-  Filter
+  Users,
+  TrendingUp
 } from "lucide-react";
+
+interface BotUser {
+  id: string;
+  telegram_id: string;
+  telegram_username: string | null;
+  first_name: string;
+  balance: number;
+  total_deposited: number;
+  total_withdrawn: number;
+  pix_key: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface BotTransaction {
+  id: string;
+  telegram_id: string;
+  type: string;
+  amount: number;
+  fee: number;
+  net_amount: number;
+  status: string;
+  pix_code: string | null;
+  pix_key: string | null;
+  created_at: string;
+}
 
 interface TelegramLog {
   id: string;
@@ -40,73 +64,55 @@ interface TelegramLog {
 
 interface TelegramStats {
   actions_today: number;
+  total_users: number;
+  users_today: number;
+  total_balance: number;
+  total_deposited: number;
+  total_withdrawn: number;
   deposits_today: number;
   withdrawals_today: number;
+  deposit_amount_today: number;
+  withdrawal_amount_today: number;
+  fees_today: number;
   total_deposits: number;
   total_withdrawals: number;
   total_deposit_amount: number;
   total_withdrawal_amount: number;
   total_fees: number;
-  deposit_amount_today: number;
-  withdrawal_amount_today: number;
-  fees_today: number;
-}
-
-interface TelegramSettings {
-  id: string;
-  bot_enabled: boolean;
-  sales_channel_id: string | null;
-  announcements_channel_id: string | null;
-  notify_deposits: boolean;
-  notify_withdrawals: boolean;
 }
 
 export default function TelegramPage() {
-  const [activeTab, setActiveTab] = useState<"overview" | "logs" | "send" | "config">("overview");
-  const [settings, setSettings] = useState<TelegramSettings | null>(null);
-  const [stats, setStats] = useState<TelegramStats | null>(null);
-  const [logs, setLogs] = useState<TelegramLog[]>([]);
+  const [activeTab, setActiveTab] = useState("overview");
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
+  const [stats, setStats] = useState<TelegramStats | null>(null);
+  const [users, setUsers] = useState<BotUser[]>([]);
+  const [transactions, setTransactions] = useState<BotTransaction[]>([]);
+  const [logs, setLogs] = useState<TelegramLog[]>([]);
+  const [webhook, setWebhook] = useState<{ url: string; pending_count: number; last_error: string | null } | null>(null);
   const [message, setMessage] = useState("");
-  const [messageChannel, setMessageChannel] = useState<"sales" | "announcements">("announcements");
-  const [searchLogs, setSearchLogs] = useState("");
-  const [webhookStatus, setWebhookStatus] = useState<"ok" | "error" | "loading">("loading");
+  const [sending, setSending] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const [copied, setCopied] = useState(false);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
     try {
-      // Buscar configuracoes
-      const settingsRes = await fetch("/api/telegram/settings");
-      const settingsData = await settingsRes.json();
-      setSettings(settingsData.settings);
-
-      // Buscar logs e stats
-      const logsRes = await fetch("/api/telegram/logs");
-      const logsData = await logsRes.json();
-      setLogs(logsData.logs || []);
-      setStats(logsData.stats || null);
+      setLoading(true);
+      const res = await fetch("/api/telegram/logs");
+      const data = await res.json();
       
-      // Verificar webhook
-      checkWebhook();
+      if (data.success) {
+        setStats(data.stats);
+        setUsers(data.users || []);
+        setTransactions(data.transactions || []);
+        setLogs(data.logs || []);
+        setWebhook(data.webhook);
+      }
     } catch (error) {
-      console.error("Erro ao carregar dados:", error);
+      console.error("Erro ao buscar dados:", error);
     } finally {
       setLoading(false);
     }
   }, []);
-
-  const checkWebhook = async () => {
-    setWebhookStatus("loading");
-    try {
-      const res = await fetch("/api/telegram/webhook-status");
-      const data = await res.json();
-      setWebhookStatus(data.ok && !data.lastError ? "ok" : "error");
-    } catch {
-      setWebhookStatus("error");
-    }
-  };
 
   useEffect(() => {
     fetchData();
@@ -120,10 +126,7 @@ export default function TelegramPage() {
       const res = await fetch("/api/telegram/send", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          message: message.trim(),
-          channel: messageChannel
-        }),
+        body: JSON.stringify({ message, channel: "announcements" }),
       });
       
       const data = await res.json();
@@ -131,28 +134,12 @@ export default function TelegramPage() {
         setMessage("");
         alert("Mensagem enviada com sucesso!");
       } else {
-        alert("Erro ao enviar: " + (data.error || "Erro desconhecido"));
+        alert("Erro ao enviar: " + data.error);
       }
-    } catch (error) {
+    } catch {
       alert("Erro ao enviar mensagem");
     } finally {
       setSending(false);
-    }
-  };
-
-  const toggleBot = async () => {
-    try {
-      const res = await fetch("/api/telegram/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bot_enabled: !settings?.bot_enabled }),
-      });
-      
-      if (res.ok) {
-        fetchData();
-      }
-    } catch (error) {
-      console.error("Erro ao alterar status:", error);
     }
   };
 
@@ -163,38 +150,35 @@ export default function TelegramPage() {
     }).format(value || 0);
   };
 
-  const copyWebhookUrl = () => {
-    navigator.clipboard.writeText("https://www.legacypay.site/api/telegram/webhook");
+  const formatDate = (date: string) => {
+    return new Date(date).toLocaleString("pt-BR");
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const filteredLogs = logs.filter(log => 
-    log.action?.toLowerCase().includes(searchLogs.toLowerCase()) ||
-    log.command?.toLowerCase().includes(searchLogs.toLowerCase())
+  const filteredUsers = users.filter(user => 
+    user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.telegram_username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.telegram_id?.toString().includes(searchTerm)
   );
 
-  const templates = [
-    {
-      name: "Manutencao",
-      icon: "🔧",
-      text: "🔧 <b>MANUTENCAO PROGRAMADA</b>\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nInformaremos quando voltar ao normal.\n\n💬 Discord: https://discord.gg/ea32hgRSeM\n📱 WhatsApp: (34) 99935-3187\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-    },
-    {
-      name: "Novidade",
-      icon: "🎉",
-      text: "🎉 <b>NOVIDADE!</b>\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nAcabamos de lancar uma nova funcionalidade!\n\nAcesse o painel para conferir.\n\n🌐 https://www.legacypay.site\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-    },
-    {
-      name: "Promocao",
-      icon: "🔥",
-      text: "🔥 <b>PROMOCAO ESPECIAL</b>\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nAproveite taxas reduzidas!\n\nValido por tempo limitado.\n\n🌐 https://www.legacypay.site\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-    },
-    {
-      name: "Sistema OK",
-      icon: "✅",
-      text: "✅ <b>SISTEMA NORMALIZADO</b>\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nTodos os servicos estao funcionando normalmente.\n\nObrigado pela paciencia!\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
-    },
+  const filteredTransactions = transactions.filter(tx =>
+    tx.telegram_id?.toString().includes(searchTerm) ||
+    tx.type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    tx.status?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const tabs = [
+    { id: "overview", label: "Visao Geral", icon: Activity },
+    { id: "users", label: "Usuarios", icon: Users },
+    { id: "transactions", label: "Transacoes", icon: Wallet },
+    { id: "logs", label: "Logs", icon: MessageSquare },
+    { id: "send", label: "Enviar Aviso", icon: Send },
+    { id: "settings", label: "Configuracoes", icon: Settings },
   ];
 
   return (
@@ -203,108 +187,35 @@ export default function TelegramPage() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-blue-500/25">
               <Bot className="w-7 h-7 text-white" />
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">Bot Telegram</h1>
-              <p className="text-muted-foreground">Gerenciar bot e notificacoes</p>
+              <p className="text-muted-foreground">Sistema independente - Sem cadastro</p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={fetchData}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-xl hover:bg-muted transition-colors"
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-              Atualizar
-            </button>
-          </div>
-        </div>
-
-        {/* Quick Links */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <a
-            href="https://t.me/Legacypay_bot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-card border border-border rounded-2xl p-5 hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10 transition-all group"
+          
+          <button
+            onClick={fetchData}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-card border border-border rounded-xl hover:bg-muted transition-colors"
           >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
-                <Bot className="w-6 h-6 text-white" />
-              </div>
-              <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-blue-400 transition-colors" />
-            </div>
-            <h3 className="font-semibold text-foreground mb-1">Bot Principal</h3>
-            <p className="text-sm text-muted-foreground">@Legacypay_bot</p>
-          </a>
-
-          <a
-            href="https://t.me/legacypaybot"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-card border border-border rounded-2xl p-5 hover:border-green-500/50 hover:shadow-lg hover:shadow-green-500/10 transition-all group"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-                <Wallet className="w-6 h-6 text-white" />
-              </div>
-              <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-green-400 transition-colors" />
-            </div>
-            <h3 className="font-semibold text-foreground mb-1">Canal de Vendas</h3>
-            <p className="text-sm text-muted-foreground">@legacypaybot</p>
-          </a>
-
-          <a
-            href="https://t.me/legacypayavisos"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-card border border-border rounded-2xl p-5 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10 transition-all group"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                <Bell className="w-6 h-6 text-white" />
-              </div>
-              <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-purple-400 transition-colors" />
-            </div>
-            <h3 className="font-semibold text-foreground mb-1">Canal de Avisos</h3>
-            <p className="text-sm text-muted-foreground">@legacypayavisos</p>
-          </a>
-
-          <a
-            href="https://discord.gg/ea32hgRSeM"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="bg-card border border-border rounded-2xl p-5 hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 transition-all group"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
-                <MessageSquare className="w-6 h-6 text-white" />
-              </div>
-              <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-indigo-400 transition-colors" />
-            </div>
-            <h3 className="font-semibold text-foreground mb-1">Discord</h3>
-            <p className="text-sm text-muted-foreground">Suporte</p>
-          </a>
+            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            Atualizar
+          </button>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 border-b border-border pb-4">
-          {[
-            { id: "overview", label: "Visao Geral", icon: Eye },
-            { id: "logs", label: "Logs", icon: Activity },
-            { id: "send", label: "Enviar Aviso", icon: Send },
-            { id: "config", label: "Configuracoes", icon: Settings },
-          ].map((tab) => (
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl font-medium transition-colors ${
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium transition-all whitespace-nowrap ${
                 activeTab === tab.id
-                  ? "bg-primary text-primary-foreground"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  ? "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/25"
+                  : "bg-card border border-border text-muted-foreground hover:text-foreground"
               }`}
             >
               <tab.icon className="w-4 h-4" />
@@ -313,182 +224,355 @@ export default function TelegramPage() {
           ))}
         </div>
 
-        {/* Tab Content */}
+        {/* Content */}
         {activeTab === "overview" && (
           <div className="space-y-6">
-            {/* Status Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="bg-card border border-border rounded-2xl p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/20 flex items-center justify-center">
-                    <Bot className="w-6 h-6 text-blue-500" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                    <Users className="w-5 h-5 text-blue-500" />
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    settings?.bot_enabled 
-                      ? "bg-green-500/20 text-green-500" 
-                      : "bg-red-500/20 text-red-500"
-                  }`}>
-                    {settings?.bot_enabled ? "Ativo" : "Inativo"}
-                  </span>
+                  <span className="text-xs text-muted-foreground">Total</span>
                 </div>
-                <h3 className="text-2xl font-bold text-foreground">Bot</h3>
-                <p className="text-sm text-muted-foreground">@Legacypay_bot</p>
+                <p className="text-2xl font-bold text-foreground">{stats?.total_users || 0}</p>
+                <p className="text-sm text-muted-foreground">Usuarios do Bot</p>
               </div>
 
               <div className="bg-card border border-border rounded-2xl p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center">
-                    <Webhook className="w-6 h-6 text-green-500" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                    <ArrowDownCircle className="w-5 h-5 text-green-500" />
                   </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    webhookStatus === "ok"
-                      ? "bg-green-500/20 text-green-500" 
-                      : webhookStatus === "error"
-                      ? "bg-red-500/20 text-red-500"
-                      : "bg-yellow-500/20 text-yellow-500"
-                  }`}>
-                    {webhookStatus === "ok" ? "OK" : webhookStatus === "error" ? "Erro" : "..."}
-                  </span>
+                  <span className="text-xs text-green-500">+{stats?.deposits_today || 0} hoje</span>
                 </div>
-                <h3 className="text-2xl font-bold text-foreground">Webhook</h3>
-                <p className="text-sm text-muted-foreground">Status da conexao</p>
+                <p className="text-2xl font-bold text-foreground">{stats?.total_deposits || 0}</p>
+                <p className="text-sm text-muted-foreground">Depositos</p>
               </div>
 
               <div className="bg-card border border-border rounded-2xl p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center">
-                    <Activity className="w-6 h-6 text-purple-500" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                    <ArrowUpCircle className="w-5 h-5 text-orange-500" />
                   </div>
+                  <span className="text-xs text-orange-500">+{stats?.withdrawals_today || 0} hoje</span>
                 </div>
-                <h3 className="text-2xl font-bold text-foreground">{stats?.actions_today || 0}</h3>
-                <p className="text-sm text-muted-foreground">Interacoes Hoje</p>
+                <p className="text-2xl font-bold text-foreground">{stats?.total_withdrawals || 0}</p>
+                <p className="text-sm text-muted-foreground">Saques</p>
               </div>
 
               <div className="bg-card border border-border rounded-2xl p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 flex items-center justify-center">
-                    <DollarSign className="w-6 h-6 text-amber-500" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                    <DollarSign className="w-5 h-5 text-purple-500" />
                   </div>
+                  <span className="text-xs text-purple-500">Taxas</span>
                 </div>
-                <h3 className="text-2xl font-bold text-foreground">{formatCurrency(stats?.fees_today || 0)}</h3>
-                <p className="text-sm text-muted-foreground">Taxas Hoje</p>
+                <p className="text-2xl font-bold text-foreground">{formatCurrency(Number(stats?.total_fees) || 0)}</p>
+                <p className="text-sm text-muted-foreground">Total Arrecadado</p>
               </div>
             </div>
 
-            {/* Taxas Info */}
-            <div className="bg-card border border-border rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Percent className="w-5 h-5 text-primary" />
-                Taxas do Bot
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-green-500/10 border border-green-500/20 rounded-xl p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <ArrowDownCircle className="w-6 h-6 text-green-500" />
-                    <span className="font-semibold text-foreground">Deposito PIX</span>
-                  </div>
-                  <p className="text-2xl font-bold text-green-500">5%</p>
-                  <p className="text-sm text-muted-foreground">Ex: R$100 = R$5 taxa, recebe R$95</p>
+            {/* Financial Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-2xl p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <ArrowDownCircle className="w-6 h-6 text-green-500" />
+                  <h3 className="font-semibold text-foreground">Depositos Hoje</h3>
                 </div>
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4">
-                  <div className="flex items-center gap-3 mb-2">
-                    <ArrowUpCircle className="w-6 h-6 text-blue-500" />
-                    <span className="font-semibold text-foreground">Saque PIX</span>
-                  </div>
-                  <p className="text-2xl font-bold text-blue-500">R$ 7,00</p>
-                  <p className="text-sm text-muted-foreground">Taxa fixa por saque</p>
+                <p className="text-3xl font-bold text-green-500">{formatCurrency(Number(stats?.deposit_amount_today) || 0)}</p>
+                <p className="text-sm text-muted-foreground mt-1">{stats?.deposits_today || 0} transacoes</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-orange-500/10 to-amber-500/10 border border-orange-500/20 rounded-2xl p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <ArrowUpCircle className="w-6 h-6 text-orange-500" />
+                  <h3 className="font-semibold text-foreground">Saques Hoje</h3>
                 </div>
+                <p className="text-3xl font-bold text-orange-500">{formatCurrency(Number(stats?.withdrawal_amount_today) || 0)}</p>
+                <p className="text-sm text-muted-foreground mt-1">{stats?.withdrawals_today || 0} transacoes</p>
+              </div>
+
+              <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-2xl p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <Percent className="w-6 h-6 text-purple-500" />
+                  <h3 className="font-semibold text-foreground">Taxas Hoje</h3>
+                </div>
+                <p className="text-3xl font-bold text-purple-500">{formatCurrency(Number(stats?.fees_today) || 0)}</p>
+                <p className="text-sm text-muted-foreground mt-1">5% deposito / R$7 saque</p>
               </div>
             </div>
 
-            {/* Atividade Recente */}
-            <div className="bg-card border border-border rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Clock className="w-5 h-5 text-primary" />
-                Atividade Recente
-              </h3>
-              <div className="space-y-3 max-h-[300px] overflow-y-auto">
-                {logs.slice(0, 10).map((log) => (
-                  <div key={log.id} className="flex items-center gap-4 p-3 bg-muted/50 rounded-xl">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      log.action === "MESSAGE" ? "bg-blue-500/20" :
-                      log.action === "CALLBACK" ? "bg-purple-500/20" :
-                      "bg-gray-500/20"
-                    }`}>
-                      {log.action === "MESSAGE" ? (
-                        <MessageSquare className="w-5 h-5 text-blue-500" />
-                      ) : (
-                        <Zap className="w-5 h-5 text-purple-500" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate">
-                        {log.action}: {log.command || "-"}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        ID: {log.telegram_id}
-                      </p>
-                    </div>
-                    <span className="text-sm text-muted-foreground whitespace-nowrap">
-                      {new Date(log.created_at).toLocaleString("pt-BR")}
+            {/* Webhook Status & Quick Links */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-card border border-border rounded-2xl p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <Webhook className="w-5 h-5 text-blue-500" />
+                  <h3 className="font-semibold text-foreground">Status do Webhook</h3>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Status</span>
+                    <span className={`flex items-center gap-2 ${webhook?.url ? "text-green-500" : "text-red-500"}`}>
+                      {webhook?.url ? <CheckCircle className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                      {webhook?.url ? "Ativo" : "Inativo"}
                     </span>
                   </div>
-                ))}
-                {logs.length === 0 && (
-                  <p className="text-center text-muted-foreground py-8">Nenhuma atividade registrada</p>
-                )}
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Pendentes</span>
+                    <span className="text-foreground">{webhook?.pending_count || 0}</span>
+                  </div>
+                  
+                  {webhook?.last_error && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl">
+                      <p className="text-sm text-red-400">{webhook.last_error}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="bg-card border border-border rounded-2xl p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <Zap className="w-5 h-5 text-yellow-500" />
+                  <h3 className="font-semibold text-foreground">Links Rapidos</h3>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <a
+                    href="https://t.me/Legacypay_bot"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 p-3 bg-blue-500/10 rounded-xl hover:bg-blue-500/20 transition-colors"
+                  >
+                    <Bot className="w-4 h-4 text-blue-500" />
+                    <span className="text-sm font-medium text-foreground">@Legacypay_bot</span>
+                  </a>
+                  
+                  <a
+                    href="https://t.me/legacypaybot"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 p-3 bg-green-500/10 rounded-xl hover:bg-green-500/20 transition-colors"
+                  >
+                    <TrendingUp className="w-4 h-4 text-green-500" />
+                    <span className="text-sm font-medium text-foreground">@legacypaybot</span>
+                  </a>
+                  
+                  <a
+                    href="https://t.me/legacypayavisos"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 p-3 bg-purple-500/10 rounded-xl hover:bg-purple-500/20 transition-colors"
+                  >
+                    <Bell className="w-4 h-4 text-purple-500" />
+                    <span className="text-sm font-medium text-foreground">@legacypayavisos</span>
+                  </a>
+                  
+                  <a
+                    href="https://discord.gg/ea32hgRSeM"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 p-3 bg-indigo-500/10 rounded-xl hover:bg-indigo-500/20 transition-colors"
+                  >
+                    <ExternalLink className="w-4 h-4 text-indigo-500" />
+                    <span className="text-sm font-medium text-foreground">Discord</span>
+                  </a>
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {activeTab === "logs" && (
+        {activeTab === "users" && (
           <div className="space-y-4">
             <div className="flex items-center gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Buscar por acao ou comando..."
-                  value={searchLogs}
-                  onChange={(e) => setSearchLogs(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Buscar por nome, username ou ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
                 />
               </div>
+              <span className="text-sm text-muted-foreground">{filteredUsers.length} usuarios</span>
             </div>
 
             <div className="bg-card border border-border rounded-2xl overflow-hidden">
               <table className="w-full">
                 <thead className="bg-muted/50">
                   <tr>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Acao</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Comando</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Telegram ID</th>
-                    <th className="text-left p-4 font-medium text-muted-foreground">Data</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Usuario</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Telegram</th>
+                    <th className="text-right p-4 font-medium text-muted-foreground">Saldo</th>
+                    <th className="text-right p-4 font-medium text-muted-foreground">Depositado</th>
+                    <th className="text-right p-4 font-medium text-muted-foreground">Sacado</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Ultima Atividade</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {filteredLogs.map((log) => (
-                    <tr key={log.id} className="border-t border-border hover:bg-muted/30">
+                <tbody className="divide-y divide-border">
+                  {filteredUsers.map((user) => (
+                    <tr key={user.id} className="hover:bg-muted/30 transition-colors">
                       <td className="p-4">
-                        <span className={`px-2 py-1 rounded-lg text-xs font-medium ${
-                          log.action === "MESSAGE" ? "bg-blue-500/20 text-blue-500" :
-                          log.action === "CALLBACK" ? "bg-purple-500/20 text-purple-500" :
-                          "bg-gray-500/20 text-gray-500"
-                        }`}>
-                          {log.action}
-                        </span>
+                        <p className="font-medium text-foreground">{user.first_name}</p>
+                        <p className="text-xs text-muted-foreground">ID: {user.telegram_id}</p>
                       </td>
-                      <td className="p-4 font-medium text-foreground">{log.command || "-"}</td>
-                      <td className="p-4 text-muted-foreground">{log.telegram_id}</td>
-                      <td className="p-4 text-muted-foreground">
-                        {new Date(log.created_at).toLocaleString("pt-BR")}
+                      <td className="p-4">
+                        {user.telegram_username ? (
+                          <a
+                            href={`https://t.me/${user.telegram_username}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-500 hover:underline"
+                          >
+                            @{user.telegram_username}
+                          </a>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </td>
+                      <td className="p-4 text-right">
+                        <span className="font-semibold text-foreground">{formatCurrency(Number(user.balance))}</span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <span className="text-green-500">{formatCurrency(Number(user.total_deposited))}</span>
+                      </td>
+                      <td className="p-4 text-right">
+                        <span className="text-orange-500">{formatCurrency(Number(user.total_withdrawn))}</span>
+                      </td>
+                      <td className="p-4">
+                        <span className="text-sm text-muted-foreground">{formatDate(user.updated_at)}</span>
                       </td>
                     </tr>
                   ))}
+                  {filteredUsers.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                        Nenhum usuario encontrado
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
-              {filteredLogs.length === 0 && (
+            </div>
+          </div>
+        )}
+
+        {activeTab === "transactions" && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Buscar por ID, tipo ou status..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-card border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                />
+              </div>
+              <span className="text-sm text-muted-foreground">{filteredTransactions.length} transacoes</span>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Tipo</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Telegram ID</th>
+                    <th className="text-right p-4 font-medium text-muted-foreground">Valor</th>
+                    <th className="text-right p-4 font-medium text-muted-foreground">Taxa</th>
+                    <th className="text-right p-4 font-medium text-muted-foreground">Liquido</th>
+                    <th className="text-center p-4 font-medium text-muted-foreground">Status</th>
+                    <th className="text-left p-4 font-medium text-muted-foreground">Data</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filteredTransactions.map((tx) => (
+                    <tr key={tx.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="p-4">
+                        <span className={`flex items-center gap-2 ${tx.type === "deposit" ? "text-green-500" : "text-orange-500"}`}>
+                          {tx.type === "deposit" ? <ArrowDownCircle className="w-4 h-4" /> : <ArrowUpCircle className="w-4 h-4" />}
+                          {tx.type === "deposit" ? "Deposito" : "Saque"}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <span className="text-sm text-muted-foreground">{tx.telegram_id}</span>
+                      </td>
+                      <td className="p-4 text-right font-medium text-foreground">
+                        {formatCurrency(Number(tx.amount))}
+                      </td>
+                      <td className="p-4 text-right text-muted-foreground">
+                        {formatCurrency(Number(tx.fee))}
+                      </td>
+                      <td className="p-4 text-right font-semibold text-foreground">
+                        {formatCurrency(Number(tx.net_amount))}
+                      </td>
+                      <td className="p-4 text-center">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          tx.status === "completed" ? "bg-green-500/10 text-green-500" :
+                          tx.status === "pending" ? "bg-yellow-500/10 text-yellow-500" :
+                          tx.status === "processing" ? "bg-blue-500/10 text-blue-500" :
+                          "bg-red-500/10 text-red-500"
+                        }`}>
+                          {tx.status === "completed" ? "Confirmado" :
+                           tx.status === "pending" ? "Pendente" :
+                           tx.status === "processing" ? "Processando" : "Falhou"}
+                        </span>
+                      </td>
+                      <td className="p-4 text-sm text-muted-foreground">
+                        {formatDate(tx.created_at)}
+                      </td>
+                    </tr>
+                  ))}
+                  {filteredTransactions.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                        Nenhuma transacao encontrada
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "logs" && (
+          <div className="bg-card border border-border rounded-2xl overflow-hidden">
+            <div className="p-4 border-b border-border">
+              <h3 className="font-semibold text-foreground">Logs de Atividade</h3>
+              <p className="text-sm text-muted-foreground">Ultimas interacoes com o bot</p>
+            </div>
+            
+            <div className="divide-y divide-border max-h-[600px] overflow-y-auto">
+              {logs.map((log) => (
+                <div key={log.id} className="p-4 hover:bg-muted/30 transition-colors">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      log.action === "COMMAND" ? "bg-blue-500/10 text-blue-500" :
+                      log.action === "CALLBACK" ? "bg-purple-500/10 text-purple-500" :
+                      log.action?.includes("DEPOSIT") ? "bg-green-500/10 text-green-500" :
+                      log.action?.includes("WITHDRAWAL") ? "bg-orange-500/10 text-orange-500" :
+                      "bg-gray-500/10 text-gray-500"
+                    }`}>
+                      {log.action}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{formatDate(log.created_at)}</span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm text-muted-foreground">ID: {log.telegram_id}</span>
+                    {log.command && (
+                      <span className="text-sm font-mono text-foreground">{log.command}</span>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {logs.length === 0 && (
                 <div className="p-8 text-center text-muted-foreground">
                   Nenhum log encontrado
                 </div>
@@ -498,203 +582,145 @@ export default function TelegramPage() {
         )}
 
         {activeTab === "send" && (
-          <div className="space-y-6">
-            <div className="bg-card border border-border rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Megaphone className="w-5 h-5 text-primary" />
-                Enviar Aviso
-              </h3>
-              <p className="text-muted-foreground mb-6">
-                Envie uma mensagem para o canal de avisos (@legacypayavisos)
-              </p>
+          <div className="bg-card border border-border rounded-2xl p-6">
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-foreground mb-2">Enviar Aviso</h3>
+              <p className="text-muted-foreground">Envie uma mensagem para o canal @legacypayavisos</p>
+            </div>
 
-              {/* Templates */}
-              <div className="mb-6">
-                <p className="text-sm font-medium text-muted-foreground mb-3">Templates rapidos:</p>
-                <div className="flex flex-wrap gap-2">
-                  {templates.map((template) => (
-                    <button
-                      key={template.name}
-                      onClick={() => setMessage(template.text)}
-                      className="flex items-center gap-2 px-3 py-2 bg-muted hover:bg-muted/80 rounded-lg text-sm transition-colors"
-                    >
-                      <span>{template.icon}</span>
-                      {template.name}
-                    </button>
-                  ))}
-                </div>
+            <div className="space-y-4">
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => setMessage("🔧 <b>MANUTENCAO PROGRAMADA</b>\n\n⚠️ Informamos que teremos uma breve manutencao.\n\n⏰ Previsao de retorno: [HORARIO]")}
+                  className="px-3 py-1.5 bg-yellow-500/10 text-yellow-500 rounded-lg text-sm hover:bg-yellow-500/20 transition-colors"
+                >
+                  Manutencao
+                </button>
+                <button
+                  onClick={() => setMessage("🎉 <b>NOVIDADE!</b>\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n[Sua mensagem aqui]\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n🌐 https://www.legacypay.site")}
+                  className="px-3 py-1.5 bg-green-500/10 text-green-500 rounded-lg text-sm hover:bg-green-500/20 transition-colors"
+                >
+                  Novidade
+                </button>
+                <button
+                  onClick={() => setMessage("🔥 <b>PROMOCAO!</b>\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n[Detalhes da promocao]\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📱 Bot: @Legacypay_bot")}
+                  className="px-3 py-1.5 bg-purple-500/10 text-purple-500 rounded-lg text-sm hover:bg-purple-500/20 transition-colors"
+                >
+                  Promocao
+                </button>
+                <button
+                  onClick={() => setMessage("✅ <b>SISTEMA OPERACIONAL</b>\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nTodos os servicos estao funcionando normalmente!\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━")}
+                  className="px-3 py-1.5 bg-blue-500/10 text-blue-500 rounded-lg text-sm hover:bg-blue-500/20 transition-colors"
+                >
+                  Sistema OK
+                </button>
               </div>
 
-              {/* Editor */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">
-                    Canal de destino
-                  </label>
-                  <select
-                    value={messageChannel}
-                    onChange={(e) => setMessageChannel(e.target.value as "sales" | "announcements")}
-                    className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="announcements">Canal de Avisos (@legacypayavisos)</option>
-                    <option value="sales">Canal de Vendas (@legacypaybot)</option>
-                  </select>
-                </div>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Digite sua mensagem (suporta HTML: <b>, <i>, <code>)..."
+                rows={8}
+                className="w-full p-4 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 resize-none font-mono text-sm"
+              />
 
-                <div>
-                  <label className="block text-sm font-medium text-muted-foreground mb-2">
-                    Mensagem (suporta HTML: &lt;b&gt;, &lt;i&gt;, &lt;code&gt;)
-                  </label>
-                  <textarea
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    rows={10}
-                    placeholder="Digite sua mensagem..."
-                    className="w-full px-4 py-3 bg-background border border-border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary resize-none font-mono text-sm"
-                  />
-                </div>
-
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">{message.length} caracteres</p>
                 <button
                   onClick={sendAnnouncement}
                   disabled={sending || !message.trim()}
-                  className="flex items-center justify-center gap-2 w-full px-6 py-3 bg-primary text-primary-foreground rounded-xl font-medium hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-xl font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg hover:shadow-blue-500/25 transition-all"
                 >
                   {sending ? (
-                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
-                    <Send className="w-5 h-5" />
+                    <Send className="w-4 h-4" />
                   )}
-                  {sending ? "Enviando..." : "Enviar Mensagem"}
+                  Enviar
                 </button>
               </div>
             </div>
-
-            {/* Preview */}
-            {message && (
-              <div className="bg-card border border-border rounded-2xl p-6">
-                <h4 className="text-sm font-medium text-muted-foreground mb-4">Pre-visualizacao:</h4>
-                <div className="bg-[#1e2124] rounded-xl p-4 text-white font-sans text-sm whitespace-pre-wrap" 
-                  dangerouslySetInnerHTML={{ __html: message.replace(/\n/g, '<br/>') }} 
-                />
-              </div>
-            )}
           </div>
         )}
 
-        {activeTab === "config" && (
+        {activeTab === "settings" && (
           <div className="space-y-6">
-            {/* Status do Bot */}
             <div className="bg-card border border-border rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Bot className="w-5 h-5 text-primary" />
-                Status do Bot
-              </h3>
-              <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Informacoes do Bot</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <p className="font-medium text-foreground">Bot Telegram</p>
-                  <p className="text-sm text-muted-foreground">@Legacypay_bot</p>
-                </div>
-                <button
-                  onClick={toggleBot}
-                  className={`relative w-14 h-7 rounded-full transition-colors ${
-                    settings?.bot_enabled ? "bg-green-500" : "bg-gray-600"
-                  }`}
-                >
-                  <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${
-                    settings?.bot_enabled ? "left-8" : "left-1"
-                  }`} />
-                </button>
-              </div>
-            </div>
-
-            {/* Canais */}
-            <div className="bg-card border border-border rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Link className="w-5 h-5 text-primary" />
-                Canais Configurados
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl">
-                  <div>
-                    <p className="font-medium text-foreground">Canal de Vendas</p>
-                    <p className="text-sm text-muted-foreground">Depositos, saques, novos usuarios</p>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Bot Username</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value="@Legacypay_bot"
+                      disabled
+                      className="flex-1 px-4 py-2.5 bg-muted border border-border rounded-xl text-foreground"
+                    />
+                    <button
+                      onClick={() => copyToClipboard("@Legacypay_bot")}
+                      className="p-2.5 bg-muted border border-border rounded-xl hover:bg-muted/80 transition-colors"
+                    >
+                      {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                    </button>
                   </div>
-                  <a
-                    href="https://t.me/legacypaybot"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
-                  >
-                    @legacypaybot
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
                 </div>
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl">
-                  <div>
-                    <p className="font-medium text-foreground">Canal de Avisos</p>
-                    <p className="text-sm text-muted-foreground">Comunicados gerais</p>
-                  </div>
-                  <a
-                    href="https://t.me/legacypayavisos"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
-                  >
-                    @legacypayavisos
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* Webhook */}
-            <div className="bg-card border border-border rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Webhook className="w-5 h-5 text-primary" />
-                Webhook
-              </h3>
-              <div className="space-y-4">
-                <div className="flex items-center gap-2">
-                  <span className={`w-3 h-3 rounded-full ${
-                    webhookStatus === "ok" ? "bg-green-500" :
-                    webhookStatus === "error" ? "bg-red-500" : "bg-yellow-500 animate-pulse"
-                  }`} />
-                  <span className="text-sm text-muted-foreground">
-                    {webhookStatus === "ok" ? "Conectado" :
-                     webhookStatus === "error" ? "Erro na conexao" : "Verificando..."}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
+                
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Webhook URL</label>
                   <input
                     type="text"
-                    value="https://www.legacypay.site/api/telegram/webhook"
-                    readOnly
-                    className="flex-1 px-4 py-3 bg-muted border border-border rounded-xl text-sm text-muted-foreground"
+                    value={webhook?.url || "Nao configurado"}
+                    disabled
+                    className="w-full px-4 py-2.5 bg-muted border border-border rounded-xl text-foreground text-sm"
                   />
-                  <button
-                    onClick={copyWebhookUrl}
-                    className="px-4 py-3 bg-muted border border-border rounded-xl hover:bg-muted/80 transition-colors"
-                  >
-                    {copied ? <Check className="w-5 h-5 text-green-500" /> : <Copy className="w-5 h-5" />}
-                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Taxas */}
             <div className="bg-card border border-border rounded-2xl p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                <Percent className="w-5 h-5 text-primary" />
-                Taxas do Bot
-              </h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">Canais</h3>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-muted/50 rounded-xl">
-                  <p className="text-sm text-muted-foreground mb-1">Deposito PIX</p>
-                  <p className="text-xl font-bold text-foreground">5%</p>
+                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
+                  <p className="text-sm font-medium text-foreground mb-1">Canal de Vendas</p>
+                  <a href="https://t.me/legacypaybot" target="_blank" rel="noopener noreferrer" className="text-green-500 hover:underline">
+                    @legacypaybot
+                  </a>
+                  <p className="text-xs text-muted-foreground mt-2">Depositos, saques, novos usuarios</p>
                 </div>
-                <div className="p-4 bg-muted/50 rounded-xl">
-                  <p className="text-sm text-muted-foreground mb-1">Saque PIX</p>
-                  <p className="text-xl font-bold text-foreground">R$ 7,00 fixo</p>
+                
+                <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
+                  <p className="text-sm font-medium text-foreground mb-1">Canal de Avisos</p>
+                  <a href="https://t.me/legacypayavisos" target="_blank" rel="noopener noreferrer" className="text-purple-500 hover:underline">
+                    @legacypayavisos
+                  </a>
+                  <p className="text-xs text-muted-foreground mt-2">Comunicados, manutencoes, promocoes</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-4">Taxas do Bot</h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ArrowDownCircle className="w-5 h-5 text-green-500" />
+                    <p className="font-medium text-foreground">Deposito PIX</p>
+                  </div>
+                  <p className="text-2xl font-bold text-green-500">5%</p>
+                  <p className="text-sm text-muted-foreground">Minimo R$ 10,00</p>
+                </div>
+                
+                <div className="p-4 bg-orange-500/10 border border-orange-500/20 rounded-xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    <ArrowUpCircle className="w-5 h-5 text-orange-500" />
+                    <p className="font-medium text-foreground">Saque PIX</p>
+                  </div>
+                  <p className="text-2xl font-bold text-orange-500">R$ 7,00</p>
+                  <p className="text-sm text-muted-foreground">Taxa fixa / Minimo R$ 20,00</p>
                 </div>
               </div>
             </div>
