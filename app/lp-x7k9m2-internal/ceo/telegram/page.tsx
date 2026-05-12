@@ -368,7 +368,7 @@ export default function TelegramPage() {
             </a>
 
             <a
-              href="https://t.me/legacypayusers"
+              href="https://t.me/legacypayavisos"
               target="_blank"
               rel="noopener noreferrer"
               className="bg-card border border-border rounded-2xl p-5 hover:border-purple-500/50 hover:shadow-lg hover:shadow-purple-500/10 transition-all group"
@@ -380,7 +380,7 @@ export default function TelegramPage() {
                 <ExternalLink className="w-5 h-5 text-muted-foreground group-hover:text-purple-400 transition-colors" />
               </div>
               <h3 className="font-semibold text-foreground mb-1">Canal de Avisos</h3>
-              <p className="text-sm text-muted-foreground">@legacypayusers</p>
+              <p className="text-sm text-muted-foreground">@legacypayavisos</p>
             </a>
 
             <a
@@ -609,7 +609,7 @@ export default function TelegramPage() {
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-foreground">Enviar Aviso</h3>
-                <p className="text-muted-foreground">Envie uma mensagem para o canal @legacypayusers</p>
+                <p className="text-muted-foreground">Envie uma mensagem para o canal @legacypayavisos</p>
               </div>
             </div>
 
@@ -761,12 +761,12 @@ export default function TelegramPage() {
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
-                      value={settings?.announcements_channel_id || "@legacypayusers"}
+                      value={settings?.announcements_channel_id || "@legacypayavisos"}
                       readOnly
                       className="flex-1 px-4 py-3 rounded-xl bg-muted border border-border text-foreground"
                     />
                     <a
-                      href="https://t.me/legacypayusers"
+                      href="https://t.me/legacypayavisos"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-3 rounded-xl bg-primary text-primary-foreground hover:opacity-90 transition-opacity"

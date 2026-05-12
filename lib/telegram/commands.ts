@@ -15,7 +15,7 @@ const DISCORD_LINK = "https://discord.gg/ea32hgRSeM";
 const WHATSAPP = "(34) 99935-3187";
 const WHATSAPP_LINK = "https://wa.me/5534999353187";
 const SALES_CHANNEL = "https://t.me/legacypaybot";
-const ANNOUNCEMENTS_CHANNEL = "https://t.me/legacypayusers";
+const ANNOUNCEMENTS_CHANNEL = "https://t.me/legacypayavisos";
 
 // ══════════════════════════════════════════════════════════════════════════════
 // TECLADOS INLINE (BOTOES)
