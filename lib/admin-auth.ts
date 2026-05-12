@@ -5,7 +5,7 @@ import { cookies } from "next/headers";
 import { jwtVerify } from "jose";
 
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || 'your-secret-key-change-in-production'
+  process.env.JWT_SECRET || 'fallback-secret-change-in-production'
 );
 
 const TEAM_COOKIE_NAME = 'team_session';
@@ -35,17 +35,18 @@ export async function verifyAdmin(): Promise<AdminSession | null> {
       try {
         const { payload } = await jwtVerify(teamToken.value, JWT_SECRET);
         
-        // Verificar se o membro ainda esta ativo no banco
+        // Verificar se o membro ainda esta ativo no banco - busca em admin_team + profiles
         const teamCheck = await sql`
-          SELECT id, email, name, role, is_active
-          FROM team_members
-          WHERE id = ${payload.id as string} AND is_active = true
-          AND LOWER(role) IN ('ceo', 'admin', 'superadmin')
+          SELECT at.id as team_id, at.user_id, p.email, p.name, at.role, at.is_active
+          FROM admin_team at
+          INNER JOIN profiles p ON p.id = at.user_id
+          WHERE at.id = ${payload.id as string} AND at.is_active = true
+          AND LOWER(at.role) IN ('ceo', 'admin', 'superadmin', 'manager', 'finance', 'attendant')
         `;
         
         if (teamCheck.length > 0) {
           return {
-            userId: teamCheck[0].id,
+            userId: teamCheck[0].user_id,
             email: teamCheck[0].email,
             name: teamCheck[0].name,
             isAdmin: true,
@@ -79,12 +80,13 @@ export async function verifyAdmin(): Promise<AdminSession | null> {
       };
     }
     
-    // Verificar na tabela team_members pelo email
+    // Verificar na tabela admin_team pelo email
     const teamResult = await sql`
-      SELECT tm.id, tm.email, tm.name, tm.role, tm.is_active
-      FROM team_members tm
-      WHERE tm.email = ${userEmail} AND tm.is_active = true
-      AND LOWER(tm.role) IN ('ceo', 'admin', 'superadmin')
+      SELECT at.id, p.email, p.name, at.role, at.is_active
+      FROM admin_team at
+      INNER JOIN profiles p ON p.id = at.user_id
+      WHERE p.email = ${userEmail} AND at.is_active = true
+      AND LOWER(at.role) IN ('ceo', 'admin', 'superadmin', 'manager', 'finance', 'attendant')
     `;
     
     if (teamResult.length > 0) {

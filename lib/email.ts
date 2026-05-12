@@ -823,3 +823,119 @@ export async function sendPasswordResetEmail(
     return false;
   }
 }
+
+export async function sendNewLoginAlert(
+  to: string,
+  name: string,
+  device: string,
+  browser: string,
+  ip: string,
+  date: string
+): Promise<boolean> {
+  const htmlContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: ${COLORS.background}; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.background}; padding: 40px 20px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(255, 107, 0, 0.15);">
+          
+          <!-- Header com Logo -->
+          <tr>
+            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(255, 107, 0, 0.08) 0%, transparent 100%);">
+              <img src="${LOGO_URL}" alt="LegacyPay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
+              <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
+                <span style="color: ${COLORS.primary};">Legacy</span><span style="color: ${COLORS.text};">Pay</span>
+              </h1>
+            </td>
+          </tr>
+
+          <!-- Divisor -->
+          <tr>
+            <td style="padding: 0 40px;">
+              <div style="height: 2px; background: linear-gradient(90deg, transparent, ${COLORS.primary}, transparent); border-radius: 2px;"></div>
+            </td>
+          </tr>
+          
+          <!-- Conteudo -->
+          <tr>
+            <td style="padding: 40px;">
+              <div style="text-align: center; margin-bottom: 28px;">
+                <div style="font-size: 48px; margin-bottom: 16px;">🔐</div>
+                <h2 style="margin: 0 0 8px 0; color: ${COLORS.text}; font-size: 22px; font-weight: 600;">
+                  Novo acesso detectado
+                </h2>
+              </div>
+              
+              <p style="margin: 0 0 24px 0; color: ${COLORS.textMuted}; font-size: 15px; line-height: 1.7; text-align: center;">
+                Ola <strong style="color: ${COLORS.text};">${name}</strong>, detectamos um login na sua conta de um novo dispositivo.
+              </p>
+              
+              <div style="background: #1a1a1a; border-radius: 12px; padding: 20px; margin-bottom: 28px;">
+                <table width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding: 8px 0; color: ${COLORS.textMuted}; font-size: 14px;">Dispositivo:</td>
+                    <td style="padding: 8px 0; color: ${COLORS.text}; font-size: 14px; text-align: right;">${device}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: ${COLORS.textMuted}; font-size: 14px;">Navegador:</td>
+                    <td style="padding: 8px 0; color: ${COLORS.text}; font-size: 14px; text-align: right;">${browser}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: ${COLORS.textMuted}; font-size: 14px;">IP:</td>
+                    <td style="padding: 8px 0; color: ${COLORS.text}; font-size: 14px; text-align: right;">${ip}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 0; color: ${COLORS.textMuted}; font-size: 14px;">Data:</td>
+                    <td style="padding: 8px 0; color: ${COLORS.text}; font-size: 14px; text-align: right;">${date}</td>
+                  </tr>
+                </table>
+              </div>
+              
+              <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 13px; line-height: 1.6; text-align: center;">
+                Se nao foi voce, altere sua senha imediatamente e entre em contato com o suporte.
+              </p>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 32px 40px; background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%); border-top: 1px solid ${COLORS.cardBorder};">
+              <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 12px; text-align: center;">
+                © ${new Date().getFullYear()} LegacyPay. Todos os direitos reservados.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+
+  try {
+    const { error } = await getResend().emails.send({
+      from: FROM_EMAIL,
+      to,
+      subject: "Novo acesso na sua conta - LegacyPay",
+      html: htmlContent,
+    });
+
+    if (error) {
+      console.error("[Email] Erro ao enviar alerta de login:", error);
+      return false;
+    }
+
+    console.log("[Email] Alerta de login enviado para:", to);
+    return true;
+  } catch (error) {
+    console.error("[Email] Erro ao enviar alerta de login:", error);
+    return false;
+  }
+}

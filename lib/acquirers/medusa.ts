@@ -144,16 +144,24 @@ export class MedusaPayments {
       },
     });
 
-    const data = await response.json();
+    const responseText = await response.text();
 
-    if (!response.ok) {
-      console.error("[MedusaPayments] API Error:", data);
-      throw new Error(
-        data.message || data.error || "Erro na API Medusa Payments"
-      );
+    let data: T;
+    try {
+      data = JSON.parse(responseText) as T;
+    } catch {
+      console.error("[MedusaPayments] Erro ao parsear JSON:", responseText.substring(0, 200));
+      throw new Error(`Erro ao processar resposta da API Medusa`);
     }
 
-    return data as T;
+    if (!response.ok) {
+      const errorData = data as { message?: string; error?: string };
+      const errorMessage = errorData.message || errorData.error || `Erro na API Medusa (${response.status})`;
+      console.error("[MedusaPayments] API Error:", errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    return data;
   }
 
   /**

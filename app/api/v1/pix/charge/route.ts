@@ -2,26 +2,65 @@ import { sql } from "@/lib/db"
 import { NextRequest, NextResponse } from "next/server"
 import { createPixPayment, getSystemFeesForUser } from "@/lib/acquirers"
 
+// Funcao para extrair credenciais do request
+function extractCredentials(request: NextRequest): { clientId: string | null; clientSecret: string | null; apiKey: string | null } {
+  const authHeader = request.headers.get("authorization")
+  if (authHeader && authHeader.startsWith("Basic ")) {
+    try {
+      const base64Credentials = authHeader.slice(6)
+      const credentials = Buffer.from(base64Credentials, "base64").toString("utf-8")
+      const [clientId, clientSecret] = credentials.split(":")
+      if (clientId && clientSecret) return { clientId, clientSecret, apiKey: null }
+    } catch { /* ignorar */ }
+  }
+  
+  const headerClientId = request.headers.get("x-client-id") || request.headers.get("client-id")
+  const headerClientSecret = request.headers.get("x-client-secret") || request.headers.get("client-secret")
+  if (headerClientId && headerClientSecret) return { clientId: headerClientId, clientSecret: headerClientSecret, apiKey: null }
+  
+  const apiKey = request.headers.get("x-api-key")
+  if (apiKey) return { clientId: null, clientSecret: null, apiKey }
+  
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    try {
+      const token = authHeader.slice(7)
+      const decoded = Buffer.from(token, "base64").toString("utf-8")
+      const [clientId, clientSecret] = decoded.split(":")
+      if (clientId && clientSecret) return { clientId, clientSecret, apiKey: null }
+    } catch { /* ignorar */ }
+  }
+  
+  return { clientId: null, clientSecret: null, apiKey: null }
+}
+
 // Criar cobrança PIX
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = request.headers.get("x-api-key")
+    const { clientId, clientSecret, apiKey } = extractCredentials(request)
     
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "API key não fornecida" },
-        { status: 401 }
-      )
+    let profile = null
+    
+    // Tentar autenticar via client_id/client_secret primeiro
+    if (clientId && clientSecret) {
+      const profiles = await sql`
+        SELECT * FROM profiles 
+        WHERE ((client_id = ${clientId} AND client_secret = ${clientSecret})
+           OR (api_key = ${clientId} AND client_secret = ${clientSecret}))
+          AND is_active = true
+      `
+      profile = profiles[0]
     }
-
-    const profiles = await sql`
-      SELECT * FROM profiles WHERE api_key = ${apiKey} AND is_active = true
-    `
-    const profile = profiles[0]
-
+    // Senao, tentar via api_key
+    else if (apiKey) {
+      const profiles = await sql`
+        SELECT * FROM profiles WHERE api_key = ${apiKey} AND is_active = true
+      `
+      profile = profiles[0]
+    }
+    
     if (!profile) {
       return NextResponse.json(
-        { error: "API key inválida ou conta inativa" },
+        { error: "Credenciais inválidas ou conta inativa" },
         { status: 401 }
       )
     }
@@ -91,23 +130,28 @@ export async function POST(request: NextRequest) {
     const expirationDate = new Date()
     expirationDate.setMinutes(expirationDate.getMinutes() + 30)
 
+    const qrCode = pixResponse.qrCode || pixResponse.data?.qrCode || ''
+    const qrCodeBase64 = pixResponse.qrCodeBase64 || pixResponse.data?.qrCodeBase64 || ''
+    const copyPaste = pixResponse.copyPaste || pixResponse.data?.copyPaste || qrCode
+    
     const charges = await sql`
       INSERT INTO pix_charges (
-        user_id, amount, fee, net_amount, description, expiration, 
-        copy_paste, qr_code, external_id, acquirer_transaction_id, status
+        user_id, amount, description, expiration, 
+        copy_paste, qr_code, qr_code_base64, external_id, 
+        payer_name, payer_document, status
       )
       VALUES (
         ${profile.id}, 
         ${amount},
-        ${fee},
-        ${netAmount},
         ${description || null}, 
         ${expirationDate.toISOString()}, 
-        ${pixResponse.copyPaste || pixResponse.data?.copyPaste || ''},
-        ${pixResponse.qrCodeBase64 || pixResponse.data?.qrCodeBase64 || pixResponse.qrCode || pixResponse.data?.qrCode || ''},
+        ${copyPaste},
+        ${qrCode},
+        ${qrCodeBase64},
         ${chargeId},
-        ${pixResponse.transactionId || pixResponse.data?.transactionId || ''},
-        'pending'
+        ${payer_name || 'Cliente'},
+        ${payer_document || '00000000000'},
+        'active'
       )
       RETURNING *
     `
@@ -125,13 +169,16 @@ export async function POST(request: NextRequest) {
         id: charge.id,
         external_id: charge.external_id,
         amount: Number(charge.amount),
-        fee: Number(charge.fee),
-        net_amount: Number(charge.net_amount),
+        fee: fee,
+        net_amount: netAmount,
         description: charge.description,
         status: charge.status,
         route: profile.route_type,
-        qr_code: charge.qr_code,
-        copy_paste: charge.copy_paste,
+        pix: {
+          qr_code: charge.qr_code,
+          qr_code_base64: charge.qr_code_base64,
+          copy_paste: charge.copy_paste,
+        },
         expiration: charge.expiration,
         created_at: charge.created_at
       }
@@ -148,23 +195,28 @@ export async function POST(request: NextRequest) {
 // Listar cobranças
 export async function GET(request: NextRequest) {
   try {
-    const apiKey = request.headers.get("x-api-key")
+    const { clientId, clientSecret, apiKey } = extractCredentials(request)
     
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "API key não fornecida" },
-        { status: 401 }
-      )
+    let profile = null
+    
+    if (clientId && clientSecret) {
+      const profiles = await sql`
+        SELECT * FROM profiles 
+        WHERE ((client_id = ${clientId} AND client_secret = ${clientSecret})
+           OR (api_key = ${clientId} AND client_secret = ${clientSecret}))
+          AND is_active = true
+      `
+      profile = profiles[0]
+    } else if (apiKey) {
+      const profiles = await sql`
+        SELECT * FROM profiles WHERE api_key = ${apiKey} AND is_active = true
+      `
+      profile = profiles[0]
     }
-
-    const profiles = await sql`
-      SELECT * FROM profiles WHERE api_key = ${apiKey} AND is_active = true
-    `
-    const profile = profiles[0]
 
     if (!profile) {
       return NextResponse.json(
-        { error: "API key inválida" },
+        { error: "Credenciais inválidas" },
         { status: 401 }
       )
     }

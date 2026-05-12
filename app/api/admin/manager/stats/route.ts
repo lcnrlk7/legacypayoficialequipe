@@ -22,12 +22,12 @@ export async function GET() {
       sql`SELECT COUNT(*) as count FROM withdrawals WHERE status = 'pending'`,
     ]);
 
-    // Today's volume
+    // Today's volume (apenas depositos)
     const today = new Date().toISOString().split("T")[0];
     const volumeResult = await sql`
       SELECT COALESCE(SUM(amount), 0) as total 
       FROM transactions 
-      WHERE created_at >= ${today} AND status = 'completed'
+      WHERE created_at >= ${today} AND status = 'completed' AND type IN ('pix_in', 'deposit')
     `;
 
     // Recent KYC

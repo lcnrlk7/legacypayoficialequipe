@@ -44,6 +44,7 @@ interface PixKey {
 
 export default function WalletPage() {
   const [balance, setBalance] = useState(0);
+  const [pendingWithdrawals, setPendingWithdrawals] = useState(0);
   const [depositAmount, setDepositAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawPixKey, setWithdrawPixKey] = useState("");
@@ -55,6 +56,18 @@ export default function WalletPage() {
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
   const [withdrawSuccess, setWithdrawSuccess] = useState(false);
+  const [withdrawalData, setWithdrawalData] = useState<{
+    id: string;
+    amount: number;
+    fee: number;
+    netAmount: number;
+    pixKey: string;
+    pixKeyType: string;
+    recipientName?: string;
+    recipientBank?: string;
+    status: string;
+    createdAt: string;
+  } | null>(null);
   const [savedPixKeys, setSavedPixKeys] = useState<PixKey[]>([]);
   const [systemSettings, setSystemSettings] = useState({
     minDeposit: 5,
@@ -148,6 +161,9 @@ export default function WalletPage() {
       if (data.balance !== undefined) {
         setBalance(data.balance);
       }
+      if (data.pendingWithdrawals !== undefined) {
+        setPendingWithdrawals(data.pendingWithdrawals);
+      }
     } catch (err) {
       console.error("Error loading balance:", err);
     } finally {
@@ -207,7 +223,7 @@ const handleDeposit = async () => {
     }
   };
 
-  const handleWithdraw = async (amount: number, pixKey: string) => {
+  const handleWithdraw = async (amount: number, pixKey: string, pixKeyType: string) => {
     if (!amount || amount <= 0 || !pixKey) {
       setError("Preencha todos os campos");
       return;
@@ -220,15 +236,15 @@ const handleDeposit = async () => {
 
     // Taxa fixa de saque
     const withdrawalFee = systemSettings.withdrawalFee || 5;
-    const netAmount = amount - withdrawalFee;
+    const totalDebit = amount + withdrawalFee;
 
-    if (netAmount <= 0) {
-      setError(`Valor muito baixo. Apos taxa de R$ ${withdrawalFee.toFixed(2).replace('.', ',')}, nao sobraria valor para transferir.`);
+    if (amount <= 0) {
+      setError("Informe um valor valido para receber");
       return;
     }
 
-    if (amount > balance) {
-      setError("Saldo insuficiente");
+    if (totalDebit > balance) {
+      setError(`Saldo insuficiente. Para receber R$ ${amount.toFixed(2)}, voce precisa de R$ ${totalDebit.toFixed(2)}`);
       return;
     }
 
@@ -246,7 +262,7 @@ const handleDeposit = async () => {
         body: JSON.stringify({
           amount: amount,
           pixKey: pixKey,
-          pixKeyType: "PIX",
+          pixKeyType: pixKeyType, // Tipo selecionado pelo usuário
         }),
       });
 
@@ -256,15 +272,24 @@ const handleDeposit = async () => {
         throw new Error(data.error || "Erro ao processar saque");
       }
 
+      // Salvar dados do saque para o comprovante
+      setWithdrawalData({
+        id: data.withdrawal?.id || data.id || `WD-${Date.now()}`,
+        amount: amount,
+        fee: withdrawalFee,
+        netAmount: amount,
+        pixKey: pixKey,
+        pixKeyType: pixKeyType,
+        recipientName: data.withdrawal?.recipient_name || undefined,
+        recipientBank: data.withdrawal?.recipient_bank || undefined,
+        status: data.withdrawal?.status || 'pending',
+        createdAt: new Date().toISOString(),
+      });
+
       setWithdrawSuccess(true);
       setWithdrawAmount("");
       setWithdrawPixKey("");
       loadBalance();
-
-      setTimeout(() => {
-        setWithdrawSuccess(false);
-        setWithdrawDialogOpen(false);
-      }, 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao processar saque");
     } finally {
@@ -324,23 +349,38 @@ const handleDeposit = async () => {
         animate={{ opacity: 1, y: 0 }}
         className="bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 rounded-2xl p-8"
       >
-        <div className="flex items-center gap-4 mb-4">
-          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center glow-orange-sm">
-            <Wallet className="w-7 h-7 text-primary-foreground" />
+        <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
+          <div className="flex items-center gap-4 flex-1">
+            <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center glow-orange-sm">
+              <Wallet className="w-7 h-7 text-primary-foreground" />
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Saldo Disponível</p>
+              {loadingBalance ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  <span className="text-muted-foreground">Carregando...</span>
+                </div>
+              ) : (
+                <p className="text-3xl lg:text-4xl font-bold text-foreground">
+                  {formatCurrency(balance)}
+                </p>
+              )}
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Saldo Disponível</p>
-            {loadingBalance ? (
-              <div className="flex items-center gap-2">
-                <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                <span className="text-muted-foreground">Carregando...</span>
+          {pendingWithdrawals > 0 && (
+            <div className="flex items-center gap-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl px-4 py-3">
+              <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center">
+                <ArrowUpRight className="w-5 h-5 text-yellow-500" />
               </div>
-            ) : (
-              <p className="text-3xl lg:text-4xl font-bold text-foreground">
-                {formatCurrency(balance)}
-              </p>
-            )}
-          </div>
+              <div>
+                <p className="text-xs text-yellow-500/80">Saques Pendentes</p>
+                <p className="text-lg font-semibold text-yellow-500">
+                  {formatCurrency(pendingWithdrawals)}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
         <div className="flex flex-wrap gap-3 mt-6">
           <Dialog open={depositDialogOpen} onOpenChange={(open) => {
@@ -512,6 +552,7 @@ const handleDeposit = async () => {
                 loading={loading}
                 error={error}
                 withdrawSuccess={withdrawSuccess}
+                withdrawalData={withdrawalData}
                 onWithdraw={handleWithdraw}
                 onClose={() => {
                   setWithdrawDialogOpen(false);
@@ -519,6 +560,7 @@ const handleDeposit = async () => {
                   setWithdrawSuccess(false);
                   setWithdrawAmount("");
                   setWithdrawPixKey("");
+                  setWithdrawalData(null);
                 }}
               />
             </DialogContent>

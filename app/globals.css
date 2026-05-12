@@ -43,61 +43,61 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* TEMA ESCURO (padrao) */
+/* TEMA ESCURO (padrao) - Estilo LegacyPay Premium */
 :root {
-  /* Core palette - Premium dark with warm orange */
-  --background: #050505;
-  --foreground: #ffffff;
-  --card: #0d0d0d;
-  --card-foreground: #ffffff;
-  --popover: #0a0a0a;
-  --popover-foreground: #ffffff;
+  /* Core palette - Deep black with subtle warmth */
+  --background: #0a0a0a;
+  --foreground: #fafafa;
+  --card: #111111;
+  --card-foreground: #fafafa;
+  --popover: #111111;
+  --popover-foreground: #fafafa;
   
-  /* Primary - Vibrant orange gradient feel */
+  /* Primary - Vibrant orange */
   --primary: #ff6a00;
   --primary-light: #ff8534;
   --primary-dark: #cc5500;
-  --primary-foreground: #000000;
+  --primary-foreground: #ffffff;
   
-  /* Secondary - Subtle grays */
+  /* Secondary */
   --secondary: #1a1a1a;
-  --secondary-foreground: #ffffff;
+  --secondary-foreground: #fafafa;
   
-  /* Muted - For less prominent elements */
-  --muted: #151515;
+  /* Muted */
+  --muted: #1a1a1a;
   --muted-foreground: #888888;
   
-  /* Accent - Matches primary */
-  --accent: #ff6a00;
-  --accent-foreground: #000000;
+  /* Accent */
+  --accent: #1a1a1a;
+  --accent-foreground: #fafafa;
   
   /* Destructive */
-  --destructive: #ff3333;
-  --destructive-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #fef2f2;
   
   /* Borders and inputs */
-  --border: #262626;
-  --input: #1a1a1a;
+  --border: #1f1f1f;
+  --input: #111111;
   --ring: #ff6a00;
   
-  /* Charts */
+  /* Charts - Orange theme */
   --chart-1: #ff6a00;
   --chart-2: #ff8534;
   --chart-3: #ffab00;
-  --chart-4: #00c853;
-  --chart-5: #00b0ff;
+  --chart-4: #10b981;
+  --chart-5: #3b82f6;
   
   /* Radius */
-  --radius: 1rem;
+  --radius: 0.5rem;
   
   /* Sidebar */
-  --sidebar: #080808;
-  --sidebar-foreground: #ffffff;
+  --sidebar: #0a0a0a;
+  --sidebar-foreground: #fafafa;
   --sidebar-primary: #ff6a00;
-  --sidebar-primary-foreground: #000000;
-  --sidebar-accent: #1a1000;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1a1a1a;
   --sidebar-accent-foreground: #ff6a00;
-  --sidebar-border: #1a1a1a;
+  --sidebar-border: #1f1f1f;
   --sidebar-ring: #ff6a00;
 }
 
@@ -607,5 +607,168 @@
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Mobile-first responsive utilities */
+@media (max-width: 640px) {
+  /* Ajustes de fonte para mobile */
+  .text-responsive-xl {
+    font-size: 1.25rem;
+    line-height: 1.75rem;
+  }
+  
+  .text-responsive-2xl {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+  
+  /* Padding responsivo */
+  .p-responsive {
+    padding: 0.75rem;
+  }
+  
+  /* Cards mais compactos em mobile */
+  .card-compact {
+    padding: 0.75rem;
+  }
+  
+  /* Botoes full width em mobile */
+  .btn-responsive {
+    width: 100%;
+  }
+  
+  /* Touch-friendly tap targets */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+@media (min-width: 641px) {
+  .text-responsive-xl {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+  
+  .text-responsive-2xl {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+  }
+  
+  .p-responsive {
+    padding: 1.5rem;
+  }
+  
+  .card-compact {
+    padding: 1.5rem;
+  }
+}
+
+/* Keyboard navigation focus styles */
+.focus-visible-ring:focus-visible {
+  outline: 2px solid rgba(255, 106, 0, 0.5);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions for all interactive elements */
+.transition-smooth {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Status page specific */
+.status-operational {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15) 0%, rgba(34, 197, 94, 0.05) 100%);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.status-degraded {
+  background: linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(234, 179, 8, 0.05) 100%);
+  border: 1px solid rgba(234, 179, 8, 0.2);
+}
+
+.status-outage {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(239, 68, 68, 0.05) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Onboarding spotlight pulse */
+@keyframes spotlight-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 4px rgba(255, 106, 0, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(255, 106, 0, 0.1);
+  }
+}
+
+.spotlight-pulse {
+  animation: spotlight-pulse 2s ease-in-out infinite;
+}
+
+/* Improved table responsiveness */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Better input focus states */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(255, 106, 0, 0.1);
+}
+
+/* Disabled state */
+.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* Loading skeleton */
+@keyframes skeleton-loading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--secondary) 25%,
+    var(--border) 50%,
+    var(--secondary) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+/* Better contrast for text on backgrounds */
+.text-shadow-sm {
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Prevent text selection on UI elements */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body {
+    background: white;
+    color: black;
   }
 }

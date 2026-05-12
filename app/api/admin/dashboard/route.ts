@@ -22,7 +22,7 @@ export async function GET() {
       sql`SELECT COUNT(*) as count FROM profiles`,
       sql`SELECT COUNT(*) as count FROM profiles WHERE kyc_status = 'pending'`,
       sql`SELECT COUNT(*) as count FROM profiles WHERE kyc_status = 'approved'`,
-      sql`SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE status = 'completed'`,
+      sql`SELECT COALESCE(SUM(amount), 0) as total FROM transactions WHERE status = 'completed' AND type IN ('pix_in', 'deposit')`,
       sql`SELECT COALESCE(SUM(fee), 0) as total FROM transactions WHERE status = 'completed'`,
       sql`SELECT COUNT(*) as count FROM transactions WHERE status = 'completed'`,
       sql`SELECT id, email, name, kyc_status, created_at, balance 

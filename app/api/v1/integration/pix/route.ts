@@ -2,39 +2,44 @@ import { sql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { createPixPayment, getSystemFeesForUser } from "@/lib/acquirers";
 import crypto from "crypto";
+import { logNewTransaction, logAPIUsage } from "@/lib/discord-webhook";
+
+// Funcao para extrair credenciais do request
+function extractCredentials(request: NextRequest): { clientId: string | null; clientSecret: string | null } {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader && authHeader.startsWith("Basic ")) {
+    try {
+      const base64Credentials = authHeader.slice(6);
+      const credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
+      const [clientId, clientSecret] = credentials.split(":");
+      if (clientId && clientSecret) return { clientId, clientSecret };
+    } catch { /* ignorar */ }
+  }
+  
+  const headerClientId = request.headers.get("x-client-id") || request.headers.get("client-id");
+  const headerClientSecret = request.headers.get("x-client-secret") || request.headers.get("client-secret");
+  if (headerClientId && headerClientSecret) return { clientId: headerClientId, clientSecret: headerClientSecret };
+  
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    try {
+      const token = authHeader.slice(7);
+      const decoded = Buffer.from(token, "base64").toString("utf-8");
+      const [clientId, clientSecret] = decoded.split(":");
+      if (clientId && clientSecret) return { clientId, clientSecret };
+    } catch { /* ignorar */ }
+  }
+  
+  return { clientId: null, clientSecret: null };
+}
 
 // POST - Criar cobrança PIX via integração externa
 export async function POST(request: NextRequest) {
   try {
-    // Autenticação via Basic Auth (client_id:client_secret)
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Basic ")) {
-      return NextResponse.json(
-        { 
-          success: false,
-          error: "Credenciais não fornecidas", 
-          code: "UNAUTHORIZED" 
-        },
-        { status: 401 }
-      );
-    }
-
-    const base64Credentials = authHeader.slice(6);
-    let credentials: string;
-    try {
-      credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
-    } catch {
-      return NextResponse.json(
-        { success: false, error: "Credenciais mal formatadas", code: "INVALID_CREDENTIALS" },
-        { status: 401 }
-      );
-    }
-
-    const [clientId, clientSecret] = credentials.split(":");
-
+    const { clientId, clientSecret } = extractCredentials(request);
+    
     if (!clientId || !clientSecret) {
       return NextResponse.json(
-        { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
+        { success: false, error: "Credenciais não fornecidas", code: "UNAUTHORIZED" },
         { status: 401 }
       );
     }
@@ -48,7 +53,7 @@ export async function POST(request: NextRequest) {
              ui.webhook_url, ui.webhook_secret,
              p.id as profile_id, p.name, p.kyc_status, p.route_type, p.balance, p.api_enabled, p.is_active
       FROM user_integrations ui
-      INNER JOIN profiles p ON p.id::text = ui.user_id
+      INNER JOIN profiles p ON p.id::text = ui.user_id::text
       WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
     `;
 
@@ -76,7 +81,8 @@ export async function POST(request: NextRequest) {
       const profileResult = await sql`
         SELECT id, name, kyc_status, route_type, balance, api_enabled, is_active
         FROM profiles
-        WHERE api_key = ${clientId} AND api_secret = ${clientSecret}
+        WHERE (client_id = ${clientId} AND client_secret = ${clientSecret})
+           OR (api_key = ${clientId} AND client_secret = ${clientSecret})
       `;
 
       if (profileResult.length > 0) {
@@ -159,9 +165,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Buscar taxas baseadas na rota do usuário (considera taxas personalizadas)
-    const systemFees = await getSystemFeesForUser(profile.id);
-    
-    console.log(`[Integration PIX] Usuario ${profile.id} - Taxas: ${systemFees.pixPercentageFee}% + R$${systemFees.pixFixedFee} (rota: ${profile.route_type})`);
+    let systemFees;
+    try {
+      systemFees = await getSystemFeesForUser(profile.id);
+    } catch {
+      // Usar taxas padrão se falhar
+      systemFees = profile.route_type === 'white' 
+        ? { pixFixedFee: 1.50, pixPercentageFee: 0, withdrawalFee: 2.00 }
+        : { pixFixedFee: 0, pixPercentageFee: 4.00, withdrawalFee: 5.00 };
+    }
 
     // Calcular taxa (usar taxa personalizada do usuario ou padrao da rota)
     const feePercentage = systemFees.pixPercentageFee;
@@ -169,17 +181,12 @@ export async function POST(request: NextRequest) {
     const percentageFee = (amount * feePercentage) / 100;
     const fee = percentageFee + fixedFee;
     const netAmount = amount - fee;
-    
-    console.log(`[Integration PIX] Valor: R$${amount}, Taxa: R$${fee.toFixed(2)} (${feePercentage}% + R$${fixedFee}), Liquido: R$${netAmount.toFixed(2)}`);
 
     const transactionId = external_id || `int_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-    // Criar cobrança PIX
-    // Garantir que os dados do pagador nunca sejam undefined
+    // Criar cobrança PIX - garantir que os dados do pagador nunca sejam undefined
     const safePayerName = (payer?.name && String(payer.name).trim()) ? String(payer.name).trim() : "Cliente";
     const safePayerDocument = (payer?.document && String(payer.document).trim()) ? String(payer.document).replace(/\D/g, "") : "00000000000";
-    
-    console.log(`[Integration PIX] Criando PIX - payerName: "${safePayerName}", payerDocument: "${safePayerDocument}"`);
     
     const pixResponse = await createPixPayment(
       amount,
@@ -191,9 +198,12 @@ export async function POST(request: NextRequest) {
     );
 
     if (!pixResponse.success) {
-      console.error("[Integration PIX] Erro ao criar PIX:", pixResponse.error);
       return NextResponse.json(
-        { success: false, error: pixResponse.error || "Erro ao criar cobrança", code: "ACQUIRER_ERROR" },
+        { 
+          success: false, 
+          error: pixResponse.error || "Erro ao criar cobrança", 
+          code: "ACQUIRER_ERROR"
+        },
         { status: 500 }
       );
     }
@@ -203,18 +213,16 @@ export async function POST(request: NextRequest) {
     const qrCode = pixResponse.qrCode || pixResponse.data?.qrCode || pixResponse.copyPaste || '';
     const qrCodeBase64 = pixResponse.qrCodeBase64 || pixResponse.data?.qrCodeBase64 || '';
     const copyPaste = pixResponse.copyPaste || pixResponse.data?.copyPaste || pixResponse.data?.pixCode || qrCode;
-    
-    console.log(`[Integration PIX] PIX criado - acquirerTxId: ${acquirerTransactionId}, qrCode: ${qrCode ? 'OK' : 'VAZIO'}, copyPaste: ${copyPaste ? 'OK' : 'VAZIO'}`);
 
     // Salvar transação no banco (tabela transactions sem qr_code)
     const txId = crypto.randomUUID();
     const txResult = await sql`
       INSERT INTO transactions (
-        id, user_id, external_id, type, amount, fee, net_amount, 
+        id, user_id, external_id, acquirer_transaction_id, type, amount, fee, net_amount, 
         status, description, payer_name, payer_document, metadata, created_at
       )
       VALUES (
-        ${txId}, ${profile.id}, ${transactionId}, ${'pix_in'}, 
+        ${txId}, ${profile.id}, ${transactionId}, ${acquirerTransactionId}, ${'pix_in'}, 
         ${amount}, ${fee}, ${netAmount}, ${'pending'}, 
         ${description || `Pagamento via ${profile.name}`},
         ${safePayerName}, ${safePayerDocument}, 
@@ -266,6 +274,30 @@ export async function POST(request: NextRequest) {
         NOW()
       )
     `;
+    
+    // Log para Discord
+    logNewTransaction({
+      transactionId: transaction.id,
+      userName: profile.name,
+      userEmail: "", // API nao tem email
+      amount: amount,
+      fee: fee,
+      netAmount: netAmount,
+      payerName: safePayerName,
+      payerDocument: safePayerDocument,
+      description: description || "Via API",
+      route: profile.route_type,
+      status: "pending",
+    });
+    
+    logAPIUsage({
+      userId: profile.id,
+      userName: profile.name,
+      endpoint: "/api/v1/integration/pix",
+      method: "POST",
+      statusCode: 200,
+      amount: amount,
+    });
 
     // Retornar resposta formatada
     return NextResponse.json({
@@ -287,9 +319,10 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[v1/integration/pix] Error:", error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("[v1/integration/pix] Error:", errorMessage);
     return NextResponse.json(
-      { success: false, error: "Erro interno do servidor", code: "INTERNAL_ERROR" },
+      { success: false, error: errorMessage, code: "INTERNAL_ERROR" },
       { status: 500 }
     );
   }
@@ -298,29 +331,11 @@ export async function POST(request: NextRequest) {
 // GET - Consultar status de transação
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader || !authHeader.startsWith("Basic ")) {
-      return NextResponse.json(
-        { success: false, error: "Credenciais não fornecidas", code: "UNAUTHORIZED" },
-        { status: 401 }
-      );
-    }
-
-    const base64Credentials = authHeader.slice(6);
-    let credentials: string;
-    try {
-      credentials = Buffer.from(base64Credentials, "base64").toString("utf-8");
-    } catch {
-      return NextResponse.json(
-        { success: false, error: "Credenciais mal formatadas", code: "INVALID_CREDENTIALS" },
-        { status: 401 }
-      );
-    }
-    const [clientId, clientSecret] = credentials.split(":");
-
+    const { clientId, clientSecret } = extractCredentials(request);
+    
     if (!clientId || !clientSecret) {
       return NextResponse.json(
-        { success: false, error: "Credenciais inválidas", code: "INVALID_CREDENTIALS" },
+        { success: false, error: "Credenciais não fornecidas", code: "UNAUTHORIZED" },
         { status: 401 }
       );
     }
@@ -331,7 +346,7 @@ export async function GET(request: NextRequest) {
     const integrationResult = await sql`
       SELECT ui.user_id, ui.is_active as integration_active
       FROM user_integrations ui
-      INNER JOIN profiles p ON p.id::text = ui.user_id
+      INNER JOIN profiles p ON p.id::text = ui.user_id::text
       WHERE ui.client_id = ${clientId} AND ui.client_secret = ${clientSecret}
     `;
 
@@ -348,7 +363,8 @@ export async function GET(request: NextRequest) {
       // Tentar na tabela profiles (lp_/sk_)
       const profileResult = await sql`
         SELECT id, api_enabled FROM profiles
-        WHERE api_key = ${clientId} AND api_secret = ${clientSecret}
+        WHERE (client_id = ${clientId} AND client_secret = ${clientSecret})
+           OR (api_key = ${clientId} AND client_secret = ${clientSecret})
       `;
       
       if (profileResult.length > 0) {

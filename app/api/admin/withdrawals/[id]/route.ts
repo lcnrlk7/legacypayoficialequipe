@@ -4,6 +4,7 @@ import { mapPixKeyType } from "@/lib/acquirers/misticpay";
 import { getAcquirerForUser, createWithdrawal } from "@/lib/acquirers";
 import { notifyWithdrawalCompleted, notifyWithdrawalFailed } from "@/lib/notifications";
 import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
+import { logWithdrawalStatusUpdate, logAdminAction } from "@/lib/discord-webhook";
 
 export async function PATCH(
   request: NextRequest,
@@ -74,6 +75,27 @@ export async function PATCH(
       } catch (auditError) {
         console.error("Error creating audit log:", auditError);
       }
+      
+      // Log para Discord
+      logWithdrawalStatusUpdate({
+        withdrawalId: id,
+        userName: withdrawal.profile_name || "N/A",
+        userEmail: withdrawal.profile_email || "",
+        amount: markPaidGross,
+        netAmount: markPaidNet,
+        oldStatus: withdrawal.status,
+        newStatus: "completed",
+        pixKey: markPaidPixKey,
+        adminName: admin.name || "Admin",
+      });
+      
+      logAdminAction({
+        adminName: admin.name || "Admin",
+        adminEmail: admin.email || "",
+        action: "Saque Marcado como Pago",
+        target: `${withdrawal.profile_name} (${withdrawal.profile_email})`,
+        details: `Valor: R$ ${markPaidNet.toFixed(2)}`,
+      });
 
       return NextResponse.json({
         success: true,
@@ -157,6 +179,27 @@ export async function PATCH(
       } catch (auditError) {
         console.error("Error creating audit log:", auditError);
       }
+      
+      // Log para Discord
+      logWithdrawalStatusUpdate({
+        withdrawalId: id,
+        userName: withdrawal.profile_name || "N/A",
+        userEmail: withdrawal.profile_email || "",
+        amount: approveSuccessAmount,
+        netAmount: Number(withdrawal.net_amount) || 0,
+        oldStatus: "pending",
+        newStatus: "processing",
+        pixKey: withdrawal.pix_key || "",
+        adminName: admin.name || "Admin",
+      });
+      
+      logAdminAction({
+        adminName: admin.name || "Admin",
+        adminEmail: admin.email || "",
+        action: "Saque Aprovado",
+        target: `${withdrawal.profile_name} (${withdrawal.profile_email})`,
+        details: `Valor: R$ ${(Number(withdrawal.net_amount) || 0).toFixed(2)} | Acquirer ID: ${acquirerWithdrawalId}`,
+      });
 
       return NextResponse.json({
         success: true,
@@ -201,6 +244,27 @@ export async function PATCH(
       } catch (auditError) {
         console.error("Error creating audit log:", auditError);
       }
+      
+      // Log para Discord
+      logWithdrawalStatusUpdate({
+        withdrawalId: id,
+        userName: withdrawal.profile_name || "N/A",
+        userEmail: withdrawal.profile_email || "",
+        amount: withdrawalAmount,
+        netAmount: Number(withdrawal.net_amount) || 0,
+        oldStatus: "pending",
+        newStatus: "rejected",
+        pixKey: withdrawal.pix_key || "",
+        adminName: admin.name || "Admin",
+      });
+      
+      logAdminAction({
+        adminName: admin.name || "Admin",
+        adminEmail: admin.email || "",
+        action: "Saque Rejeitado",
+        target: `${withdrawal.profile_name} (${withdrawal.profile_email})`,
+        details: `Valor: R$ ${withdrawalAmount.toFixed(2)} | Motivo: ${reason || "Nao informado"}`,
+      });
 
       return NextResponse.json({
         success: true,

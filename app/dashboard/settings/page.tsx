@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, Mail, Phone, Building, Loader2, Save, CheckCircle2, Shield, Lock, Eye, EyeOff, KeyRound, X, Monitor, Smartphone, Globe, Clock, LogOut, Trash2, AlertTriangle, Bell, BellRing, Send, Calendar, Moon, Sun, Palette } from "lucide-react";
+import { User, Mail, Phone, Building, Loader2, Save, CheckCircle2, Shield, Lock, Eye, EyeOff, KeyRound, X, Monitor, Smartphone, Globe, Clock, LogOut, Trash2, AlertTriangle, Bell, BellRing, Send, Calendar, Moon, Sun, Palette, Camera, ImagePlus } from "lucide-react";
+import Image from "next/image";
 import { ThemeToggleWithLabel } from "@/components/theme-toggle";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -15,6 +17,8 @@ interface Profile {
   cpf: string;
   email_verified: boolean;
   kyc_status: string;
+  avatar_url: string | null;
+  bio: string | null;
 }
 
 export default function SettingsPage() {
@@ -29,7 +33,11 @@ export default function SettingsPage() {
     cpf: "",
     email_verified: false,
     kyc_status: "pending",
+    avatar_url: null,
+    bio: null,
   });
+
+
 
   // Password change states
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -121,7 +129,10 @@ export default function SettingsPage() {
           cpf: formatCPF(data.profile.cpf || ""),
           email_verified: data.profile.email_verified || false,
           kyc_status: data.profile.kyc_status || "pending",
+          avatar_url: data.profile.avatar_url || null,
+          bio: data.profile.bio || null,
         });
+
       }
     } catch (err) {
       console.error("Erro ao carregar perfil:", err);
@@ -158,6 +169,7 @@ export default function SettingsPage() {
         body: JSON.stringify({
           name: profile.name,
           phone: profile.phone.replace(/\D/g, ""),
+          bio: profile.bio,
         }),
       });
 
@@ -506,19 +518,6 @@ export default function SettingsPage() {
 
         <div className="grid gap-6 max-w-xl">
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Nome Completo</label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                value={profile.name}
-                onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                placeholder="Seu nome completo"
-                className="pl-9 bg-secondary border-border"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">Email</label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -854,20 +853,22 @@ export default function SettingsPage() {
 
           <div className="flex items-center justify-between p-4 bg-secondary/50 rounded-xl opacity-60">
             <div className="flex items-center gap-3 sm:gap-4">
-              <div className="p-2.5 sm:p-3 rounded-xl bg-purple-500/10">
-                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
-              </div>
-              <div>
-                <p className="font-medium text-foreground text-sm sm:text-base">
-                  Autenticacao de Dois Fatores
-                </p>
-                <p className="text-xs sm:text-sm text-muted-foreground">
-                  Em breve disponivel
-                </p>
-              </div>
-            </div>
-            <Button variant="outline" disabled className="text-xs sm:text-sm">Em breve</Button>
-          </div>
+  <div className="p-2.5 sm:p-3 rounded-xl bg-purple-500/10">
+  <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500" />
+  </div>
+  <div>
+  <p className="font-medium text-foreground text-sm sm:text-base">
+  Autenticacao de Dois Fatores
+  </p>
+  <p className="text-xs sm:text-sm text-muted-foreground">
+  Proteja sua conta com codigo do app
+  </p>
+  </div>
+  </div>
+  <Link href="/dashboard/security">
+    <Button variant="outline" className="text-xs sm:text-sm">Configurar</Button>
+  </Link>
+  </div>
 
           {/* Sessoes Ativas */}
           <div className="flex items-center justify-between p-3 sm:p-4 bg-secondary/50 rounded-xl">

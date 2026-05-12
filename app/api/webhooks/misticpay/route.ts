@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 import { mapMisticPayStatus } from "@/lib/acquirers/misticpay";
 import { notifyPixPaid, notifyWithdrawalCompleted, notifyWithdrawalFailed } from "@/lib/notifications";
+import { logTransactionStatusUpdate, logWithdrawalStatusUpdate, logWebhookReceived } from "@/lib/discord-webhook";
 
 /**
  * Webhook para receber notificações da MisticPay
@@ -32,7 +33,8 @@ import { notifyPixPaid, notifyWithdrawalCompleted, notifyWithdrawalFailed } from
 
 interface MisticPayWebhookPayload {
   transactionId: string | number;
-  transactionState: "PENDENTE" | "COMPLETO" | "FALHA" | "CANCELADO" | "QUEUED";
+  transactionState?: "PENDENTE" | "COMPLETO" | "FALHA" | "CANCELADO" | "QUEUED" | "COMPLETED" | "PAID";
+  status?: string; // Alternativo para transactionState
   value: number;
   fee?: number;
   transactionType: string;
@@ -55,7 +57,32 @@ export async function POST(request: NextRequest) {
 
     console.log("[MisticPay Webhook] Payload parseado:", JSON.stringify(payload, null, 2));
 
-    const { transactionId, transactionState, payer, transactionType } = payload;
+    // Registrar webhook recebido para debug
+    try {
+      await sql`
+        INSERT INTO webhook_logs (id, url, payload, response_status, success, created_at)
+        VALUES (
+          ${crypto.randomUUID()},
+          'misticpay-incoming',
+          ${JSON.stringify(payload)},
+          200,
+          true,
+          NOW()
+        )
+      `;
+      
+      // Log para Discord
+      logWebhookReceived({
+        source: "MisticPay",
+        transactionId: String(payload.transactionId),
+        status: String(payload.transactionState || payload.status || "N/A"),
+        amount: payload.value,
+      });
+    } catch (logError) {
+      console.error("[MisticPay Webhook] Erro ao logar webhook:", logError);
+    }
+
+    const { transactionId, transactionState, status, payer, transactionType } = payload;
 
     if (!transactionId) {
       console.log("[MisticPay Webhook] Payload sem ID:", payload);
@@ -65,22 +92,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // MisticPay pode enviar status em transactionState ou status
+    const rawStatus = transactionState || status || "PENDENTE";
+    
+    // Normalizar status (COMPLETED, PAID -> COMPLETO)
+    let normalizedStatus = rawStatus.toUpperCase();
+    if (normalizedStatus === "COMPLETED" || normalizedStatus === "PAID") {
+      normalizedStatus = "COMPLETO";
+    } else if (normalizedStatus === "FAILED" || normalizedStatus === "CANCELLED") {
+      normalizedStatus = "FALHA";
+    }
+    
     // Mapear status da MisticPay para status interno
-    const internalStatus = mapMisticPayStatus(transactionState);
+    const internalStatus = mapMisticPayStatus(normalizedStatus);
+    
+    console.log(`[MisticPay Webhook] Status raw=${rawStatus}, normalizado=${normalizedStatus}, interno=${internalStatus}`);
 
     // Detectar se é um callback de SAQUE
-    const isWithdrawalCallback = transactionType === "WITHDRAWAL" || transactionType === "PIX_OUT";
+    // A MisticPay pode enviar como WITHDRAWAL, PIX_OUT ou RETIRADA
+    const isWithdrawalCallback = transactionType === "WITHDRAWAL" || transactionType === "PIX_OUT" || transactionType === "RETIRADA";
 
-    console.log(`[MisticPay Webhook] Tipo: ${isWithdrawalCallback ? 'SAQUE' : 'DEPOSITO'}, Status: ${transactionState} -> ${internalStatus}`);
+    console.log(`[MisticPay Webhook] Tipo: ${transactionType} (${isWithdrawalCallback ? 'SAQUE' : 'DEPOSITO'}), Status: ${transactionState} -> ${internalStatus}`);
 
     // Primeiro, verificar se é um callback de saque
+    // Busca por acquirer_withdrawal_id ou pelo ID no campo id (alguns webhooks enviam assim)
+    const transactionIdStr = String(transactionId);
+    console.log(`[MisticPay Webhook] Buscando saque com transactionId: "${transactionIdStr}" (tipo original: ${typeof transactionId})`);
+    
     const withdrawals = await sql`
-      SELECT w.id, w.user_id, w.amount, w.fee, w.net_amount, w.status, w.pix_key,
+      SELECT w.id, w.user_id, w.amount, w.fee, w.net_amount, w.status, w.pix_key, w.acquirer_withdrawal_id,
              p.email as profile_email, p.name as profile_name, p.balance as profile_balance
       FROM withdrawals w
       LEFT JOIN profiles p ON w.user_id = p.id
-      WHERE w.acquirer_withdrawal_id = ${String(transactionId)}
+      WHERE w.acquirer_withdrawal_id = ${transactionIdStr}
+         OR w.id = ${transactionIdStr}
+         OR CAST(w.acquirer_withdrawal_id AS TEXT) = ${transactionIdStr}
     `;
+    
+    console.log(`[MisticPay Webhook] Resultado busca saque: encontrados ${withdrawals.length} registros`);
+    if (withdrawals.length > 0) {
+      console.log(`[MisticPay Webhook] Saque encontrado: id=${withdrawals[0].id}, acquirer_id=${withdrawals[0].acquirer_withdrawal_id}, status_atual=${withdrawals[0].status}`);
+    }
 
     if (withdrawals.length > 0) {
       // É um callback de saque
@@ -113,6 +165,18 @@ export async function POST(request: NextRequest) {
         
         // Notificar usuario com valor bruto, liquido e taxa
         await notifyWithdrawalCompleted(withdrawal.user_id as string, grossAmount, netAmount, fee, pixKey);
+        
+        // Log para Discord
+        logWithdrawalStatusUpdate({
+          withdrawalId: withdrawal.id as string,
+          userName: withdrawal.profile_name as string,
+          userEmail: withdrawal.profile_email as string,
+          amount: grossAmount,
+          netAmount: netAmount,
+          oldStatus: withdrawal.status as string,
+          newStatus: "completed",
+          pixKey: pixKey,
+        });
         
         return NextResponse.json({ success: true, type: "withdrawal", status: withdrawalStatus });
         
@@ -148,6 +212,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Se não é saque, buscar transação de depósito
+    // Busca por external_id, acquirer_transaction_id, ou acquirer_id no metadata
     const transactions = await sql`
       SELECT t.id, t.user_id, t.amount, t.fee, t.net_amount, t.status,
              p.balance as profile_balance
@@ -155,6 +220,7 @@ export async function POST(request: NextRequest) {
       LEFT JOIN profiles p ON t.user_id = p.id
       WHERE t.external_id = ${String(transactionId)} 
          OR t.acquirer_transaction_id = ${String(transactionId)}
+         OR t.metadata->>'acquirer_id' = ${String(transactionId)}
     `;
 
     if (transactions.length === 0) {
@@ -165,9 +231,18 @@ export async function POST(request: NextRequest) {
 
     const transaction = transactions[0];
 
-    // Se o status já é final, não atualizar
-    if (transaction.status === "completed" || transaction.status === "failed") {
-      console.log(`[MisticPay Webhook] Transaction ${transactionId} already in final status: ${transaction.status}`);
+    // Verificar se o saldo ja foi creditado para esta transacao
+    const existingCredit = await sql`
+      SELECT id FROM audit_logs 
+      WHERE entity_id = ${transaction.id}
+        AND action = 'PAYMENT_CONFIRMED'
+      LIMIT 1
+    `;
+    const alreadyCredited = existingCredit.length > 0;
+
+    // Se o status já é final E o saldo já foi creditado, não fazer nada
+    if ((transaction.status === "completed" || transaction.status === "failed") && alreadyCredited) {
+      console.log(`[MisticPay Webhook] Transaction ${transactionId} already processed and credited. Skipping.`);
       return NextResponse.json({ success: true, message: "Transação já processada" });
     }
 
@@ -176,17 +251,17 @@ export async function POST(request: NextRequest) {
       UPDATE transactions 
       SET 
         status = ${internalStatus},
-        paid_at = ${internalStatus === 'completed' ? new Date() : null},
-        payer_name = ${payer?.name || null},
-        payer_document = ${payer?.document || null},
+        paid_at = COALESCE(paid_at, ${internalStatus === 'completed' ? new Date() : null}),
+        payer_name = COALESCE(payer_name, ${payer?.name || null}),
+        payer_document = COALESCE(payer_document, ${payer?.document || null}),
         updated_at = NOW()
       WHERE id = ${transaction.id}
     `;
 
-    console.log(`[MisticPay Webhook] Transaction ${transactionId} updated to status: ${internalStatus}`);
+    console.log(`[MisticPay Webhook] Transaction ${transactionId} updated to status: ${internalStatus}. Already credited: ${alreadyCredited}`);
 
-    // Se pagamento confirmado, creditar saldo do usuário
-    if (internalStatus === "completed" && transaction.user_id) {
+    // Se pagamento confirmado E saldo ainda nao foi creditado, creditar saldo do usuário
+    if (internalStatus === "completed" && transaction.user_id && !alreadyCredited) {
       const netAmount = Number(transaction.net_amount) || (Number(transaction.amount) - Number(transaction.fee || 0));
       const currentBalance = Number(transaction.profile_balance) || 0;
       const newBalance = currentBalance + netAmount;
@@ -224,6 +299,17 @@ export async function POST(request: NextRequest) {
       // Notificar usuario com valor bruto e liquido
       const grossAmount = Number(transaction.amount) || 0;
       await notifyPixPaid(transaction.user_id as string, grossAmount, netAmount);
+      
+      // Log para Discord - transacao aprovada
+      logTransactionStatusUpdate({
+        transactionId: transaction.id as string,
+        userName: "", // Buscar nome do usuario seria um query extra
+        userEmail: "",
+        amount: grossAmount,
+        oldStatus: "pending",
+        newStatus: "completed",
+        payerName: payer?.name,
+      });
 
       // Enviar webhook para o cliente se configurado
       const userProfile = await sql`

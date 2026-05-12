@@ -9,6 +9,9 @@ import {
 } from "@/lib/acquirers";
 import { mapPixKeyType } from "@/lib/acquirers/misticpay";
 import { validateWithdrawal, getClientIP, logSuspiciousActivity, rateLimit, isValidPixKey } from "@/lib/security";
+import { logWithdrawalRequest } from "@/lib/discord-webhook";
+import { detectAttack } from "@/lib/sanitize";
+import { logAttack } from "@/lib/attack-logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,6 +38,37 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { amount, pixKey, pixKeyType } = body;
+
+    // SEGURANCA: Verificar ataques na chave PIX
+    const attack = detectAttack(pixKey || "");
+    if (attack.detected) {
+      await logAttack({
+        attackType: attack.attackType!,
+        ipAddress: ip,
+        userId: sessionUser.id,
+        userEmail: sessionUser.email,
+        payload: pixKey?.substring(0, 100),
+        endpoint: "/api/withdrawals/create",
+        severity: attack.severity || "high",
+        blocked: true,
+      });
+      
+      // Bloquear IP
+      try {
+        await sql`
+          INSERT INTO blocked_ips (ip_address, reason, user_id)
+          VALUES (${ip}, ${`${attack.attackType} em saque`}, ${sessionUser.id})
+          ON CONFLICT (ip_address) DO NOTHING
+        `;
+      } catch {
+        // Ignora
+      }
+      
+      return NextResponse.json(
+        { error: "Conteúdo não permitido" },
+        { status: 400 }
+      );
+    }
     
     // SEGURANCA: Validar chave PIX
     if (!isValidPixKey(pixKey)) {
@@ -88,9 +122,20 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    if (amount < settings.min_withdrawal) {
+    // Buscar minimo de saque da adquirente especifica do usuario
+    const userAcquirerResult = await sql`
+      SELECT p.acquirer_id, a.min_withdrawal as acquirer_min_withdrawal
+      FROM profiles p
+      LEFT JOIN acquirers a ON a.id = p.acquirer_id AND a.is_active = true
+      WHERE p.id = ${sessionUser.id}
+    `;
+    
+    const acquirerMinWithdrawal = userAcquirerResult[0]?.acquirer_min_withdrawal;
+    const effectiveMinWithdrawal = acquirerMinWithdrawal ? Number(acquirerMinWithdrawal) : settings.min_withdrawal;
+
+    if (amount < effectiveMinWithdrawal) {
       return NextResponse.json(
-        { error: `Valor mínimo para saque: R$ ${settings.min_withdrawal.toFixed(2)}` },
+        { error: `Valor mínimo para saque: R$ ${effectiveMinWithdrawal.toFixed(2)}` },
         { status: 400 }
       );
     }
@@ -112,33 +157,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar saldo atual
-    const balanceResult = await sql`
-      SELECT balance FROM profiles WHERE id = ${sessionUser.id}
+    // Buscar saldo e KYC atual diretamente do banco (não do token que pode estar desatualizado)
+    const profileResult = await sql`
+      SELECT balance, kyc_status FROM profiles WHERE id = ${sessionUser.id}
     `;
-    const currentBalance = Number(balanceResult[0]?.balance) || 0;
+    const currentBalance = Number(profileResult[0]?.balance) || 0;
+    const currentKycStatus = profileResult[0]?.kyc_status;
 
-    if (sessionUser.kyc_status !== "approved") {
+    if (currentKycStatus !== "approved") {
       return NextResponse.json(
         { error: "KYC não aprovado. Complete a verificação para sacar." },
         { status: 403 }
       );
     }
 
-    if (amount > currentBalance) {
+    // Calcular taxas usando o sistema centralizado baseado na rota do usuário
+    // NOTA: "amount" agora é o valor que o usuário QUER RECEBER
+    // totalDebit = amount + taxa (o que será debitado do saldo)
+    const systemFees = await getSystemFeesForUser(sessionUser.id);
+    
+    // Calcular taxa de saque (pode ser fixa ou percentual)
+    let totalFee: number;
+    if (systemFees.withdrawalFeeIsPercentage) {
+      // Taxa percentual: calcular sobre o valor do saque
+      totalFee = amount * (systemFees.withdrawalFee / 100);
+      console.log(`[Withdrawal] Taxa percentual: ${systemFees.withdrawalFee}% de ${amount} = ${totalFee}`);
+    } else {
+      // Taxa fixa em reais
+      totalFee = systemFees.withdrawalFee || 2;
+      console.log(`[Withdrawal] Taxa fixa: R$ ${totalFee}`);
+    }
+    
+    const netAmount = amount; // Valor que o usuário vai receber
+    const totalDebit = amount + totalFee; // Total a ser debitado do saldo
+    
+    if (amount <= 0) {
       return NextResponse.json(
-        { error: `Saldo insuficiente. Disponível: R$ ${currentBalance.toFixed(2)}` },
+        { error: "Valor inválido para saque" },
         { status: 400 }
       );
     }
-
-    // Calcular taxas usando o sistema centralizado baseado na rota do usuário
-    const systemFees = await getSystemFeesForUser(sessionUser.id);
-    const { netAmount, totalFee } = calculateWithdrawalFees(amount, systemFees);
     
-    if (netAmount <= 0) {
+    // Verificar se o saldo cobre o valor + taxa
+    if (totalDebit > currentBalance) {
       return NextResponse.json(
-        { error: `Valor muito baixo. Após taxa de R$ ${totalFee.toFixed(2)}, não sobraria valor para transferir.` },
+        { error: `Saldo insuficiente. Para receber R$ ${amount.toFixed(2)}, você precisa de R$ ${totalDebit.toFixed(2)} (valor + taxa de R$ ${totalFee.toFixed(2)})` },
         { status: 400 }
       );
     }
@@ -149,9 +212,9 @@ export async function POST(request: NextRequest) {
     `;
     const userRouteType = userRouteResult[0]?.route_type || 'black';
     
-    // Saques automáticos até R$ 500, acima disso vai para aprovação manual no painel admin
-    const AUTO_WITHDRAWAL_LIMIT = 500;
-    const requiresApproval = amount >= AUTO_WITHDRAWAL_LIMIT;
+    // Saques automáticos até R$ 400, acima disso vai para aprovação manual no painel admin
+    const AUTO_WITHDRAWAL_LIMIT = 400;
+    const requiresApproval = amount > AUTO_WITHDRAWAL_LIMIT;
 
     // Buscar adquirente baseado na rota do usuário
     const acquirer = await getAcquirerForUser(sessionUser.id);
@@ -159,10 +222,10 @@ export async function POST(request: NextRequest) {
     let acquirerWithdrawalId = null;
     let withdrawalStatus = requiresApproval ? "pending" : "processing";
 
-    // Descontar saldo do usuário ANTES de processar
+    // Descontar saldo do usuário ANTES de processar (valor + taxa)
     await sql`
       UPDATE profiles 
-      SET balance = balance - ${amount}
+      SET balance = balance - ${totalDebit}
       WHERE id = ${sessionUser.id}
     `;
 
@@ -182,29 +245,25 @@ export async function POST(request: NextRequest) {
         acquirerWithdrawalId = String(withdrawalResult.withdrawalId);
         withdrawalStatus = "processing";
       } else {
-        // Se falhar no processamento automático
+        // Se falhar no processamento automático, devolver saldo e marcar como failed
         console.error("[Withdrawal] Falha ao processar saque automático:", withdrawalResult.error);
         
-        // Se o erro é de saldo insuficiente na adquirente, devolver saldo e retornar erro
-        if (withdrawalResult.error?.toLowerCase().includes("saldo insuficiente")) {
-          await sql`
-            UPDATE profiles 
-            SET balance = balance + ${amount}
-            WHERE id = ${sessionUser.id}
-          `;
-          
-          return NextResponse.json({
-            success: false,
-            error: "Sistema temporariamente indisponível para saques. Tente novamente em alguns minutos.",
-          }, { status: 503 });
-        }
+        // Devolver saldo ao usuário
+        await sql`
+          UPDATE profiles SET balance = balance + ${totalDebit} WHERE id = ${sessionUser.id}
+        `;
         
-        // Para outros erros, deixar pendente para aprovação manual
-        withdrawalStatus = "pending";
+        // Retornar erro com mensagem da adquirente
+        const errorMessage = withdrawalResult.error || "Falha ao processar saque na adquirente";
+        return NextResponse.json({
+          success: false,
+          error: errorMessage,
+        }, { status: 400 });
       }
     }
 
     // Salvar saque no banco (incluindo acquirer_withdrawal_id diretamente)
+    // amount = valor a receber, totalDebit = valor debitado (amount + taxa)
     const withdrawalId = crypto.randomUUID();
     const savedResult = await sql`
       INSERT INTO withdrawals (
@@ -213,18 +272,18 @@ export async function POST(request: NextRequest) {
       )
       VALUES (
         ${withdrawalId}, ${sessionUser.id},
-        ${amount}, ${totalFee}, ${netAmount}, ${pixKey}, ${pixKeyType || mapPixKeyType(pixKey)},
+        ${totalDebit}, ${totalFee}, ${netAmount}, ${pixKey}, ${pixKeyType || mapPixKeyType(pixKey)},
         ${withdrawalStatus}, ${acquirerWithdrawalId}, NOW()
       )
       RETURNING id, acquirer_withdrawal_id
     `;
     
-    console.log(`[Withdrawal] Saque salvo: id=${withdrawalId}, acquirer_id=${acquirerWithdrawalId}, status=${withdrawalStatus}`);
+    console.log(`[Withdrawal] Saque salvo: id=${withdrawalId}, total_debit=${totalDebit}, net=${netAmount}, fee=${totalFee}, status=${withdrawalStatus}`);
 
     if (savedResult.length === 0) {
       // Reverter saldo se falhar ao salvar
       await sql`
-        UPDATE profiles SET balance = balance + ${amount} WHERE id = ${sessionUser.id}
+        UPDATE profiles SET balance = balance + ${totalDebit} WHERE id = ${sessionUser.id}
       `;
         
       return NextResponse.json(
@@ -253,6 +312,19 @@ export async function POST(request: NextRequest) {
         NOW()
       )
     `;
+    
+    // Log para Discord
+    logWithdrawalRequest({
+      withdrawalId: withdrawalId,
+      userName: user.name || "N/A",
+      userEmail: user.email,
+      userDocument: (user as unknown as { cpf_cnpj?: string }).cpf_cnpj,
+      amount: totalDebit,
+      fee: totalFee,
+      netAmount: netAmount,
+      pixKey: pixKey,
+      pixKeyType: pixKeyType || mapPixKeyType(pixKey),
+    });
 
     // Notificar usuário
     await sql`

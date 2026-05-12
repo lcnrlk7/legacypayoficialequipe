@@ -1,8 +1,7 @@
 "use client"
 
-import { Bell, Search, Trophy } from "lucide-react"
+import { Bell, Trophy } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { useProfile } from "@/components/profile-provider"
 
 interface Profile {
@@ -92,19 +91,8 @@ export function DashboardHeader({ profile }: HeaderProps) {
     : 100;
 
   return (
-    <header className="h-14 sm:h-16 lg:h-20 bg-card border-b border-border flex items-center justify-between pl-14 pr-3 sm:pl-4 sm:pr-4 lg:px-8">
-      {/* Search - hidden on mobile */}
-      <div className="hidden md:flex items-center gap-2 flex-1 max-w-md">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar transações..."
-            className="pl-9 bg-secondary border-border"
-          />
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3 sm:gap-6 ml-auto">
+    <header className="hidden lg:flex h-16 bg-card border-b border-border items-center justify-end px-8">
+      <div className="flex items-center gap-3 sm:gap-6">
         {/* Rewards Progress - hidden on very small screens */}
         <div className="hidden sm:flex items-center gap-2">
           <Trophy className="w-4 h-4 text-orange-500" />

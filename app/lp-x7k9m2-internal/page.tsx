@@ -42,8 +42,9 @@ export default function SecretAdminLogin() {
       localStorage.setItem("lp_admin_email", data.member.email);
       localStorage.setItem("lp_admin_login_time", (data.loginTime || Date.now()).toString());
 
-      // Redirecionar baseado no role
-      router.push(data.redirectUrl || "/lp-x7k9m2-internal/ceo");
+      // Redirecionar usando window.location para garantir que os cookies sejam aplicados
+      const redirectUrl = data.redirectUrl || "/lp-x7k9m2-internal/ceo";
+      window.location.href = redirectUrl;
     } catch (err) {
       console.error("Login error:", err);
       setError("Erro ao fazer login. Tente novamente.");

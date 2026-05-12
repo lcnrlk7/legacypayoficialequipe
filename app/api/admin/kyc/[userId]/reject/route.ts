@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { neon } from "@neondatabase/serverless";
 import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
+import { logKYCStatusUpdate, logAdminAction } from "@/lib/discord-webhook";
 
 export async function POST(
   request: Request,
@@ -53,6 +54,25 @@ export async function POST(
         NOW()
       )
     `;
+    
+    // Log para Discord
+    logKYCStatusUpdate({
+      userId: userId,
+      userName: userCheck[0].name as string,
+      userEmail: userCheck[0].email as string,
+      oldStatus: "pending",
+      newStatus: "rejected",
+      adminName: admin.name || "Admin",
+      reason: reason || "Documentos invalidos",
+    });
+    
+    logAdminAction({
+      adminName: admin.name || "Admin",
+      adminEmail: admin.email || "",
+      action: "KYC Rejeitado",
+      target: `${userCheck[0].name} (${userCheck[0].email})`,
+      details: reason || "Documentos invalidos",
+    });
 
     return NextResponse.json({ 
       success: true, 

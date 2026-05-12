@@ -15,7 +15,10 @@ import {
   ArrowUpDown,
   Plus,
   Minus,
+  ShieldX,
+  KeyRound,
 } from "lucide-react";
+import Image from "next/image";
 
 interface UserProfile {
   id: string;
@@ -28,11 +31,34 @@ interface UserProfile {
   is_active: boolean;
   role: string;
   route_type: string;
+  acquirer_id: string | null;
   daily_limit: number;
   fee_percentage: number | null;
   fixed_fee: number | null;
   withdrawal_fee: number | null;
+  // Taxas personalizadas (tem prioridade sobre fee_percentage/withdrawal_fee)
+  custom_fee_percentage: number | null;
+  custom_withdrawal_fee: number | null;
+  custom_withdrawal_fee_is_percentage: boolean | null;
+  last_ip: string | null;
   created_at: string;
+  avatar_url: string | null;
+  bio: string | null;
+  has_2fa?: boolean;
+}
+
+interface Acquirer {
+  id: string;
+  name: string;
+  code: string;
+  route_type: string;
+  fee_percentage: number;
+  fixed_fee: number;
+  fee_is_percentage: boolean;
+  withdrawal_fee: number;
+  withdrawal_fee_is_percentage: boolean;
+  min_deposit: number;
+  min_withdrawal: number;
 }
 
 interface Filters {
@@ -43,6 +69,7 @@ interface Filters {
 
 export default function UsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [acquirers, setAcquirers] = useState<Acquirer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
@@ -52,12 +79,15 @@ export default function UsersPage() {
   const [balanceAmount, setBalanceAmount] = useState("");
   const [balanceReason, setBalanceReason] = useState("");
   const [isUpdatingBalance, setIsUpdatingBalance] = useState(false);
+  const [blockingIp, setBlockingIp] = useState<string | null>(null);
+  const [disabling2FA, setDisabling2FA] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     daily_limit: 0,
     fee_percentage: "",
     fixed_fee: "",
     withdrawal_fee: "",
     route_type: "white",
+    acquirer_id: "",
     is_active: true,
   });
   
@@ -71,7 +101,20 @@ export default function UsersPage() {
 
   useEffect(() => {
     loadUsers();
+    loadAcquirers();
   }, []);
+  
+  async function loadAcquirers() {
+    try {
+      const response = await fetch("/api/admin/acquirers");
+      const data = await response.json();
+      if (data.acquirers) {
+        setAcquirers(data.acquirers);
+      }
+    } catch (error) {
+      console.error("Error loading acquirers:", error);
+    }
+  }
 
   // Filtrar e ordenar usuários
   const filteredUsers = useMemo(() => {
@@ -142,28 +185,29 @@ export default function UsersPage() {
 
   const [isUpdatingUser, setIsUpdatingUser] = useState(false);
 
-  async function updateUser() {
-    if (!selectedUser) return;
-
-    // Validações
-    const feeValue = editForm.fee_percentage ? parseFloat(editForm.fee_percentage) : 2.5;
-    if (feeValue < 0 || feeValue > 100) {
-      alert("A taxa deve estar entre 0% e 100%");
-      return;
-    }
-
-    // Taxa de saque: usar valor informado ou padrão baseado na rota
-    const defaultWithdrawalFee = editForm.route_type === "white" ? 2 : 5;
-    const withdrawalFeeValue = editForm.withdrawal_fee ? parseFloat(editForm.withdrawal_fee) : defaultWithdrawalFee;
-    if (withdrawalFeeValue < 0) {
-      alert("A taxa de saque não pode ser negativa");
-      return;
-    }
-
-    // Taxa fixa: usar valor informado ou padrao baseado na rota
-    // WHITE: R$ 1.50 fixo | BLACK: R$ 0.00 (Medusa cobra 4% sem fixo)
-    const defaultFixedFee = editForm.route_type === "white" ? 1.50 : 0;
-    const fixedFeeValue = editForm.fixed_fee ? parseFloat(editForm.fixed_fee) : defaultFixedFee;
+async function updateUser() {
+  if (!selectedUser) return;
+  
+  // Buscar adquirente selecionada para usar taxas padrao
+  const selectedAcquirer = acquirers.find(a => a.id === editForm.acquirer_id);
+  
+  // Validações
+  const feeValue = editForm.fee_percentage ? parseFloat(editForm.fee_percentage) : (selectedAcquirer?.fee_percentage ?? 2.5);
+  if (feeValue < 0 || feeValue > 100) {
+    alert("A taxa deve estar entre 0% e 100%");
+    return;
+  }
+  
+  // Taxa de saque: usar valor informado ou padrão da adquirente
+  const defaultWithdrawalFee = selectedAcquirer?.withdrawal_fee ?? (editForm.route_type === "white" ? 4 : 5);
+  const withdrawalFeeValue = editForm.withdrawal_fee ? parseFloat(editForm.withdrawal_fee) : defaultWithdrawalFee;
+  if (withdrawalFeeValue < 0) {
+    alert("A taxa de saque não pode ser negativa");
+    return;
+  }
+  
+  // Taxa fixa: usar valor informado ou 0
+  const fixedFeeValue = editForm.fixed_fee ? parseFloat(editForm.fixed_fee) : 0;
     if (fixedFeeValue < 0) {
       alert("A taxa fixa não pode ser negativa");
       return;
@@ -176,6 +220,7 @@ export default function UsersPage() {
     }
 
     setIsUpdatingUser(true);
+    
     try {
       const response = await fetch("/api/admin/users", {
         method: "PUT",
@@ -189,6 +234,7 @@ export default function UsersPage() {
             fixed_fee: fixedFeeValue,
             withdrawal_fee: withdrawalFeeValue,
             route_type: editForm.route_type,
+            acquirer_id: editForm.acquirer_id || null,
             is_active: editForm.is_active,
           },
         }),
@@ -209,6 +255,74 @@ export default function UsersPage() {
       alert("Erro ao atualizar usuário");
     } finally {
       setIsUpdatingUser(false);
+    }
+  }
+
+  async function blockUserIp(user: UserProfile) {
+    if (!user.last_ip) {
+      alert("Este usuario nao tem IP registrado");
+      return;
+    }
+    
+    if (!confirm(`Tem certeza que deseja bloquear o IP ${user.last_ip}?\n\nO usuario sera bloqueado permanentemente e vera uma tela de acesso negado.`)) {
+      return;
+    }
+    
+    setBlockingIp(user.id);
+    try {
+      const response = await fetch("/api/admin/blocked-ips", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ip_address: user.last_ip,
+          reason: "Bloqueio manual pelo painel CEO",
+          user_id: user.id,
+        }),
+      });
+      
+      if (response.ok) {
+        alert(`IP ${user.last_ip} bloqueado com sucesso!`);
+        loadUsers();
+      } else {
+        const data = await response.json();
+        alert(data.error || "Erro ao bloquear IP");
+      }
+    } catch (error) {
+      console.error("Erro ao bloquear IP:", error);
+      alert("Erro ao bloquear IP");
+    } finally {
+      setBlockingIp(null);
+    }
+  }
+
+  async function disableUser2FA(user: UserProfile) {
+    if (!user.has_2fa) {
+      alert("Este usuario nao tem 2FA ativado");
+      return;
+    }
+    
+    if (!confirm(`Tem certeza que deseja desativar a autenticacao de dois fatores de ${user.name || user.email}?`)) {
+      return;
+    }
+    
+    setDisabling2FA(user.id);
+    try {
+      const response = await fetch(`/api/admin/users/${user.id}/disable-2fa`, {
+        method: "DELETE",
+      });
+      
+      if (response.ok) {
+        alert("2FA desativado com sucesso!");
+        loadUsers();
+      } else {
+        const data = await response.json();
+        alert(data.error || "Erro ao desativar 2FA");
+      }
+    } catch (error) {
+      console.error("Erro ao desativar 2FA:", error);
+      alert("Erro ao desativar 2FA");
+    } finally {
+      setDisabling2FA(null);
     }
   }
 
@@ -286,16 +400,34 @@ export default function UsersPage() {
     setShowBalanceModal(true);
   };
 
-  const openEditModal = (user: UserProfile) => {
-    setSelectedUser(user);
-    const defaultWithdrawalFee = user.route_type === "white" ? 2 : 5;
-    const defaultFixedFee = user.route_type === "white" ? 1.50 : 1.00;
+const openEditModal = (user: UserProfile) => {
+  setSelectedUser(user);
+  
+  // Buscar a adquirente do usuario ou a primeira da rota dele
+  let acquirerId = user.acquirer_id || "";
+  let userAcquirer = acquirers.find(a => a.id === user.acquirer_id);
+  
+  if (!acquirerId && acquirers.length > 0) {
+    const defaultAcquirer = acquirers.find(a => a.route_type === (user.route_type || "white"));
+    if (defaultAcquirer) {
+      acquirerId = defaultAcquirer.id;
+      userAcquirer = defaultAcquirer;
+    }
+  }
+  
+    // Prioridade de taxas: custom > legado > adquirente > default
+    // Se tem taxa personalizada, mostrar ela; senao mostrar da rota
+    const feePercentage = user.custom_fee_percentage ?? user.fee_percentage ?? userAcquirer?.fee_percentage ?? 2.5;
+    const withdrawalFee = user.custom_withdrawal_fee ?? user.withdrawal_fee ?? userAcquirer?.withdrawal_fee ?? (user.route_type === "white" ? 4 : 5);
+    const fixedFee = user.fixed_fee ?? 0;
+    
     setEditForm({
       daily_limit: user.daily_limit || 10000,
-      fee_percentage: user.fee_percentage?.toString() || "2.5",
-      fixed_fee: user.fixed_fee?.toString() || defaultFixedFee.toString(),
-      withdrawal_fee: user.withdrawal_fee?.toString() || defaultWithdrawalFee.toString(),
+      fee_percentage: feePercentage.toString(),
+      fixed_fee: fixedFee.toString(),
+      withdrawal_fee: withdrawalFee.toString(),
       route_type: user.route_type || "white",
+      acquirer_id: acquirerId,
       is_active: user.is_active,
     });
     setShowModal(true);
@@ -533,8 +665,18 @@ export default function UsersPage() {
                 <tr key={user.id} className="hover:bg-secondary transition-colors">
                   <td className="p-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="w-5 h-5 text-primary" />
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+                        {user.avatar_url ? (
+                          <Image
+                            src={user.avatar_url}
+                            alt={user.name || "Avatar"}
+                            width={40}
+                            height={40}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <User className="w-5 h-5 text-primary" />
+                        )}
                       </div>
                       <div>
                         <p className="font-medium text-white">
@@ -543,6 +685,11 @@ export default function UsersPage() {
                         <p className="text-sm text-muted-foreground">
                           {user.email}
                         </p>
+                        {user.bio && (
+                          <p className="text-xs text-muted-foreground/70 max-w-[200px] truncate" title={user.bio}>
+                            {user.bio}
+                          </p>
+                        )}
                         <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
                           <span>CPF: {formatCPF(user.cpf)}</span>
                           <span>Tel: {formatPhone(user.phone)}</span>
@@ -555,11 +702,20 @@ export default function UsersPage() {
                       {formatCurrency(Number(user.balance) || 0)}
                     </p>
                   </td>
-                  <td className="p-4">
-                    <p className="font-medium text-yellow-400">
-                      {user.fee_percentage ? `${Number(user.fee_percentage).toFixed(2)}%` : "Padrão"}
-                    </p>
-                  </td>
+                            <td className="p-4">
+                              <div className="flex flex-col">
+                                <p className="font-medium text-yellow-400">
+                                  {user.custom_fee_percentage !== null && user.custom_fee_percentage !== undefined
+                                    ? `${Number(user.custom_fee_percentage).toFixed(2)}%`
+                                    : user.fee_percentage 
+                                      ? `${Number(user.fee_percentage).toFixed(2)}%` 
+                                      : "Padrao"}
+                                </p>
+                                {user.custom_fee_percentage !== null && user.custom_fee_percentage !== undefined && (
+                                  <span className="text-xs text-green-400">Personalizada</span>
+                                )}
+                              </div>
+                            </td>
                   <td className="p-4">
                     <span
                       className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -631,15 +787,43 @@ export default function UsersPage() {
                         }`}
                         title={user.is_active ? "Bloquear" : "Desbloquear"}
                       >
-                        {user.is_active ? (
-                          <Ban className="w-4 h-4" />
-                        ) : (
-                          <CheckCircle className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+  {user.is_active ? (
+  <Ban className="w-4 h-4" />
+  ) : (
+  <CheckCircle className="w-4 h-4" />
+  )}
+  </button>
+  {user.last_ip && (
+    <button
+      onClick={() => blockUserIp(user)}
+      disabled={blockingIp === user.id}
+      className="p-2 rounded-lg transition-colors hover:bg-red-500/10 text-muted-foreground hover:text-red-400 disabled:opacity-50"
+      title={`Bloquear IP: ${user.last_ip}`}
+    >
+{blockingIp === user.id ? (
+  <Loader2 className="w-4 h-4 animate-spin" />
+  ) : (
+  <ShieldX className="w-4 h-4" />
+  )}
+  </button>
+  )}
+  {user.has_2fa && (
+  <button
+  onClick={() => disableUser2FA(user)}
+  disabled={disabling2FA === user.id}
+  className="p-2 rounded-lg transition-colors hover:bg-orange-500/10 text-muted-foreground hover:text-orange-400 disabled:opacity-50"
+  title="Desativar 2FA"
+  >
+  {disabling2FA === user.id ? (
+  <Loader2 className="w-4 h-4 animate-spin" />
+  ) : (
+  <KeyRound className="w-4 h-4" />
+  )}
+  </button>
+  )}
+  </div>
+  </td>
+  </tr>
               ))}
             </tbody>
           </table>
@@ -754,7 +938,7 @@ export default function UsersPage() {
                     type="number"
                     step="0.5"
                     min="0"
-                    placeholder={editForm.route_type === "white" ? "2.00" : "5.00"}
+                    placeholder="5.00"
                     value={editForm.withdrawal_fee}
                     onChange={(e) =>
                       setEditForm({
@@ -765,7 +949,7 @@ export default function UsersPage() {
                     className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Padrao Rota White: R$ 2,00 | Padrao Rota Black: R$ 5,00
+                    MisticPay: R$ 2,00 | Medusa: R$ 5,00
                   </p>
                 </div>
               </div>
@@ -774,38 +958,55 @@ export default function UsersPage() {
                   Rota
                 </label>
                 <select
-                  value={editForm.route_type}
+                  value={editForm.acquirer_id || ""}
                   onChange={(e) => {
-                    const newRoute = e.target.value;
-                    // WHITE: 0% + R$ 1.50 fixo, R$ 2.00 saque
-                    // BLACK: 4% + R$ 0.00 fixo, R$ 5.00 saque
-                    const newWithdrawalFee = newRoute === "white" ? "2" : "5";
-                    const newFixedFee = newRoute === "white" ? "1.50" : "0";
-                    const newFeePercentage = newRoute === "white" ? "0" : "4";
-                    setEditForm({ 
-                      ...editForm, 
-                      route_type: newRoute,
-                      withdrawal_fee: newWithdrawalFee,
-                      fixed_fee: newFixedFee,
-                      fee_percentage: newFeePercentage,
-                    });
+                    const selectedAcquirer = acquirers.find(a => a.id === e.target.value);
+                    if (selectedAcquirer) {
+                      setEditForm({
+                        ...editForm,
+                        acquirer_id: selectedAcquirer.id,
+                        route_type: selectedAcquirer.route_type,
+                        fee_percentage: selectedAcquirer.fee_percentage.toString(),
+                        withdrawal_fee: selectedAcquirer.withdrawal_fee.toString(),
+                        fixed_fee: "0",
+                      });
+                    }
                   }}
                   className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white focus:outline-none focus:border-primary/50"
                 >
-                  <option value="white" className="bg-card">
-                    Rota White (MisticPay) - Taxa: R$ 1,50 fixo | Saque: R$ 2,00
-                  </option>
-                  <option value="black" className="bg-card">
-                    Rota Black (Medusa) - Taxa: 4% | Saque: R$ 5,00
-                  </option>
+                  {acquirers.filter(a => a.route_type === "white").length > 0 && (
+                    <optgroup label="WHITE" className="bg-card text-muted-foreground">
+                      {acquirers.filter(a => a.route_type === "white").map(acq => {
+                        const taxaEntrada = acq.fee_is_percentage ? `${acq.fee_percentage}%` : `R$ ${Number(acq.fixed_fee || 0).toFixed(2)}`;
+                        const taxaSaque = acq.withdrawal_fee_is_percentage ? `${acq.withdrawal_fee}%` : `R$ ${Number(acq.withdrawal_fee).toFixed(2)}`;
+                        return (
+                          <option key={acq.id} value={acq.id} className="bg-card text-white">
+                            Rota White ({acq.name}) - Taxa: {taxaEntrada} | Saque: {taxaSaque}
+                          </option>
+                        );
+                      })}
+                    </optgroup>
+                  )}
+                  {acquirers.filter(a => a.route_type === "black").length > 0 && (
+                    <optgroup label="BLACK" className="bg-card text-muted-foreground">
+                      {acquirers.filter(a => a.route_type === "black").map(acq => {
+                        const taxaEntrada = acq.fee_is_percentage ? `${acq.fee_percentage}%` : `R$ ${Number(acq.fixed_fee || 0).toFixed(2)}`;
+                        const taxaSaque = acq.withdrawal_fee_is_percentage ? `${acq.withdrawal_fee}%` : `R$ ${Number(acq.withdrawal_fee).toFixed(2)}`;
+                        return (
+                          <option key={acq.id} value={acq.id} className="bg-card text-white">
+                            Rota Black ({acq.name}) - Taxa: {taxaEntrada} | Saque: {taxaSaque}
+                          </option>
+                        );
+                      })}
+                    </optgroup>
+                  )}
                 </select>
                 <p className="text-xs text-muted-foreground mt-2">
-                  {editForm.route_type === "white" 
-                    ? "Rota White (MisticPay): Taxa fixa de R$ 1,50 por transacao + R$ 2,00 por saque" 
-                    : "Rota Black (Medusa): Taxa de 4% por transacao + R$ 5,00 por saque"}
+                  Selecione a adquirente/rota do usuario
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+  
+  <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
                   id="is_active"

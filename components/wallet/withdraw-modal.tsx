@@ -1,18 +1,32 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Loader2, AlertCircle, CheckCircle, Key, ArrowLeft, Wallet, Mail, Phone, CreditCard, Hash } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle, Key, ArrowLeft, Wallet, Mail, Phone, CreditCard, Hash, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { calculateWithdrawalFee, formatCurrency, validatePixKey } from '@/lib/pix-validator';
+import { WithdrawalReceipt } from './withdrawal-receipt';
 
 interface PixKey {
   id: string;
   key_type: string;
   key_value: string;
   is_primary: boolean;
+}
+
+interface WithdrawalData {
+  id: string;
+  amount: number;
+  fee: number;
+  netAmount: number;
+  pixKey: string;
+  pixKeyType: string;
+  recipientName?: string;
+  recipientBank?: string;
+  status: string;
+  createdAt: string;
 }
 
 interface WithdrawModalProps {
@@ -22,7 +36,8 @@ interface WithdrawModalProps {
   loading: boolean;
   error: string | null;
   withdrawSuccess: boolean;
-  onWithdraw: (amount: number, pixKey: string) => Promise<void>;
+  withdrawalData?: WithdrawalData | null;
+  onWithdraw: (amount: number, pixKey: string, pixKeyType: string) => Promise<void>;
   onClose: () => void;
 }
 
@@ -46,6 +61,7 @@ export function WithdrawModal({
   loading,
   error,
   withdrawSuccess,
+  withdrawalData,
   onWithdraw,
   onClose,
 }: WithdrawModalProps) {
@@ -57,6 +73,7 @@ export function WithdrawModal({
   const [manualKeyType, setManualKeyType] = useState('cpf');
   const [manualKeyValue, setManualKeyValue] = useState('');
   const [localError, setLocalError] = useState<string | null>(null);
+  const [showReceipt, setShowReceipt] = useState(false);
 
   // Calculate fee when amount changes
   const amount = parseFloat(withdrawAmount) || 0;
@@ -113,22 +130,23 @@ export function WithdrawModal({
     }
 
     if (amount < (systemSettings.minWithdrawal || 3)) {
-      setLocalError(`Valor minimo: ${formatCurrency(systemSettings.minWithdrawal || 3)}`);
+      setLocalError(`Valor minimo para receber: ${formatCurrency(systemSettings.minWithdrawal || 3)}`);
       return;
     }
 
-    if (amount > balance) {
-      setLocalError('Saldo insuficiente para esta transferencia');
+    // Verificar se o saldo cobre o valor + taxa
+    if (totalDebit > balance) {
+      setLocalError(`Saldo insuficiente. Para receber ${formatCurrency(amount)}, voce precisa de ${formatCurrency(totalDebit)} (valor + taxa de ${formatCurrency(withdrawalFee)})`);
       return;
     }
 
-    if (feeCalculation.netAmount <= 0) {
-      setLocalError(`Valor muito baixo. Apos taxas de R$ ${feeCalculation.totalFee.toFixed(2)}, nao sobraria valor para transferir.`);
+    if (amount <= 0) {
+      setLocalError('Informe um valor valido para receber');
       return;
     }
 
     try {
-      await onWithdraw(amount, withdrawPixKey);
+      await onWithdraw(amount, withdrawPixKey, pixKeyType);
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : 'Erro ao processar saque');
     }
@@ -137,9 +155,27 @@ export function WithdrawModal({
   const displayError = localError || error;
   const minWithdrawal = systemSettings.minWithdrawal || 25;
   const maxWithdrawal = systemSettings.maxWithdrawal || 50000;
+  
+  // Valor máximo que o usuário pode RECEBER = saldo - taxa de saque
+  const maxReceivable = Math.max(0, balance - withdrawalFee);
+  // Total que será debitado do saldo = valor que quer receber + taxa
+  const totalDebit = amount + withdrawalFee;
 
   // Success state
   if (withdrawSuccess) {
+    // Se tem dados do saque e usuario quer ver comprovante
+    if (showReceipt && withdrawalData) {
+      return (
+        <WithdrawalReceipt 
+          withdrawal={withdrawalData} 
+          onClose={() => {
+            setShowReceipt(false);
+            onClose();
+          }} 
+        />
+      );
+    }
+
     return (
       <div className="text-center space-y-4 py-6">
         <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
@@ -148,20 +184,32 @@ export function WithdrawModal({
         <div>
           <h3 className="font-semibold text-foreground">Saque Solicitado!</h3>
           <p className="text-sm text-muted-foreground mt-1">
-            Valor: {formatCurrency(amount)}
+            Valor: {formatCurrency(amount || withdrawalData?.amount || 0)}
           </p>
           <p className="text-sm text-muted-foreground">
-            Chave: {withdrawPixKey}
+            Chave: {withdrawPixKey || withdrawalData?.pixKey}
           </p>
           <p className="text-xs text-muted-foreground mt-2">
-            {amount <= 500
+            {(amount || withdrawalData?.amount || 0) <= 500
               ? 'Seu saque sera processado em breve'
               : 'Seu saque foi enviado para aprovacao'}
           </p>
         </div>
-        <Button onClick={onClose} className="w-full bg-primary hover:bg-primary/90">
-          Fechar
-        </Button>
+        <div className="flex gap-3">
+          {withdrawalData && (
+            <Button 
+              onClick={() => setShowReceipt(true)} 
+              variant="outline"
+              className="flex-1"
+            >
+              <FileText className="w-4 h-4 mr-2" />
+              Comprovante
+            </Button>
+          )}
+          <Button onClick={onClose} className={`bg-primary hover:bg-primary/90 ${withdrawalData ? 'flex-1' : 'w-full'}`}>
+            Fechar
+          </Button>
+        </div>
       </div>
     );
   }
@@ -371,7 +419,7 @@ export function WithdrawModal({
 
           {/* Amount Input */}
           <div className="space-y-2">
-            <label className="text-sm font-medium text-foreground">Valor do saque</label>
+            <label className="text-sm font-medium text-foreground">Quanto voce quer receber?</label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
               <Input
@@ -384,37 +432,50 @@ export function WithdrawModal({
                 }}
                 className="pl-10 bg-secondary border-border text-lg h-12"
                 min={minWithdrawal}
-                max={maxWithdrawal}
+                max={maxReceivable}
                 step="0.01"
                 autoFocus
               />
             </div>
-            <p className="text-xs text-muted-foreground">
-              Minimo: {formatCurrency(minWithdrawal)} | Maximo: {formatCurrency(maxWithdrawal)}
-            </p>
+            <div className="space-y-2 mt-3">
+              <div className="p-3 bg-primary/10 border border-primary/30 rounded-lg">
+                <p className="text-sm text-primary font-medium">
+                  Para sacar tudo, coloque: {formatCurrency(maxReceivable)}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Taxa de saque: {formatCurrency(withdrawalFee)} | Minimo: {formatCurrency(minWithdrawal)}
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Fee Breakdown */}
           {amount > 0 && (
             <div className="p-4 bg-secondary rounded-xl space-y-3 border border-border">
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Valor do saque:</span>
-                <span className="font-medium text-foreground">{formatCurrency(feeCalculation.amount)}</span>
+                <span className="text-muted-foreground">Voce recebe:</span>
+                <span className="font-bold text-xl text-primary">{formatCurrency(amount)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Taxa de saque:</span>
-                <span className="font-medium text-red-400">- {formatCurrency(feeCalculation.totalFee)}</span>
+                <span className="font-medium text-red-400">+ {formatCurrency(withdrawalFee)}</span>
               </div>
               <div className="border-t border-border pt-3 flex justify-between">
-                <span className="font-semibold text-foreground">Destinatario recebe:</span>
-                <span className={`font-bold text-xl ${feeCalculation.netAmount > 0 ? 'text-primary' : 'text-red-400'}`}>
-                  {formatCurrency(feeCalculation.netAmount)}
+                <span className="font-semibold text-foreground">Total debitado do saldo:</span>
+                <span className={`font-bold text-lg ${totalDebit <= balance ? 'text-foreground' : 'text-red-400'}`}>
+                  {formatCurrency(totalDebit)}
                 </span>
               </div>
-              <div className="flex justify-between text-xs text-muted-foreground">
-                <span>Total debitado do saldo:</span>
-                <span>{formatCurrency(feeCalculation.total)}</span>
-              </div>
+              {totalDebit > balance && (
+                <p className="text-xs text-red-400">
+                  Saldo insuficiente! Voce precisa de {formatCurrency(totalDebit)} mas tem apenas {formatCurrency(balance)}
+                </p>
+              )}
+              {amount > 400 && (
+                <p className="text-xs text-yellow-500 mt-2">
+                  Saques acima de R$ 400,00 requerem aprovacao manual.
+                </p>
+              )}
             </div>
           )}
 

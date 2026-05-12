@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   Link2,
   Edit3,
+  BarChart3,
 } from "lucide-react";
 
 interface Integration {
@@ -74,9 +75,18 @@ export default function IntegrationPage() {
   const [webhookInputs, setWebhookInputs] = useState<Record<string, string>>({});
   const [savingWebhook, setSavingWebhook] = useState<string | null>(null);
 
+  // UTMify states
+  const [utmifyToken, setUtmifyToken] = useState("");
+  const [utmifyIntegrated, setUtmifyIntegrated] = useState(false);
+  const [utmifyTokenPreview, setUtmifyTokenPreview] = useState<string | null>(null);
+  const [utmifyLoading, setUtmifyLoading] = useState(false);
+  const [utmifyTesting, setUtmifyTesting] = useState(false);
+  const [showUtmifyToken, setShowUtmifyToken] = useState(false);
+
   useEffect(() => {
     loadIntegrations();
     loadProfile();
+    loadUtmifyStatus();
   }, []);
 
   async function loadProfile() {
@@ -88,6 +98,75 @@ export default function IntegrationPage() {
       }
     } catch (error) {
       console.error("Erro ao carregar profile:", error);
+    }
+  }
+
+  async function loadUtmifyStatus() {
+    try {
+      const response = await fetch("/api/integrations/utmify");
+      const data = await response.json();
+      setUtmifyIntegrated(data.integrated);
+      setUtmifyTokenPreview(data.tokenPreview);
+    } catch (error) {
+      console.error("Erro ao carregar status UTMify:", error);
+    }
+  }
+
+  async function saveUtmifyToken(testFirst: boolean = true) {
+    if (!utmifyToken.trim()) {
+      alert("Insira o token da API UTMify");
+      return;
+    }
+    
+    setUtmifyLoading(true);
+    if (testFirst) setUtmifyTesting(true);
+    
+    try {
+      const response = await fetch("/api/integrations/utmify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          apiToken: utmifyToken.trim(),
+          testConnection: testFirst 
+        }),
+      });
+      const data = await response.json();
+      
+      if (data.success) {
+        alert("Integracao UTMify configurada com sucesso!");
+        setUtmifyToken("");
+        loadUtmifyStatus();
+      } else {
+        alert(data.error || "Erro ao configurar UTMify");
+      }
+    } catch (error) {
+      console.error("Erro ao salvar UTMify:", error);
+      alert("Erro ao configurar UTMify");
+    } finally {
+      setUtmifyLoading(false);
+      setUtmifyTesting(false);
+    }
+  }
+
+  async function removeUtmify() {
+    if (!confirm("Tem certeza que deseja remover a integracao com UTMify?")) return;
+    
+    setUtmifyLoading(true);
+    try {
+      const response = await fetch("/api/integrations/utmify", { method: "DELETE" });
+      const data = await response.json();
+      
+      if (data.success) {
+        alert("Integracao UTMify removida");
+        loadUtmifyStatus();
+      } else {
+        alert(data.error || "Erro ao remover integracao");
+      }
+    } catch (error) {
+      console.error("Erro ao remover UTMify:", error);
+      alert("Erro ao remover integracao");
+    } finally {
+      setUtmifyLoading(false);
     }
   }
 
@@ -392,6 +471,120 @@ export default function IntegrationPage() {
         >
           Ver documentacao da API
         </button>
+      </motion.div>
+
+      {/* UTMify Integration */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="bg-card border border-border rounded-2xl p-4 sm:p-6"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+            <BarChart3 className="w-5 h-5 text-blue-500" />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="text-base sm:text-lg font-semibold text-foreground">
+                UTMify
+              </h2>
+              {utmifyIntegrated && (
+                <span className="text-xs bg-green-500/20 text-green-500 px-2 py-0.5 rounded-full">
+                  Conectado
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Rastreie suas conversoes e campanhas de marketing
+            </p>
+          </div>
+          {utmifyIntegrated && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={removeUtmify}
+              disabled={utmifyLoading}
+              className="text-destructive hover:bg-destructive/10"
+            >
+              {utmifyLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            </Button>
+          )}
+        </div>
+
+        {utmifyIntegrated ? (
+          <div className="bg-secondary/30 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-muted-foreground">Token Configurado</span>
+              <code className="text-xs font-mono text-foreground bg-background px-2 py-1 rounded">
+                {utmifyTokenPreview || "Configurado"}
+              </code>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Suas transacoes PIX serao enviadas automaticamente para o UTMify. 
+              Certifique-se de enviar os parametros UTM na criacao do pagamento.
+            </p>
+            <div className="mt-3 p-3 bg-background rounded-lg">
+              <p className="text-xs text-muted-foreground mb-2">Parametros suportados na API de criacao PIX:</p>
+              <code className="text-xs font-mono text-primary block">
+                utm_source, utm_campaign, utm_medium, utm_content, utm_term, src, sck
+              </code>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="bg-secondary/30 rounded-xl p-4">
+              <p className="text-sm text-muted-foreground mb-3">
+                Conecte sua conta UTMify para rastrear a origem das suas vendas e 
+                medir o desempenho das suas campanhas de marketing.
+              </p>
+              <ol className="text-xs text-muted-foreground space-y-2 list-decimal list-inside">
+                <li>Acesse sua conta no <a href="https://utmify.com.br" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">UTMify</a></li>
+                <li>Va em Integracoes &gt; Webhooks &gt; Credenciais de API</li>
+                <li>Clique em &quot;Adicionar Credencial&quot; e copie o token gerado</li>
+                <li>Cole o token no campo abaixo</li>
+              </ol>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="flex-1 relative">
+                <Input
+                  type={showUtmifyToken ? "text" : "password"}
+                  placeholder="Cole seu token da API UTMify"
+                  value={utmifyToken}
+                  onChange={(e) => setUtmifyToken(e.target.value)}
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowUtmifyToken(!showUtmifyToken)}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 p-0"
+                >
+                  {showUtmifyToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </Button>
+              </div>
+              <Button
+                onClick={() => saveUtmifyToken(true)}
+                disabled={utmifyLoading || !utmifyToken.trim()}
+                className="bg-blue-500 hover:bg-blue-600"
+              >
+                {utmifyLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {utmifyTesting ? "Testando..." : "Salvando..."}
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Conectar UTMify
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* Integrations List */}
@@ -1017,16 +1210,41 @@ export default function IntegrationPage() {
 
                 {/* Auth */}
                 <div className="bg-secondary/30 rounded-xl p-4">
-                  <h4 className="text-sm font-semibold text-foreground mb-2">Autenticacao (Basic Auth)</h4>
+                  <h4 className="text-sm font-semibold text-foreground mb-2">Autenticacao</h4>
                   <p className="text-sm text-muted-foreground mb-3">
-                    Junte Client ID + Client Secret com dois pontos e codifique em Base64:
+                    Voce pode autenticar de 3 formas diferentes:
                   </p>
-                  <code className="block p-3 bg-background rounded-lg text-xs font-mono mb-3">
-                    Authorization: Basic base64(client_id:client_secret)
-                  </code>
-                  <p className="text-xs text-muted-foreground mb-2">Exemplo em JavaScript:</p>
+                  
+                  <div className="space-y-3">
+                    <div className="bg-background rounded-lg p-3">
+                      <p className="text-xs font-semibold text-green-400 mb-1">Opcao 1: Headers separados (Recomendado)</p>
+                      <code className="block text-xs font-mono text-muted-foreground">
+                        x-client-id: seu_client_id{"\n"}
+                        x-client-secret: seu_client_secret
+                      </code>
+                    </div>
+                    
+                    <div className="bg-background rounded-lg p-3">
+                      <p className="text-xs font-semibold text-blue-400 mb-1">Opcao 2: Basic Auth</p>
+                      <code className="block text-xs font-mono text-muted-foreground">
+                        Authorization: Basic base64(client_id:client_secret)
+                      </code>
+                    </div>
+                    
+                    <div className="bg-background rounded-lg p-3">
+                      <p className="text-xs font-semibold text-purple-400 mb-1">Opcao 3: Bearer Token</p>
+                      <code className="block text-xs font-mono text-muted-foreground">
+                        Authorization: Bearer base64(client_id:client_secret)
+                      </code>
+                    </div>
+                  </div>
+                  
+                  <p className="text-xs text-muted-foreground mt-3 mb-2">Exemplo em JavaScript (Headers):</p>
                   <code className="block p-2 bg-background rounded-lg text-xs font-mono">
-                    {`const credentials = btoa(client_id + ":" + client_secret);`}
+{`headers: {
+  "x-client-id": "seu_client_id",
+  "x-client-secret": "seu_client_secret"
+}`}
                   </code>
                 </div>
 
@@ -1491,6 +1709,162 @@ console.log("Status:", status.data.status);`}
                         <span className="text-muted-foreground ml-1">- Cancelado</span>
                       </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* SAQUES / WITHDRAWALS */}
+                <div className="bg-orange-500/5 border border-orange-500/20 rounded-xl p-4">
+                  <h4 className="text-base font-semibold text-orange-400 mb-3">API de Saques (PIX Out)</h4>
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Realize saques programaticos para qualquer chave PIX diretamente via API.
+                  </p>
+                  
+                  {/* Criar Saque */}
+                  <div className="mb-4">
+                    <h5 className="text-sm font-semibold text-foreground mb-2">6. Criar Saque</h5>
+                    <p className="text-xs text-muted-foreground mb-2">POST /withdrawal</p>
+                    <code className="block p-3 bg-background rounded-lg text-xs font-mono whitespace-pre overflow-x-auto">
+{`{
+  "amount": 100.00,
+  "pix_key": "email@exemplo.com",
+  "pix_key_type": "email",
+  "external_id": "saque_123",
+  "description": "Saque do pedido 123"
+}`}
+                    </code>
+                    <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                      <p><strong>amount</strong> - Valor em reais (obrigatorio, minimo R$ 10)</p>
+                      <p><strong>pix_key</strong> - Chave PIX do destinatario (obrigatorio)</p>
+                      <p><strong>pix_key_type</strong> - Tipo da chave: cpf, cnpj, email, phone, random (obrigatorio)</p>
+                      <p><strong>external_id</strong> - Seu ID interno para rastrear (opcional)</p>
+                      <p><strong>description</strong> - Descricao do saque (opcional)</p>
+                    </div>
+                  </div>
+                  
+                  {/* Resposta Saque */}
+                  <div className="mb-4">
+                    <h5 className="text-xs font-semibold text-foreground mb-2">Resposta da Criacao do Saque:</h5>
+                    <code className="block p-3 bg-background rounded-lg text-xs font-mono whitespace-pre overflow-x-auto">
+{`{
+  "success": true,
+  "data": {
+    "withdrawal_id": "wd_abc123-uuid",
+    "external_id": "saque_123",
+    "amount": 100.00,
+    "fee": 5.00,
+    "net_amount": 95.00,
+    "pix_key": "email@exemplo.com",
+    "pix_key_type": "email",
+    "status": "pending",
+    "created_at": "2024-01-01T00:00:00Z"
+  }
+}`}
+                    </code>
+                  </div>
+                  
+                  {/* Consultar Status Saque */}
+                  <div className="mb-4">
+                    <h5 className="text-sm font-semibold text-foreground mb-2">7. Consultar Status do Saque</h5>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Consulte o status usando o withdrawal_id ou seu external_id:
+                    </p>
+                    <code className="block p-2 bg-background rounded-lg text-xs font-mono mb-2">
+                      GET /withdrawal?withdrawal_id=wd_abc123-uuid
+                    </code>
+                    <code className="block p-2 bg-background rounded-lg text-xs font-mono">
+                      GET /withdrawal?external_id=saque_123
+                    </code>
+                    
+                    <h6 className="text-xs font-semibold text-foreground mt-3 mb-2">Resposta:</h6>
+                    <code className="block p-3 bg-background rounded-lg text-xs font-mono whitespace-pre overflow-x-auto">
+{`{
+  "success": true,
+  "data": {
+    "withdrawal_id": "wd_abc123-uuid",
+    "external_id": "saque_123",
+    "status": "completed",
+    "amount": 100.00,
+    "fee": 5.00,
+    "net_amount": 95.00,
+    "pix_key": "email@exemplo.com",
+    "recipient_name": "JOAO DA SILVA",
+    "recipient_bank": "Banco Inter",
+    "completed_at": "2024-01-01T00:02:00Z"
+  }
+}`}
+                    </code>
+                  </div>
+                  
+                  {/* Status do Saque */}
+                  <div className="mb-4">
+                    <h5 className="text-xs font-semibold text-foreground mb-2">Status do Saque:</h5>
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="flex items-center gap-2 bg-background p-2 rounded-lg">
+                        <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                        <span><strong>pending</strong> - Aguardando processamento</span>
+                      </div>
+                      <div className="flex items-center gap-2 bg-background p-2 rounded-lg">
+                        <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                        <span><strong>processing</strong> - Em processamento</span>
+                      </div>
+                      <div className="flex items-center gap-2 bg-background p-2 rounded-lg">
+                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                        <span><strong>completed</strong> - Concluido com sucesso</span>
+                      </div>
+                      <div className="flex items-center gap-2 bg-background p-2 rounded-lg">
+                        <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                        <span><strong>failed</strong> - Falhou</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Exemplo Node.js Saque */}
+                  <div>
+                    <h5 className="text-xs font-semibold text-foreground mb-2">Exemplo - Node.js:</h5>
+                    <code className="block p-3 bg-background rounded-lg text-xs font-mono whitespace-pre overflow-x-auto">
+{`// Criar saque
+async function criarSaque(amount, pixKey, pixKeyType, externalId) {
+  const response = await fetch(\`\${BASE_URL}/withdrawal\`, {
+    method: "POST",
+    headers: {
+      "Authorization": \`Basic \${credentials}\`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      amount,
+      pix_key: pixKey,
+      pix_key_type: pixKeyType,
+      external_id: externalId
+    })
+  });
+  return response.json();
+}
+
+// Consultar status do saque
+async function consultarSaque(externalId) {
+  const response = await fetch(
+    \`\${BASE_URL}/withdrawal?external_id=\${externalId}\`,
+    { headers: { "Authorization": \`Basic \${credentials}\` } }
+  );
+  return response.json();
+}
+
+// Uso
+const saque = await criarSaque(100.00, "email@exemplo.com", "email", "saque_123");
+console.log("Saque criado:", saque.data.withdrawal_id);
+
+// Verificar status
+const status = await consultarSaque("saque_123");
+console.log("Status:", status.data.status);`}
+                    </code>
+                  </div>
+                  
+                  <div className="mt-3 p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                    <p className="text-xs text-red-400 font-medium">Importante:</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Saques sao debitados do seu saldo disponivel. Certifique-se de ter saldo suficiente 
+                      (valor + taxa) antes de criar um saque.
+                    </p>
                   </div>
                 </div>
 

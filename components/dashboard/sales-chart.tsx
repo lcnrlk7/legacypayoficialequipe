@@ -121,18 +121,15 @@ export function SalesChart({ transactions }: SalesChartProps) {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-card border border-border rounded-2xl p-4 sm:p-6"
+      className="bg-card border border-border rounded-lg p-4 sm:p-6"
     >
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <TrendingUp className="w-5 h-5 text-primary shrink-0" />
-          <div>
-            <h3 className="text-base sm:text-lg font-semibold text-foreground">Analise de Vendas</h3>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Visualize o desempenho das suas vendas
-            </p>
-          </div>
+        <div>
+          <h3 className="text-base sm:text-lg font-semibold text-foreground">Vendas por Hora</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Acompanhe o volume horario da sua empresa
+          </p>
         </div>
         <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-4">
           {/* Period Selector */}
@@ -180,8 +177,8 @@ export function SalesChart({ transactions }: SalesChartProps) {
           >
             <defs>
               <linearGradient id="colorVendas" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
+                <stop offset="5%" stopColor="#ff6a00" stopOpacity={0.4} />
+                <stop offset="95%" stopColor="#ff6a00" stopOpacity={0.05} />
               </linearGradient>
             </defs>
             <CartesianGrid 
@@ -206,25 +203,25 @@ export function SalesChart({ transactions }: SalesChartProps) {
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: '#1a1a1a',
-                border: '1px solid #333',
-                borderRadius: '12px',
-                padding: '12px',
+                backgroundColor: '#111111',
+                border: '1px solid #1f1f1f',
+                borderRadius: '6px',
+                padding: '10px 12px',
               }}
-              labelStyle={{ color: '#fff', fontWeight: 'bold', marginBottom: '4px' }}
+              labelStyle={{ color: '#fafafa', fontWeight: '600', marginBottom: '4px' }}
               formatter={(value: number) => [
                 new Intl.NumberFormat("pt-BR", {
                   style: "currency",
                   currency: "BRL",
                 }).format(value),
-                "Vendas"
+                "Receita"
               ]}
             />
             <Area
               type="monotone"
               dataKey="vendas"
-              stroke="#f97316"
-              strokeWidth={3}
+              stroke="#ff6a00"
+              strokeWidth={2}
               fill="url(#colorVendas)"
               animationDuration={1500}
               animationEasing="ease-out"

@@ -98,20 +98,7 @@ export async function GET(request: NextRequest) {
           payload
         );
 
-        // Criar notificação no banco também
-        await sql`
-          INSERT INTO user_notifications (id, user_id, title, message, type, read, created_at)
-          VALUES (
-            ${crypto.randomUUID()},
-            ${user.id},
-            ${title},
-            ${message},
-            'info',
-            false,
-            NOW()
-          )
-        `;
-
+        // NAO criar notificacao no banco - mensagens motivacionais vao apenas via push
         console.log(`[Motivational Cron] Enviado para ${user.email}: "${title}"`);
         sent++;
 
@@ -212,19 +199,7 @@ export async function POST(request: NextRequest) {
       payload
     );
 
-    // Criar notificação no banco
-    await sql`
-      INSERT INTO user_notifications (id, user_id, title, message, type, read, created_at)
-      VALUES (
-        ${crypto.randomUUID()},
-        ${user.id},
-        ${title},
-        ${message},
-        'info',
-        false,
-        NOW()
-      )
-    `;
+    // NAO criar notificacao no banco - mensagens motivacionais vao apenas via push
 
     return NextResponse.json({
       success: true,

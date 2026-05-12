@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import {
   ArrowDownLeft,
   ArrowUpRight,
-  Key,
   Clock,
   Calendar,
   ChevronDown,
@@ -15,11 +14,11 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { UserNotificationsBanner } from "./user-notifications-banner";
 import { SalesChart } from "./sales-chart";
 import { StatsCards } from "./stats-cards";
 import { GoalsRoadmap } from "./goals-roadmap";
 import { BannerCarousel } from "./banner-carousel";
+import { CustomizableWidgets } from "./customizable-widgets";
 import { useProfile } from "@/components/profile-provider";
 
 export interface Profile {
@@ -249,10 +248,7 @@ export function DashboardContent({
   }, [transactions, periodFilter]);
 
   return (
-    <div className="space-y-4 sm:space-y-6 lg:space-y-8 overflow-x-hidden">
-      {/* Notifications Banner */}
-      {profile && <UserNotificationsBanner userId={profile.id} />}
-
+    <div data-onboarding="dashboard" className="space-y-4 sm:space-y-6 lg:space-y-8 overflow-x-hidden">
       {/* Welcome */}
       <div>
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
@@ -265,13 +261,24 @@ export function DashboardContent({
 
       {/* Banner Carousel */}
       <BannerCarousel />
+
+      {/* Customizable Widgets */}
+      <CustomizableWidgets
+        balance={profile?.balance || 0}
+        totalReceived={totalReceivedGross}
+        totalSent={totalSent}
+        pendingCount={filteredTransactions.filter(t => t.status === 'pending').length}
+        savedPixKeys={pixKeys.map(k => ({ id: k.id, key_value: k.key_value, key_type: k.key_type }))}
+      />
       
       {/* Sales Chart */}
-      <SalesChart transactions={transactions} />
+      <div data-onboarding="sales-chart">
+        <SalesChart transactions={transactions} />
+      </div>
 
       {/* Period Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <h2 className="text-base sm:text-lg font-semibold text-foreground">Resumo Financeiro</h2>
+        <h2 className="text-base sm:text-lg font-semibold text-foreground">Metricas</h2>
         <div className="relative">
           <button
             onClick={() => setShowPeriodDropdown(!showPeriodDropdown)}
@@ -303,13 +310,15 @@ export function DashboardContent({
       </div>
 
       {/* Stats Cards */}
-      <StatsCards
+      <div data-onboarding="stats-cards">
+        <StatsCards
         balance={profile?.balance || 0}
         blockedBalance={0}
         transactions={filteredTransactions}
         periodFilter={periodLabels[periodFilter]}
         allTransactions={transactions}
-      />
+        />
+      </div>
 
       {/* Goals Roadmap */}
       {profile && (
@@ -318,38 +327,6 @@ export function DashboardContent({
           userId={profile.id}
         />
       )}
-
-      {/* Quick Actions */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="bg-card border border-border rounded-xl sm:rounded-2xl p-4 sm:p-6"
-      >
-          <h2 className="text-base sm:text-lg font-semibold text-foreground mb-3 sm:mb-4">
-            Ações Rápidas
-          </h2>
-          <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 sm:gap-3">
-            <Link href="/dashboard/wallet" className="block">
-              <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground justify-center lg:justify-start text-xs sm:text-sm h-9 sm:h-10">
-                <ArrowDownLeft className="w-4 h-4 lg:mr-2" />
-                <span className="hidden lg:inline">Depositar</span>
-              </Button>
-            </Link>
-            <Link href="/dashboard/wallet" className="block">
-              <Button variant="outline" className="w-full justify-center lg:justify-start text-xs sm:text-sm h-9 sm:h-10">
-                <ArrowUpRight className="w-4 h-4 lg:mr-2" />
-                <span className="hidden lg:inline">Sacar</span>
-              </Button>
-            </Link>
-            <Link href="/dashboard/pix-keys" className="block">
-              <Button variant="outline" className="w-full justify-center lg:justify-start text-xs sm:text-sm h-9 sm:h-10">
-                <Key className="w-4 h-4 lg:mr-2" />
-                <span className="hidden lg:inline">Gerenciar Chaves</span>
-              </Button>
-            </Link>
-          </div>
-      </motion.div>
 
       {/* Recent Transactions */}
       <motion.div

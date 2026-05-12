@@ -178,13 +178,7 @@ export async function validateWithdrawal(
       return { valid: false, reason: "Valor maximo de saque: R$ 50.000,00" };
     }
 
-    // 5. Verificar se a conta tem pelo menos 24h
-    const accountAge = Date.now() - new Date(user[0].created_at).getTime();
-    if (accountAge < 24 * 60 * 60 * 1000) {
-      return { valid: false, reason: "Conta muito nova para saques" };
-    }
-
-    // 6. Rate limit de saques (maximo 3 por hora)
+    // 5. Rate limit de saques (maximo 3 por hora)
     const recentWithdrawals = await sql`
       SELECT COUNT(*) as count FROM withdrawals
       WHERE user_id = ${userId}
@@ -195,7 +189,7 @@ export async function validateWithdrawal(
       return { valid: false, reason: "Limite de saques por hora atingido" };
     }
 
-    // 7. Verificar se a chave PIX ja foi usada por outro usuario
+    // 6. Verificar se a chave PIX ja foi usada por outro usuario
     const pixKeyUsedByOthers = await sql`
       SELECT user_id FROM withdrawals
       WHERE pix_key = ${pixKey}

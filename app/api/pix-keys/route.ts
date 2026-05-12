@@ -146,13 +146,13 @@ export async function DELETE(request: NextRequest) {
 
     // Registrar log de auditoria
     await sql`
-      INSERT INTO audit_logs (id, user_id, user_email, action, action_type, description, metadata, created_at)
+      INSERT INTO audit_logs (id, user_id, action, entity_id, entity_type, description, metadata, created_at)
       VALUES (
         ${crypto.randomUUID()},
         ${user.id},
-        ${user.email},
-        ${'Chave PIX removida'},
-        ${'pix_key'},
+        'PIX_KEY_REMOVED',
+        ${keyId},
+        'pix_key',
         ${`Chave ${pixKey.key_type.toUpperCase()} removida`},
         ${JSON.stringify({ pix_key_id: keyId, key_type: pixKey.key_type })},
         NOW()

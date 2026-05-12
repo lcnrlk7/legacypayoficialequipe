@@ -57,21 +57,6 @@ export function useNotifications() {
     }
   }, []);
 
-  // Tocar som e mostrar notificacao quando chegar nova notificacao
-  useEffect(() => {
-    if (unreadCount > lastNotificationCount.current && lastNotificationCount.current > 0) {
-      // Nova notificacao chegou
-      playNotificationSound();
-      
-      // Mostrar notificacao do browser se permitido
-      const latestNotification = notifications.find(n => !n.read);
-      if (latestNotification && permission === "granted") {
-        showBrowserNotification(latestNotification.title, latestNotification.body);
-      }
-    }
-    lastNotificationCount.current = unreadCount;
-  }, [unreadCount, notifications, permission]);
-
   const playNotificationSound = useCallback(() => {
     if (audioRef.current) {
       audioRef.current.currentTime = 0;
@@ -81,20 +66,17 @@ export function useNotifications() {
     }
   }, []);
 
-  const showBrowserNotification = useCallback((title: string, body: string) => {
-    if (!isSupported || permission !== "granted") return;
-    
-    try {
-      new Notification(title, {
-        body,
-        icon: "/logo-icon.png",
-        badge: "/logo-icon.png",
-        tag: "legacypay-notification",
-      });
-    } catch (error) {
-      console.error("Erro ao mostrar notificacao:", error);
+  // Tocar som quando chegar nova notificacao (notificacao visual ja chega via push)
+  useEffect(() => {
+    if (unreadCount > lastNotificationCount.current && lastNotificationCount.current > 0) {
+      // Nova notificacao chegou - tocar som apenas
+      playNotificationSound();
+      // Nao mostrar notificacao do browser aqui pois ja chega via push notification
     }
-  }, [isSupported, permission]);
+    lastNotificationCount.current = unreadCount;
+  }, [unreadCount, playNotificationSound]);
+
+
 
   const requestPermission = useCallback(async () => {
     if (!isSupported) return false;

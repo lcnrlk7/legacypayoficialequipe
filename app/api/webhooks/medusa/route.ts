@@ -6,6 +6,8 @@ import {
   notifyPixPaid,
   notifyDeposit 
 } from "@/lib/notifications";
+import { logTransactionStatusUpdate, logWithdrawalStatusUpdate, logWebhookReceived } from "@/lib/discord-webhook";
+import { sendPixEventToUtmify } from "@/lib/utmify";
 
 /**
  * Webhook para receber notificações da Medusa Payments
@@ -252,10 +254,22 @@ async function updateWithdrawalStatus(
       WHERE id = ${withdrawal.id}
     `;
     
-    console.log(`[Medusa Webhook] Saque ${withdrawal.id} CONCLUIDO! Bruto: R$ ${grossAmount.toFixed(2)}, Taxa: R$ ${fee.toFixed(2)}, Liquido: R$ ${netAmount.toFixed(2)}`);
-    
-    // Notificar usuario usando a funcao de notificacao com valor bruto, liquido e taxa
-    await notifyWithdrawalCompleted(userId, grossAmount, netAmount, fee, pixKey, metadata.end_to_end);
+        console.log(`[Medusa Webhook] Saque ${withdrawal.id} CONCLUIDO! Bruto: R$ ${grossAmount.toFixed(2)}, Taxa: R$ ${fee.toFixed(2)}, Liquido: R$ ${netAmount.toFixed(2)}`);
+        
+        // Notificar usuario usando a funcao de notificacao com valor bruto, liquido e taxa
+        await notifyWithdrawalCompleted(userId, grossAmount, netAmount, fee, pixKey, metadata.end_to_end);
+        
+        // Log para Discord
+        logWithdrawalStatusUpdate({
+          withdrawalId: withdrawal.id as string,
+          userName: withdrawal.profile_name as string || "N/A",
+          userEmail: withdrawal.profile_email as string || "",
+          amount: grossAmount,
+          netAmount: netAmount,
+          oldStatus: withdrawal.status as string,
+          newStatus: "completed",
+          pixKey: pixKey,
+        });
     
   } else if (internalStatus === "failed" || internalStatus === "cancelled") {
     newStatus = "failed";
@@ -407,24 +421,57 @@ export async function POST(request: NextRequest) {
     }
 
     // Se não é saque, buscar transação de pagamento
+    // Buscar por acquirer_transaction_id, external_id exato, ou external_id que contenha o ID da Medusa
     const transactions = await sql`
       SELECT t.id, t.user_id, t.amount, t.fee, t.net_amount, t.status,
              p.email as profile_email, p.name as profile_name, p.balance as profile_balance
       FROM transactions t
       LEFT JOIN profiles p ON t.user_id = p.id
-      WHERE t.external_id = ${String(transactionId)} OR t.acquirer_transaction_id = ${String(transactionId)}
+      WHERE t.acquirer_transaction_id = ${String(transactionId)} 
+         OR t.external_id = ${String(transactionId)}
+         OR t.external_id LIKE ${'%' + String(transactionId) + '%'}
+         OR t.metadata::text LIKE ${'%' + String(transactionId) + '%'}
+      ORDER BY t.created_at DESC
+      LIMIT 1
     `;
 
     if (transactions.length === 0) {
       console.log(`[Medusa Webhook] Transação/Saque ${transactionId} não encontrado no sistema`);
+      
+      // Logar o webhook recebido para debug
+      try {
+        await sql`
+          INSERT INTO webhook_logs (id, url, payload, response_status, success, created_at)
+          VALUES (
+            ${crypto.randomUUID()},
+            'medusa-not-found',
+            ${JSON.stringify(payload)},
+            404,
+            false,
+            NOW()
+          )
+        `;
+      } catch (logErr) {
+        console.error("[Medusa Webhook] Erro ao logar webhook:", logErr);
+      }
+      
       return NextResponse.json({ success: true, message: "Transação não encontrada" });
     }
 
     const transaction = transactions[0];
 
-    // Se o status já é final, não atualizar
-    if (transaction.status === "completed" || transaction.status === "failed") {
-      console.log(`[Medusa Webhook] Transação ${transactionId} já está em status final: ${transaction.status}`);
+    // Verificar se o saldo ja foi creditado para esta transacao
+    const existingCredit = await sql`
+      SELECT id FROM audit_logs 
+      WHERE entity_id = ${transaction.id}
+        AND action = 'PAYMENT_CONFIRMED'
+      LIMIT 1
+    `;
+    const alreadyCredited = existingCredit.length > 0;
+
+    // Se o status já é final E o saldo já foi creditado, não fazer nada
+    if ((transaction.status === "completed" || transaction.status === "failed") && alreadyCredited) {
+      console.log(`[Medusa Webhook] Transação ${transactionId} já processada e creditada. Skipping.`);
       return NextResponse.json({ success: true, message: "Transação já processada" });
     }
 
@@ -437,17 +484,35 @@ export async function POST(request: NextRequest) {
       UPDATE transactions 
       SET 
         status = ${internalStatus},
-        paid_at = ${paidAt ? new Date(paidAt) : (internalStatus === 'completed' ? new Date() : null)},
-        payer_name = ${customer?.name || null},
-        payer_document = ${customer?.document?.number || null},
+        paid_at = COALESCE(paid_at, ${paidAt ? new Date(paidAt) : (internalStatus === 'completed' ? new Date() : null)}),
+        payer_name = COALESCE(payer_name, ${customer?.name || null}),
+        payer_document = COALESCE(payer_document, ${customer?.document?.number || null}),
         updated_at = NOW()
       WHERE id = ${transaction.id}
     `;
 
-    console.log(`[Medusa Webhook] Transação ${transactionId} atualizada para status: ${internalStatus}`);
+    console.log(`[Medusa Webhook] Transação ${transactionId} atualizada para status: ${internalStatus}. Already credited: ${alreadyCredited}`);
 
-    // Se pagamento confirmado, creditar saldo do usuário
-    if (internalStatus === "completed" && transaction.user_id) {
+    // Logar webhook recebido com sucesso
+    try {
+      await sql`
+        INSERT INTO webhook_logs (id, transaction_id, url, payload, response_status, success, created_at)
+        VALUES (
+          ${crypto.randomUUID()},
+          ${transaction.id},
+          'medusa-success',
+          ${JSON.stringify(payload)},
+          200,
+          true,
+          NOW()
+        )
+      `;
+    } catch (logErr) {
+      console.error("[Medusa Webhook] Erro ao logar webhook:", logErr);
+    }
+
+    // Se pagamento confirmado E saldo ainda nao foi creditado, creditar saldo do usuario
+    if (internalStatus === "completed" && transaction.user_id && !alreadyCredited) {
       const netAmount = Number(transaction.net_amount) || (Number(transaction.amount) - Number(transaction.fee || 0));
       const currentBalance = Number(transaction.profile_balance) || 0;
       const newBalance = currentBalance + netAmount;
@@ -465,6 +530,17 @@ export async function POST(request: NextRequest) {
       // Notificar usuario sobre o deposito/PIX recebido com valor bruto e liquido
       const grossAmount = Number(transaction.amount) || 0;
       await notifyPixPaid(transaction.user_id as string, grossAmount, netAmount);
+      
+      // Log para Discord - transacao confirmada
+      logTransactionStatusUpdate({
+        transactionId: transaction.id as string,
+        userName: transaction.profile_name as string || "N/A",
+        userEmail: transaction.profile_email as string || "",
+        amount: grossAmount,
+        oldStatus: "pending",
+        newStatus: "completed",
+        payerName: customer?.name,
+      });
 
       // Registrar audit log
       await sql`
@@ -499,6 +575,44 @@ export async function POST(request: NextRequest) {
       `;
 
       // Enviar push notification (ja enviado pelo notifyPixPaid acima)
+
+      // Enviar para UTMify se o usuario tiver a integracao configurada
+      try {
+        // Buscar dados UTM da transacao
+        const transactionData = await sql`
+          SELECT external_id, description, payer_name, payer_email, payer_document, created_at,
+                 utm_source, utm_campaign, utm_medium, utm_content, utm_term, utm_src, utm_sck
+          FROM transactions WHERE id = ${transaction.id}
+        `;
+        
+        if (transactionData.length > 0) {
+          const txData = transactionData[0];
+          await sendPixEventToUtmify(transaction.user_id as string, {
+            id: transaction.id as string,
+            amount: Number(transaction.amount),
+            fee: Number(transaction.fee || 0),
+            status: "paid",
+            payer_name: txData.payer_name as string,
+            payer_email: txData.payer_email as string,
+            payer_document: txData.payer_document as string,
+            description: txData.description as string,
+            external_id: txData.external_id as string,
+            created_at: txData.created_at as string,
+            paid_at: new Date().toISOString(),
+            utm_source: txData.utm_source as string,
+            utm_campaign: txData.utm_campaign as string,
+            utm_medium: txData.utm_medium as string,
+            utm_content: txData.utm_content as string,
+            utm_term: txData.utm_term as string,
+            src: txData.utm_src as string,
+            sck: txData.utm_sck as string,
+          });
+          console.log(`[Medusa Webhook] Enviado evento para UTMify - Transacao ${transaction.id}`);
+        }
+      } catch (utmifyError) {
+        console.error("[Medusa Webhook] Erro ao enviar para UTMify:", utmifyError);
+        // Nao falhar o webhook por causa do UTMify
+      }
 
       // Processar comissao de afiliado
       try {
