@@ -670,7 +670,7 @@ export default function TelegramPage() {
                   title: "Nova Funcionalidade",
                   icon: "🎉",
                   color: "from-green-500/10 to-emerald-500/10 border-green-500/20",
-                  text: "🎉 <b>NOVIDADE!</b>\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nAcabamos de lancar uma nova funcionalidade!\n\nAcesse o painel para conferir.\n\n🌐 https://legacypay.com.br\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
+                  text: "🎉 <b>NOVIDADE!</b>\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\nAcabamos de lancar uma nova funcionalidade!\n\nAcesse o painel para conferir.\n\n🌐 https://www.legacypay.site\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
                 },
                 {
                   title: "Promocao Especial",

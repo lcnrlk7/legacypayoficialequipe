@@ -12,7 +12,7 @@ const sql = neon(process.env.DATABASE_URL!);
 // ═══════════════════════════════════════════════════════════════
 
 const BOT_NAME = "LegacyPay";
-const SITE_URL = "https://legacypay.com.br";
+const SITE_URL = "https://www.legacypay.site";
 const DISCORD_LINK = "https://discord.gg/ea32hgRSeM";
 const WHATSAPP_LINK = "https://wa.me/5534999353187";
 const SALES_CHANNEL = "https://t.me/legacypaybot";
