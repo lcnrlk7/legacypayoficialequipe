@@ -1,3 +1,5 @@
+import { sql } from "@/lib/db";
+
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
@@ -174,8 +176,6 @@ export async function notifySalesChannel(data: {
   userEmail: string;
   status: string;
 }) {
-  const dbSql = sql;
-  
   const settings = await sql`
     SELECT sales_channel_id FROM telegram_settings LIMIT 1
   `;
