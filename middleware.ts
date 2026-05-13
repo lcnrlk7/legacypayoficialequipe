@@ -78,6 +78,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
   
+  // Ignorar setup endpoint para criar super admin
+  if (pathname === '/api/admin/setup-superadmin') {
+    return NextResponse.next()
+  }
+  
   // Verificar se IP esta bloqueado
   const clientIp = getClientIp(request)
   const blocked = await isIpBlocked(clientIp)
