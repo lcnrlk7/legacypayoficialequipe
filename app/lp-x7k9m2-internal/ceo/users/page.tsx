@@ -977,8 +977,13 @@ const openEditModal = (user: UserProfile) => {
                   {acquirers.filter(a => a.route_type === "white").length > 0 && (
                     <optgroup label="WHITE" className="bg-card text-muted-foreground">
                       {acquirers.filter(a => a.route_type === "white").map(acq => {
-                        const taxaEntrada = acq.fee_is_percentage ? `${acq.fee_percentage}%` : `R$ ${Number(acq.fixed_fee || 0).toFixed(2)}`;
-                        const taxaSaque = acq.withdrawal_fee_is_percentage ? `${acq.withdrawal_fee}%` : `R$ ${Number(acq.withdrawal_fee).toFixed(2)}`;
+                        // Taxa de entrada: percentual + fixa (se houver)
+                        let taxaEntrada = acq.fee_is_percentage ? `${acq.fee_percentage}%` : '';
+                        if (acq.fixed_fee && Number(acq.fixed_fee) > 0) {
+                          taxaEntrada += taxaEntrada ? ` + R$${Number(acq.fixed_fee).toFixed(2)}` : `R$${Number(acq.fixed_fee).toFixed(2)}`;
+                        }
+                        if (!taxaEntrada) taxaEntrada = 'R$0,00';
+                        const taxaSaque = acq.withdrawal_fee_is_percentage ? `${acq.withdrawal_fee}%` : `R$${Number(acq.withdrawal_fee).toFixed(2)}`;
                         return (
                           <option key={acq.id} value={acq.id} className="bg-card text-white">
                             Rota White ({acq.name}) - Taxa: {taxaEntrada} | Saque: {taxaSaque}
@@ -990,8 +995,13 @@ const openEditModal = (user: UserProfile) => {
                   {acquirers.filter(a => a.route_type === "black").length > 0 && (
                     <optgroup label="BLACK" className="bg-card text-muted-foreground">
                       {acquirers.filter(a => a.route_type === "black").map(acq => {
-                        const taxaEntrada = acq.fee_is_percentage ? `${acq.fee_percentage}%` : `R$ ${Number(acq.fixed_fee || 0).toFixed(2)}`;
-                        const taxaSaque = acq.withdrawal_fee_is_percentage ? `${acq.withdrawal_fee}%` : `R$ ${Number(acq.withdrawal_fee).toFixed(2)}`;
+                        // Taxa de entrada: percentual + fixa (se houver)
+                        let taxaEntrada = acq.fee_is_percentage ? `${acq.fee_percentage}%` : '';
+                        if (acq.fixed_fee && Number(acq.fixed_fee) > 0) {
+                          taxaEntrada += taxaEntrada ? ` + R$${Number(acq.fixed_fee).toFixed(2)}` : `R$${Number(acq.fixed_fee).toFixed(2)}`;
+                        }
+                        if (!taxaEntrada) taxaEntrada = 'R$0,00';
+                        const taxaSaque = acq.withdrawal_fee_is_percentage ? `${acq.withdrawal_fee}%` : `R$${Number(acq.withdrawal_fee).toFixed(2)}`;
                         return (
                           <option key={acq.id} value={acq.id} className="bg-card text-white">
                             Rota Black ({acq.name}) - Taxa: {taxaEntrada} | Saque: {taxaSaque}
