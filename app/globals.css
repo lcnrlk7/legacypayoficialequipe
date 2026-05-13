@@ -439,6 +439,34 @@
 .float-delay-2 { animation-delay: -2s; }
 .float-delay-3 { animation-delay: -3s; }
 
+/* Float animations for landing page mascot badges */
+@keyframes float-badge {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  25% { transform: translateY(-8px) translateX(3px); }
+  50% { transform: translateY(-5px) translateX(-2px); }
+  75% { transform: translateY(-12px) translateX(2px); }
+}
+
+.animate-float-delay-1 {
+  animation: float-badge 4s ease-in-out infinite;
+  animation-delay: 0s;
+}
+
+.animate-float-delay-2 {
+  animation: float-badge 5s ease-in-out infinite;
+  animation-delay: -1s;
+}
+
+.animate-float-delay-3 {
+  animation: float-badge 4.5s ease-in-out infinite;
+  animation-delay: -2s;
+}
+
+.animate-float-delay-4 {
+  animation: float-badge 5.5s ease-in-out infinite;
+  animation-delay: -3s;
+}
+
 /* Pulse glow */
 @keyframes pulse-glow {
   0%, 100% { 
