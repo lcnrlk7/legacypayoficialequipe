@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   try {
     // Buscar usuario
     const users = await sql`
-      SELECT id, user_id, email, notifications_push, push_subscription 
+      SELECT id, email, notifications_push, push_subscription 
       FROM profiles 
       WHERE email = ${email}
     `;
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     const user = users[0];
-    const userId = user.user_id || user.id; // UUID do usuario
+    const odUserId = user.id; // O campo id em profiles já é o UUID do usuario
 
     // Verificar se tabela push_subscriptions existe
     let subscriptions: unknown[] = [];
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
       subscriptions = await sql`
         SELECT id, endpoint, p256dh, auth, created_at 
         FROM push_subscriptions 
-        WHERE user_id = ${userId}
+        WHERE user_id = ${odUserId}
       `;
       tableExists = true;
     } catch (e) {
@@ -44,7 +44,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       user: {
         id: user.id,
-        user_id: user.user_id,
         email: user.email,
         notifications_push: user.notifications_push,
         has_push_subscription_in_profile: !!user.push_subscription,
