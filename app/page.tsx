@@ -132,7 +132,7 @@ export default function Home() {
                 </div>
               </div>
               
-              {/* Badge 3 - Saque em cripto */}
+              {/* Badge 3 - Multiplas rotas */}
               <div className="absolute top-1/2 right-0 md:-right-8 animate-float-delay-3">
                 <div className="flex items-center gap-2 px-3 py-2 bg-[#1a1a1a]/90 backdrop-blur-sm border border-white/10 rounded-lg shadow-xl">
                   <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
@@ -140,7 +140,7 @@ export default function Home() {
                   </div>
                   <div>
                     <div className="text-[10px] text-gray-400">Na Legacy Pay tem</div>
-                    <div className="text-xs font-semibold text-white">Saque em cripto.</div>
+                    <div className="text-xs font-semibold text-white">Múltiplas rotas</div>
                   </div>
                 </div>
               </div>
