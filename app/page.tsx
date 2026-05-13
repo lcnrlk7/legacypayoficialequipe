@@ -148,8 +148,8 @@ export default function Home() {
               {/* Badge 4 - Saque em PIX */}
               <div className="absolute bottom-1/4 -left-4 md:left-4 animate-float-delay-4">
                 <div className="flex items-center gap-2 px-3 py-2 bg-[#1a1a1a]/90 backdrop-blur-sm border border-white/10 rounded-lg shadow-xl">
-                  <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center">
-                    <Zap className="w-4 h-4 text-black" />
+                  <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center p-1.5">
+                    <Image src="/images/pix-icon.png" alt="PIX" width={20} height={20} className="w-full h-full object-contain brightness-0" />
                   </div>
                   <div>
                     <div className="text-[10px] text-gray-400">Na Legacy Pay tem</div>
