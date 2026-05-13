@@ -101,6 +101,7 @@ export async function handleAuth(request: NextRequest) {
     '/api/push/test',
     '/api/admin/update-white-route',
     '/api/admin/all-routes',
+    '/api/admin/update-routes-fees',
   ]
 
   const isPublicPath = publicPaths.some(path => pathname === path || pathname.startsWith(path + '/')) ||

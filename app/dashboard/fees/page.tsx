@@ -8,12 +8,11 @@ import {
   ArrowUpRight,
   Info,
   TrendingDown,
-  Clock,
-  Shield,
   DollarSign,
   TrendingUp,
   Calendar,
   Building2,
+  Check,
 } from "lucide-react";
 
 interface UserFees {
@@ -37,13 +36,42 @@ interface UserFees {
   total_volume: number;
 }
 
+// Taxas fixas por rota (apenas visual)
+const ROUTE_FEES = {
+  black: {
+    name: "BLACK",
+    depositPercentage: 5,
+    depositFixed: 0,
+    withdrawalPercentage: 5,
+    withdrawalFixed: 0,
+    color: "orange",
+    description: "Taxa percentual em depósitos e saques",
+  },
+  white: {
+    name: "WHITE",
+    depositPercentage: 2,
+    depositFixed: 0.70,
+    withdrawalPercentage: 2,
+    withdrawalFixed: 0,
+    color: "zinc",
+    description: "Taxa reduzida com valor fixo adicional",
+  },
+};
+
 export default function FeesPage() {
   const [fees, setFees] = useState<UserFees | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedRoute, setSelectedRoute] = useState<"black" | "white">("black");
 
   useEffect(() => {
     loadFees();
   }, []);
+
+  useEffect(() => {
+    if (fees?.route_type) {
+      setSelectedRoute(fees.route_type as "black" | "white");
+    }
+  }, [fees]);
 
   async function loadFees() {
     try {
@@ -69,8 +97,10 @@ export default function FeesPage() {
 
   const formatPercent = (value: number | null | undefined) => {
     const num = Number(value) || 0;
-    return `${num.toFixed(2)}%`;
+    return `${num.toFixed(0)}%`;
   };
+
+  const currentRouteFees = ROUTE_FEES[selectedRoute];
 
   if (loading) {
     return (
@@ -87,7 +117,7 @@ export default function FeesPage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-foreground">Taxas e Limites</h1>
           <p className="text-sm sm:text-base text-muted-foreground mt-1">
-            Confira suas taxas e limites de operacao
+            Confira suas taxas e limites de operação
           </p>
         </div>
         {fees && (
@@ -102,7 +132,7 @@ export default function FeesPage() {
             <span className={`font-semibold ${
               fees.route_type === 'black' ? 'text-orange-500' : 'text-zinc-400'
             }`}>
-              Rota {fees.route_type?.toUpperCase() || 'BLACK'}
+              Sua Rota: {fees.route_type?.toUpperCase() || 'BLACK'}
             </span>
           </div>
         )}
@@ -124,9 +154,6 @@ export default function FeesPage() {
           <p className="text-xl sm:text-2xl font-bold text-white">
             {formatCurrency(fees?.total_fees_paid || 0)}
           </p>
-          <p className="text-xs text-muted-foreground mt-1 hidden sm:block">
-            Taxas descontadas
-          </p>
         </motion.div>
 
         <motion.div
@@ -144,9 +171,6 @@ export default function FeesPage() {
           <p className="text-xl sm:text-2xl font-bold text-white">
             {formatCurrency(fees?.total_volume || 0)}
           </p>
-          <p className="text-xs text-muted-foreground mt-1 hidden sm:block">
-            Total movimentado
-          </p>
         </motion.div>
 
         <motion.div
@@ -159,18 +183,159 @@ export default function FeesPage() {
             <div className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-purple-500/20">
               <ArrowUpRight className="w-4 h-4 sm:w-5 sm:h-5 text-purple-400" />
             </div>
-            <span className="text-xs sm:text-sm text-purple-400">Transacoes</span>
+            <span className="text-xs sm:text-sm text-purple-400">Transações</span>
           </div>
           <p className="text-xl sm:text-2xl font-bold text-white">
             {fees?.total_transactions || 0}
           </p>
-          <p className="text-xs text-muted-foreground mt-1 hidden sm:block">
-            Total de transacoes
-          </p>
         </motion.div>
       </div>
 
-      {/* Alerta de rota atual */}
+      {/* Seletor de Rotas */}
+      <div>
+        <h2 className="text-lg font-semibold text-foreground mb-4">Taxas por Rota</h2>
+        <div className="flex gap-3 mb-6">
+          <button
+            onClick={() => setSelectedRoute("black")}
+            className={`flex-1 p-4 rounded-xl border-2 transition-all ${
+              selectedRoute === "black"
+                ? "border-orange-500 bg-orange-500/10"
+                : "border-border bg-card hover:border-orange-500/50"
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-orange-500" />
+                <span className="font-bold text-orange-500">ROTA BLACK</span>
+              </div>
+              {selectedRoute === "black" && (
+                <Check className="w-5 h-5 text-orange-500" />
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground text-left">
+              {ROUTE_FEES.black.description}
+            </p>
+          </button>
+
+          <button
+            onClick={() => setSelectedRoute("white")}
+            className={`flex-1 p-4 rounded-xl border-2 transition-all ${
+              selectedRoute === "white"
+                ? "border-zinc-400 bg-zinc-500/10"
+                : "border-border bg-card hover:border-zinc-400/50"
+            }`}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-zinc-400" />
+                <span className="font-bold text-zinc-400">ROTA WHITE</span>
+              </div>
+              {selectedRoute === "white" && (
+                <Check className="w-5 h-5 text-zinc-400" />
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground text-left">
+              {ROUTE_FEES.white.description}
+            </p>
+          </button>
+        </div>
+
+        {/* Cards de Taxas da Rota Selecionada */}
+        <motion.div
+          key={selectedRoute}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4"
+        >
+          {/* Taxa de Depósito */}
+          <div className={`p-5 rounded-xl border ${
+            selectedRoute === "black" 
+              ? "bg-orange-500/5 border-orange-500/20" 
+              : "bg-zinc-500/5 border-zinc-500/20"
+          }`}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                selectedRoute === "black" ? "bg-orange-500/20" : "bg-zinc-500/20"
+              }`}>
+                <ArrowDownLeft className={`w-5 h-5 ${
+                  selectedRoute === "black" ? "text-orange-500" : "text-zinc-400"
+                }`} />
+              </div>
+              <span className="text-sm text-muted-foreground">Taxa Depósito</span>
+            </div>
+            <p className={`text-2xl font-bold ${
+              selectedRoute === "black" ? "text-orange-500" : "text-zinc-400"
+            }`}>
+              {formatPercent(currentRouteFees.depositPercentage)}
+            </p>
+            {currentRouteFees.depositFixed > 0 && (
+              <p className={`text-lg font-semibold ${
+                selectedRoute === "black" ? "text-orange-400" : "text-zinc-500"
+              }`}>
+                + {formatCurrency(currentRouteFees.depositFixed)}
+              </p>
+            )}
+          </div>
+
+          {/* Taxa de Saque */}
+          <div className={`p-5 rounded-xl border ${
+            selectedRoute === "black" 
+              ? "bg-orange-500/5 border-orange-500/20" 
+              : "bg-zinc-500/5 border-zinc-500/20"
+          }`}>
+            <div className="flex items-center gap-3 mb-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                selectedRoute === "black" ? "bg-orange-500/20" : "bg-zinc-500/20"
+              }`}>
+                <ArrowUpRight className={`w-5 h-5 ${
+                  selectedRoute === "black" ? "text-orange-500" : "text-zinc-400"
+                }`} />
+              </div>
+              <span className="text-sm text-muted-foreground">Taxa Saque</span>
+            </div>
+            <p className={`text-2xl font-bold ${
+              selectedRoute === "black" ? "text-orange-500" : "text-zinc-400"
+            }`}>
+              {formatPercent(currentRouteFees.withdrawalPercentage)}
+            </p>
+            {currentRouteFees.withdrawalFixed > 0 && (
+              <p className={`text-lg font-semibold ${
+                selectedRoute === "black" ? "text-orange-400" : "text-zinc-500"
+              }`}>
+                + {formatCurrency(currentRouteFees.withdrawalFixed)}
+              </p>
+            )}
+          </div>
+
+          {/* Limite Diário */}
+          <div className="p-5 rounded-xl bg-card border border-border">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-primary" />
+              </div>
+              <span className="text-sm text-muted-foreground">Limite Diário</span>
+            </div>
+            <p className="text-2xl font-bold text-foreground">
+              {formatCurrency(fees?.daily_limit || 10000)}
+            </p>
+          </div>
+
+          {/* Limite por Saque */}
+          <div className="p-5 rounded-xl bg-card border border-border">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Building2 className="w-5 h-5 text-primary" />
+              </div>
+              <span className="text-sm text-muted-foreground">Limite por Saque</span>
+            </div>
+            <p className="text-2xl font-bold text-foreground">
+              {formatCurrency(fees?.per_withdrawal_limit || fees?.max_withdrawal || 10000)}
+            </p>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Alerta de rota atual do usuario */}
       {fees && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -178,123 +343,22 @@ export default function FeesPage() {
           className={`flex items-center gap-3 p-4 rounded-xl ${
             fees.route_type === 'black'
               ? 'bg-orange-500/10 border border-orange-500/20'
-              : 'bg-green-500/10 border border-green-500/20'
+              : 'bg-zinc-500/10 border border-zinc-500/20'
           }`}
         >
           <TrendingDown className={`w-5 h-5 flex-shrink-0 ${
-            fees.route_type === 'black' ? 'text-orange-500' : 'text-green-500'
+            fees.route_type === 'black' ? 'text-orange-500' : 'text-zinc-400'
           }`} />
-          <p className={`text-sm ${fees.route_type === 'black' ? 'text-orange-400' : 'text-green-400'}`}>
-            Você está na rota <strong>{fees.route_type?.toUpperCase() || 'BLACK'}</strong> -{' '}
-            {fees.has_percentage_fee ? (
-              fees.pix_fixed_fee > 0 ? (
-                <>Taxa de <strong>{formatPercent(fees.pix_percentage_fee)} + {formatCurrency(fees.pix_fixed_fee)}</strong> por transação</>
-              ) : (
-                <>Taxa de <strong>{formatPercent(fees.pix_percentage_fee)}</strong> por transação</>
-              )
+          <p className={`text-sm ${fees.route_type === 'black' ? 'text-orange-400' : 'text-zinc-400'}`}>
+            Você está na rota <strong>{fees.route_type?.toUpperCase() || 'BLACK'}</strong> - 
+            {fees.route_type === 'black' ? (
+              <> Taxa de <strong>5%</strong> em depósitos e <strong>5%</strong> em saques</>
             ) : (
-              <>Taxa fixa de <strong>{formatCurrency(fees.pix_fixed_fee)}</strong> por transação</>
+              <> Taxa de <strong>2% + R$0,70</strong> em depósitos e <strong>2%</strong> em saques</>
             )}
           </p>
         </motion.div>
       )}
-
-      {/* Sua Taxa Personalizada */}
-      {fees && fees.user_fee_percentage > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="flex items-center gap-3 p-4 rounded-xl bg-primary/10 border border-primary/20"
-        >
-          <Percent className="w-5 h-5 flex-shrink-0 text-primary" />
-          <p className="text-sm text-primary">
-            Sua taxa personalizada: <strong>{formatPercent(fees.user_fee_percentage)}</strong> -{' '}
-            Limite diário: <strong>{formatCurrency(fees.daily_limit)}</strong>
-          </p>
-        </motion.div>
-      )}
-
-      {/* Cards Principais - Taxas e Limites */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Taxa de Entrada */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="p-5 rounded-xl bg-card border border-border"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <ArrowDownLeft className="w-5 h-5 text-primary" />
-            </div>
-            <span className="text-sm text-muted-foreground">Taxa de Entrada</span>
-          </div>
-          <p className="text-2xl font-bold text-foreground">
-            {fees?.has_percentage_fee 
-              ? formatPercent(fees?.pix_percentage_fee)
-              : formatCurrency(fees?.pix_fixed_fee || 0)
-            }
-          </p>
-        </motion.div>
-
-        {/* Taxa de Saída */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="p-5 rounded-xl bg-card border border-border"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <ArrowUpRight className="w-5 h-5 text-primary" />
-            </div>
-            <span className="text-sm text-muted-foreground">Taxa de Saida</span>
-          </div>
-          <p className="text-2xl font-bold text-foreground">
-            {fees?.withdrawal_fee_is_percentage 
-              ? formatPercent(fees?.withdrawal_fee || 0)
-              : formatCurrency(fees?.withdrawal_fee || 0)
-            }
-          </p>
-        </motion.div>
-
-        {/* Limite Diário */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="p-5 rounded-xl bg-card border border-border"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-primary" />
-            </div>
-            <span className="text-sm text-muted-foreground">Limite Diario</span>
-          </div>
-          <p className="text-2xl font-bold text-foreground">
-            {formatCurrency(fees?.daily_limit || 10000)}
-          </p>
-        </motion.div>
-
-        {/* Limite por Saque */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="p-5 rounded-xl bg-card border border-border"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Building2 className="w-5 h-5 text-primary" />
-            </div>
-            <span className="text-sm text-muted-foreground">Limite por Saque</span>
-          </div>
-          <p className="text-2xl font-bold text-foreground">
-            {formatCurrency(fees?.per_withdrawal_limit || fees?.max_withdrawal || 10000)}
-          </p>
-        </motion.div>
-      </div>
 
       {/* Detalhes de Deposito e Saque */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -310,20 +374,20 @@ export default function FeesPage() {
               <ArrowDownLeft className="w-5 h-5 text-green-500" />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground">Depositos (PIX In)</h3>
-              <p className="text-sm text-muted-foreground">Limites por operacao</p>
+              <h3 className="font-semibold text-foreground">Depósitos (PIX In)</h3>
+              <p className="text-sm text-muted-foreground">Limites por operação</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3 bg-secondary/50 rounded-lg">
-              <p className="text-xs text-muted-foreground">Minimo</p>
+              <p className="text-xs text-muted-foreground">Mínimo</p>
               <p className="font-semibold text-foreground">
                 {formatCurrency(fees?.min_deposit || 10)}
               </p>
             </div>
             <div className="p-3 bg-secondary/50 rounded-lg">
-              <p className="text-xs text-muted-foreground">Maximo</p>
+              <p className="text-xs text-muted-foreground">Máximo</p>
               <p className="font-semibold text-foreground">
                 {formatCurrency(fees?.max_deposit || 50000)}
               </p>
@@ -344,19 +408,19 @@ export default function FeesPage() {
             </div>
             <div>
               <h3 className="font-semibold text-foreground">Saques (PIX Out)</h3>
-              <p className="text-sm text-muted-foreground">Limites por operacao</p>
+              <p className="text-sm text-muted-foreground">Limites por operação</p>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3 bg-secondary/50 rounded-lg">
-              <p className="text-xs text-muted-foreground">Minimo</p>
+              <p className="text-xs text-muted-foreground">Mínimo</p>
               <p className="font-semibold text-foreground">
                 {formatCurrency(fees?.min_withdrawal || 10)}
               </p>
             </div>
             <div className="p-3 bg-secondary/50 rounded-lg">
-              <p className="text-xs text-muted-foreground">Maximo</p>
+              <p className="text-xs text-muted-foreground">Máximo</p>
               <p className="font-semibold text-foreground">
                 {formatCurrency(fees?.max_withdrawal || 10000)}
               </p>
@@ -364,6 +428,47 @@ export default function FeesPage() {
           </div>
         </motion.div>
       </div>
+
+      {/* Exemplo de Cálculo */}
+      <motion.div
+        key={`calc-${selectedRoute}`}
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="p-6 rounded-2xl bg-gradient-to-br from-card to-card/50 border border-border"
+      >
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
+            <Percent className="w-6 h-6 text-purple-500" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground">Exemplo de Cálculo - Rota {currentRouteFees.name}</h3>
+            <p className="text-sm text-muted-foreground">Veja como as taxas são aplicadas</p>
+          </div>
+        </div>
+
+        <div className="bg-background/50 rounded-xl p-4 space-y-3">
+          <div className="flex justify-between items-center pb-3 border-b border-border">
+            <span className="text-muted-foreground">Valor do depósito</span>
+            <span className="font-semibold text-foreground">R$ 100,00</span>
+          </div>
+          <div className="flex justify-between items-center pb-3 border-b border-border">
+            <span className="text-muted-foreground">
+              Taxa ({formatPercent(currentRouteFees.depositPercentage)}
+              {currentRouteFees.depositFixed > 0 && ` + ${formatCurrency(currentRouteFees.depositFixed)}`})
+            </span>
+            <span className="font-semibold text-red-400">
+              - {formatCurrency(100 * currentRouteFees.depositPercentage / 100 + currentRouteFees.depositFixed)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center pt-1">
+            <span className="font-semibold text-foreground">Valor líquido</span>
+            <span className="font-bold text-green-400 text-lg">
+              {formatCurrency(100 - (100 * currentRouteFees.depositPercentage / 100) - currentRouteFees.depositFixed)}
+            </span>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Informações */}
       <motion.div
@@ -379,56 +484,12 @@ export default function FeesPage() {
               <strong className="text-foreground">Como funcionam as taxas?</strong>
             </p>
             <ul className="list-disc list-inside space-y-1 ml-2">
+              <li><strong>Rota BLACK:</strong> 5% em depósitos + 5% em saques</li>
+              <li><strong>Rota WHITE:</strong> 2% + R$0,70 em depósitos + 2% em saques</li>
               <li>A taxa de depósito é descontada automaticamente do valor recebido</li>
-              <li>A taxa de saque é um valor fixo descontado por operação</li>
-              <li>Taxas podem ser personalizadas com base no seu volume de transações</li>
-              <li>Entre em contato com o suporte para negociar taxas especiais</li>
+              <li>A taxa de saque é descontada do valor sacado</li>
+              <li>Entre em contato com o suporte para mais informações</li>
             </ul>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Exemplo de Cálculo */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="p-6 rounded-2xl bg-gradient-to-br from-card to-card/50 border border-border"
-      >
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
-            <Percent className="w-6 h-6 text-purple-500" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-foreground">Exemplo de Cálculo</h3>
-            <p className="text-sm text-muted-foreground">Veja como suas taxas são aplicadas</p>
-          </div>
-        </div>
-
-        <div className="bg-background/50 rounded-xl p-4 space-y-3">
-          <div className="flex justify-between items-center pb-3 border-b border-border">
-            <span className="text-muted-foreground">Valor do depósito</span>
-            <span className="font-semibold text-foreground">R$ 100,00</span>
-          </div>
-          <div className="flex justify-between items-center pb-3 border-b border-border">
-            <span className="text-muted-foreground">
-              Taxa (Rota {fees?.route_type?.toUpperCase() || 'BLACK'})
-            </span>
-            <span className="font-semibold text-red-400">
-              {fees?.has_percentage_fee 
-                ? `- R$ ${(100 * (fees?.pix_percentage_fee || 0) / 100 + (fees?.pix_fixed_fee || 0)).toFixed(2).replace('.', ',')}`
-                : `- ${formatCurrency(fees?.pix_fixed_fee || 0)}`
-              }
-            </span>
-          </div>
-          <div className="flex justify-between items-center pt-1">
-            <span className="font-semibold text-foreground">Valor liquido</span>
-            <span className="font-bold text-green-400 text-lg">
-              {fees?.has_percentage_fee
-                ? formatCurrency(100 - (100 * (fees?.pix_percentage_fee || 0) / 100) - (fees?.pix_fixed_fee || 0))
-                : formatCurrency(100 - (fees?.pix_fixed_fee || 0))
-              }
-            </span>
           </div>
         </div>
       </motion.div>
