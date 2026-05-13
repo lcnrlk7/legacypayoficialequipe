@@ -7,18 +7,18 @@ export async function GET(request: NextRequest) {
   try {
     const results: string[] = [];
 
-    // 1. Buscar MisticPay para usar como substituta
-    const misticpay = await sql`SELECT id FROM acquirers WHERE code = 'misticpay' LIMIT 1`;
+    // 1. Buscar Medusa White para usar como substituta
+    const medusaWhite = await sql`SELECT id FROM acquirers WHERE code = 'medusa_white' LIMIT 1`;
     
-    if (misticpay.length === 0) {
+    if (medusaWhite.length === 0) {
       return NextResponse.json({ 
         success: false, 
-        error: "MisticPay nao encontrada para migrar usuarios" 
+        error: "Medusa White nao encontrada para migrar usuarios" 
       }, { status: 400 });
     }
     
-    const misticpayId = misticpay[0].id;
-    results.push(`MisticPay encontrada: ${misticpayId}`);
+    const medusaWhiteId = medusaWhite[0].id;
+    results.push(`Medusa White encontrada: ${medusaWhiteId}`);
 
     // 2. Buscar ID da VenoPag
     const venopag = await sql`SELECT id FROM acquirers WHERE code = 'venopag' LIMIT 1`;
@@ -28,14 +28,14 @@ export async function GET(request: NextRequest) {
     } else {
       const venopagId = venopag[0].id;
       
-      // 3. Migrar usuarios da VenoPag para MisticPay
+      // 3. Migrar usuarios da VenoPag para Medusa White
       const usersUpdated = await sql`
         UPDATE profiles 
-        SET acquirer_id = ${misticpayId}, updated_at = NOW()
+        SET acquirer_id = ${medusaWhiteId}, route_type = 'white', updated_at = NOW()
         WHERE acquirer_id = ${venopagId}
         RETURNING id, email
       `;
-      results.push(`Usuarios migrados de VenoPag para MisticPay: ${usersUpdated.length}`);
+      results.push(`Usuarios migrados de VenoPag para Medusa White: ${usersUpdated.length}`);
       
       // 4. Desativar VenoPag
       await sql`UPDATE acquirers SET is_active = false WHERE code = 'venopag'`;
