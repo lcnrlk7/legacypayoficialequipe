@@ -55,7 +55,6 @@ export default function AcquirersPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingAcquirer, setEditingAcquirer] = useState<Acquirer | null>(null);
   const [checkingHealth, setCheckingHealth] = useState<string | null>(null);
-  const [addingVenopag, setAddingVenopag] = useState(false);
   const [form, setForm] = useState({
     name: "",
     code: "",
@@ -106,25 +105,6 @@ export default function AcquirersPage() {
       console.error("Error checking health:", error);
     } finally {
       setCheckingHealth(null);
-    }
-  }
-
-  async function addVenopag() {
-    setAddingVenopag(true);
-    try {
-      const response = await fetch("/api/admin/add-venopag");
-      const data = await response.json();
-      if (data.success) {
-        alert("Venopag adicionada com sucesso!");
-        loadAcquirers();
-      } else {
-        alert("Erro ao adicionar Venopag: " + (data.error || "Erro desconhecido"));
-      }
-    } catch (error) {
-      console.error("Error adding Venopag:", error);
-      alert("Erro ao adicionar Venopag");
-    } finally {
-      setAddingVenopag(false);
     }
   }
 
@@ -306,16 +286,6 @@ export default function AcquirersPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          {!acquirers.find(a => a.code === 'venopag') && (
-            <button
-              onClick={addVenopag}
-              disabled={addingVenopag}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50"
-            >
-              {addingVenopag ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-              Adicionar Venopag
-            </button>
-          )}
           <button
             onClick={openAddModal}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
