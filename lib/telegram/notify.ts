@@ -1,6 +1,4 @@
-import { neon } from "@neondatabase/serverless";
-
-const sql = neon(process.env.DATABASE_URL!);
+import { sql } from "@/lib/db";
 
 // Constantes de links
 const SITE_URL = "https://www.legacypay.site";

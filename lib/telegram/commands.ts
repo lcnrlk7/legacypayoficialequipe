@@ -1,4 +1,4 @@
-import { neon } from "@neondatabase/serverless";
+import { sql } from "@/lib/db";
 import { sendMessage, sendPhoto, editMessageText, answerCallbackQuery, checkChannelMembership, deleteMessage } from "./bot";
 import { logTelegramAction } from "./logs";
 import { notifyDeposit, notifyWithdrawal } from "./notify";
@@ -9,8 +9,6 @@ const REQUIRED_CHANNELS = [
   { id: "@legacypaybot", name: "Vendas", link: "https://t.me/legacypaybot" },
   { id: "@legacypayavisos", name: "Avisos", link: "https://t.me/legacypayavisos" },
 ];
-
-const sql = neon(process.env.DATABASE_URL!);
 
 // ══════════════════════════════════════════════════════════════════════════════
 // CONFIGURACOES
@@ -415,7 +413,7 @@ function msgSacar(balance: number): string {
    ⚡ Processamento rapido
    ✅ PIX instantaneo
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━━━━━━━━━━━━━━━━━━━━━��━━━━
 `;
 }
 

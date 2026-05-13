@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { neon } from "@neondatabase/serverless";
+import { sql } from "@/lib/db";
 import { MisticPay } from "@/lib/acquirers/misticpay";
 
 // Mapeamento de status da Medusa para status interno
@@ -40,7 +40,7 @@ interface MedusaListResponse {
 }
 
 export async function GET(request: Request) {
-  const sql = neon(process.env.DATABASE_URL!);
+  const dbSql = sql;
   
   try {
     // Verificar autorização

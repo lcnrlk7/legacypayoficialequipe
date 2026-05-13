@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { neon } from "@neondatabase/serverless";
+import { sql } from "@/lib/db";
 import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 
-const sql = neon(process.env.DATABASE_URL!);
 
 // DELETE - Desativar 2FA de usuario (admin)
 export async function DELETE(

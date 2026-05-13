@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { neon } from "@neondatabase/serverless";
+import { sql } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 
-const sql = neon(process.env.DATABASE_URL!);
 
 // GET - Buscar configuracoes e usuarios
 export async function GET() {

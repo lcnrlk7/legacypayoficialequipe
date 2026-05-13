@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { neon } from "@neondatabase/serverless";
+import { sql } from "@/lib/db";
 import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 import { logTicketClosed, logTicketAdminReply } from "@/lib/discord-webhook";
 
-const sql = neon(process.env.DATABASE_URL!);
 
 export const dynamic = "force-dynamic";
 

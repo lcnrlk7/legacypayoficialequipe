@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { neon } from "@neondatabase/serverless";
+import { sql } from "@/lib/db";
 import { sendMessage } from "@/lib/telegram/bot";
 
-const sql = neon(process.env.DATABASE_URL!);
 
 /**
  * Webhook para receber confirmacao de pagamento PIX do Bot Telegram

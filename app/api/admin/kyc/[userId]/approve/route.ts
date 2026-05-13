@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { neon } from "@neondatabase/serverless";
+import { sql } from "@/lib/db";
 import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 import { logKYCStatusUpdate, logAdminAction } from "@/lib/discord-webhook";
 
@@ -7,7 +7,7 @@ export async function POST(
   request: Request,
   { params }: { params: Promise<{ userId: string }> }
 ) {
-  const sql = neon(process.env.DATABASE_URL!);
+  const dbSql = sql;
   
   // Verificar se e admin (fora do try/catch)
   const admin = await verifyAdmin();

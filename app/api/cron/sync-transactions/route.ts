@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { neon } from "@neondatabase/serverless";
+import { sql } from "@/lib/db";
 
 // Mapeamento de status da Medusa para status interno
 const MEDUSA_STATUS_MAP: Record<string, string> = {
@@ -39,7 +39,7 @@ interface MedusaListResponse {
 }
 
 export async function GET(request: Request) {
-  const sql = neon(process.env.DATABASE_URL!);
+  const dbSql = sql;
   
   try {
     // Verificar se é uma requisição interna ou do Vercel Cron
