@@ -34,27 +34,21 @@ export async function GET() {
     `;
     results.push(`Rotas WHITE atualizadas: ${white.length}`);
 
-    // Atualizar usuarios com as novas taxas BLACK
+    // Limpar taxas personalizadas dos usuarios para usar as taxas da rota
+    // (apenas usuarios sem taxa custom definida pelo admin)
+    // Nao atualizamos diretamente pois as taxas vem da adquirente/rota
+    // O sistema ja busca automaticamente da rota quando custom_ esta NULL
+    
+    // Verificar usuarios por rota
     const usersBlack = await sql`
-      UPDATE profiles 
-      SET pix_fee_percentage = 5,
-          pix_fixed_fee = 0,
-          withdrawal_fee_percentage = 5
-      WHERE LOWER(route) = 'black'
-      RETURNING email
+      SELECT email FROM profiles WHERE LOWER(route_type) = 'black'
     `;
-    results.push(`Usuarios BLACK atualizados: ${usersBlack.length}`);
+    results.push(`Usuarios na rota BLACK: ${usersBlack.length}`);
 
-    // Atualizar usuarios com as novas taxas WHITE
     const usersWhite = await sql`
-      UPDATE profiles 
-      SET pix_fee_percentage = 2,
-          pix_fixed_fee = 0.70,
-          withdrawal_fee_percentage = 2
-      WHERE LOWER(route) = 'white'
-      RETURNING email
+      SELECT email FROM profiles WHERE LOWER(route_type) = 'white'
     `;
-    results.push(`Usuarios WHITE atualizados: ${usersWhite.length}`);
+    results.push(`Usuarios na rota WHITE: ${usersWhite.length}`);
 
     // Verificar resultado final
     const allRoutes = await sql`

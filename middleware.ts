@@ -16,16 +16,26 @@ async function isIpBlocked(ip: string): Promise<boolean> {
     return blockedIpsCache.has(ip)
   }
   
-  // Atualiza cache
+  // Atualiza cache - só tenta se DATABASE_URL estiver disponível
+  const databaseUrl = process.env.DATABASE_URL
+  if (!databaseUrl) {
+    // Em Edge Runtime, a variável pode não estar disponível
+    // Retorna cache existente ou false
+    return blockedIpsCache.has(ip)
+  }
+  
   try {
-    const sql = neon(process.env.DATABASE_URL!)
+    const sql = neon(databaseUrl)
     const blockedIps = await sql`SELECT ip_address FROM blocked_ips`
     blockedIpsCache = new Set(blockedIps.map((row: { ip_address: string }) => row.ip_address))
     lastCacheUpdate = now
     return blockedIpsCache.has(ip)
   } catch (error) {
-    console.error('[Middleware] Erro ao verificar IP bloqueado:', error)
-    return false
+    // Silencia erro em produção, apenas loga se for erro diferente de conexão
+    if (error instanceof Error && !error.message.includes('database connection')) {
+      console.error('[Middleware] Erro ao verificar IP bloqueado:', error)
+    }
+    return blockedIpsCache.has(ip)
   }
 }
 
