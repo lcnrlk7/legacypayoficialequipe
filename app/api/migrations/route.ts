@@ -5,20 +5,24 @@ export async function GET() {
   try {
     const results: string[] = [];
 
-    // Criar tabela push_subscriptions se nao existir
+    // Dropar tabela antiga se existir com estrutura errada e recriar
+    await sql`DROP TABLE IF EXISTS push_subscriptions CASCADE`;
+    
+    // Criar tabela push_subscriptions com user_id como TEXT (UUID string)
     await sql`
       CREATE TABLE IF NOT EXISTS push_subscriptions (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+        user_id TEXT NOT NULL,
         endpoint TEXT NOT NULL,
         p256dh TEXT NOT NULL,
         auth TEXT NOT NULL,
+        user_agent TEXT,
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW(),
         UNIQUE(user_id, endpoint)
       )
     `;
-    results.push("push_subscriptions table created/verified");
+    results.push("push_subscriptions table recreated with correct structure");
 
     // Adicionar coluna push_subscription em profiles se nao existir
     await sql`
