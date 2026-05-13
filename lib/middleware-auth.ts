@@ -98,6 +98,7 @@ export async function handleAuth(request: NextRequest) {
     '/api/cron/',
     '/api/migrations',
     '/api/push/debug',
+    '/api/push/test',
   ]
 
   const isPublicPath = publicPaths.some(path => pathname === path || pathname.startsWith(path + '/')) ||
