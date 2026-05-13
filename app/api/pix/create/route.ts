@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
       }
 
       // URL do webhook MisticPay - usar domínio de produção
-      const webhookUrl = "https://legacypay.site/api/webhooks/misticpay";
+      const webhookUrl = "https://www.legacypay.site/api/webhooks/misticpay";
 
       pixResult = await misticPay.createPixCharge({
         amount,
@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
         const customerEmail = profile.email || "cliente@legacypay.com";
         
         // URL do webhook Medusa - usar domínio de produção
-        const medusaWebhookUrl = "https://legacypay.site/api/webhooks/medusa";
+        const medusaWebhookUrl = "https://www.legacypay.site/api/webhooks/medusa";
         
         const medusaResult = await medusa.createSimplePixPayment(
           amountInCents,
@@ -285,7 +285,7 @@ export async function POST(request: NextRequest) {
           clientSecret: acquirer.api_secret || "",
         });
 
-        const webhookUrl = "https://legacypay.site/api/webhooks/venopag";
+        const webhookUrl = "https://www.legacypay.site/api/webhooks/venopag";
         const customerName = profile.name || payerName || "Cliente LegacyPay";
         const customerDocument = (payerDocument || profile.cpf_cnpj || "00000000000").replace(/\D/g, "");
 

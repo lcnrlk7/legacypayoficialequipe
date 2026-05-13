@@ -34,9 +34,18 @@ const STATUS_MAP: Record<string, string> = {
 
 export async function POST(request: Request) {
   try {
-    const body: VenopagWebhook = await request.json();
+    const rawBody = await request.text();
+    console.log("[Venopag Webhook] RAW Body recebido:", rawBody);
+    
+    let body: VenopagWebhook;
+    try {
+      body = JSON.parse(rawBody);
+    } catch (parseError) {
+      console.error("[Venopag Webhook] Erro ao parsear JSON:", parseError);
+      return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
+    }
 
-    console.log("[Venopag Webhook] Recebido:", JSON.stringify(body));
+    console.log("[Venopag Webhook] Parsed body:", JSON.stringify(body));
 
     if (!body.type || !body.status) {
       console.error("[Venopag Webhook] Payload invalido:", body);
@@ -127,15 +136,17 @@ export async function POST(request: Request) {
 
       console.log(`[Venopag Webhook] Saque ${withdrawalId}: ${body.status} -> ${internalStatus}`);
 
-      // Buscar saque pelo external_id
+      // Buscar saque pelo acquirer_withdrawal_id (e2e ou transaction_id da VenoPag)
       const withdrawal = await sql`
         SELECT w.*, p.id as user_id, p.balance
         FROM withdrawals w
         JOIN profiles p ON w.user_id = p.id
-        WHERE w.external_id = ${withdrawalId}
-        OR w.acquirer_transaction_id = ${withdrawalId}
+        WHERE w.acquirer_withdrawal_id = ${withdrawalId}
+        OR w.external_id = ${withdrawalId}
         LIMIT 1
       `;
+      
+      console.log(`[Venopag Webhook] Busca por saque ${withdrawalId}: encontrado=${withdrawal.length > 0}`);
 
       if (withdrawal.length === 0) {
         console.log(`[Venopag Webhook] Saque ${withdrawalId} nao encontrado`);
