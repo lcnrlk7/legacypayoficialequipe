@@ -397,8 +397,7 @@ export default function Home() {
                 </svg>
               </div>
               <h3 className="text-base md:text-xl font-semibold mb-1 md:mb-2">PIX Instantâneo</h3>
-              <div className="text-2xl md:text-4xl font-bold text-orange-500 mb-0.5 md:mb-1">1%</div>
-              <div className="text-lg md:text-2xl font-bold text-orange-500 mb-1 md:mb-2">+ R$1,00</div>
+              <div className="text-2xl md:text-4xl font-bold text-orange-500 mb-1 md:mb-2">R$0,50</div>
               <p className="text-xs md:text-sm text-gray-500">Taxa fixa por transação.</p>
               <p className="text-[10px] md:text-xs text-gray-600 mt-1 md:mt-2">Receba na hora.</p>
             </div>
@@ -409,8 +408,7 @@ export default function Home() {
                 <Code2 className="w-5 h-5 md:w-7 md:h-7 text-orange-500" />
               </div>
               <h3 className="text-base md:text-xl font-semibold mb-1 md:mb-2">API PIX</h3>
-              <div className="text-2xl md:text-4xl font-bold text-orange-500 mb-0.5 md:mb-1">1%</div>
-              <div className="text-lg md:text-2xl font-bold text-orange-500 mb-1 md:mb-2">+ R$1,00</div>
+              <div className="text-2xl md:text-4xl font-bold text-orange-500 mb-1 md:mb-2">R$0,50</div>
               <p className="text-xs md:text-sm text-gray-500">Integração via API.</p>
               <p className="text-[10px] md:text-xs text-gray-600 mt-1 md:mt-2">Documentação completa.</p>
             </div>
