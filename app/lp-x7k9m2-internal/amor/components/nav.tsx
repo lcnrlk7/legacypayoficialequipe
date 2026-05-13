@@ -15,10 +15,10 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: "Dashboard", icon: <LayoutDashboard className="w-5 h-5" />, href: "/lp-x7k9m2-internal/superadmin", id: "dashboard" },
-  { label: "Administradores", icon: <Users className="w-5 h-5" />, href: "/lp-x7k9m2-internal/superadmin/admins", id: "admins" },
-  { label: "Roles", icon: <Shield className="w-5 h-5" />, href: "/lp-x7k9m2-internal/superadmin/roles", id: "roles" },
-  { label: "Auditoria", icon: <Activity className="w-5 h-5" />, href: "/lp-x7k9m2-internal/superadmin/audit", id: "audit" },
+  { label: "Dashboard", icon: <LayoutDashboard className="w-5 h-5" />, href: "/lp-x7k9m2-internal/amor", id: "dashboard" },
+  { label: "Administradores", icon: <Users className="w-5 h-5" />, href: "/lp-x7k9m2-internal/amor/admins", id: "admins" },
+  { label: "Roles", icon: <Shield className="w-5 h-5" />, href: "/lp-x7k9m2-internal/amor/roles", id: "roles" },
+  { label: "Auditoria", icon: <Activity className="w-5 h-5" />, href: "/lp-x7k9m2-internal/amor/audit", id: "audit" },
 ];
 
 export function SuperAdminNav({ activeTab }: { activeTab: string }) {
