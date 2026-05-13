@@ -4,7 +4,9 @@
 
 import { detectAttack, AttackDetectionResult } from "./sanitize";
 import { logAttack } from "./attack-logger";
-import { sql } from "@/lib/db";
+import { neon } from "@neondatabase/serverless";
+
+const sql = neon(process.env.DATABASE_URL!);
 
 export interface SecurityCheckResult {
   blocked: boolean;

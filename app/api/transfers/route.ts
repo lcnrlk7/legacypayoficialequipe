@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@/lib/db";
+import { neon } from "@neondatabase/serverless";
 import { getCurrentUser } from "@/lib/auth";
+
+const sql = neon(process.env.DATABASE_URL!);
 
 // GET - Listar transferencias do usuario
 export async function GET(request: NextRequest) {

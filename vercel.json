@@ -2,23 +2,23 @@
   "crons": [
     {
       "path": "/api/cron/telegram-reminders",
-      "schedule": "0 8 * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/sync-transactions",
-      "schedule": "0 6 * * *"
+      "schedule": "*/2 * * * *"
     },
     {
       "path": "/api/cron/sync-withdrawals",
-      "schedule": "0 7 * * *"
+      "schedule": "*/3 * * * *"
     },
     {
       "path": "/api/cron/sync-misticpay",
-      "schedule": "0 5 * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/sync-medusa",
-      "schedule": "0 4 * * *"
+      "schedule": "*/5 * * * *"
     },
     {
       "path": "/api/cron/motivational",

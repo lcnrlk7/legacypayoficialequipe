@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@/lib/db";
+import { neon } from "@neondatabase/serverless";
 import { setWebhook } from "@/lib/telegram/bot";
 
+const sql = neon(process.env.DATABASE_URL!);
 
 // POST - Configurar webhook e salvar configuracoes
 export async function POST(request: NextRequest) {

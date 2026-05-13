@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { sql } from "@/lib/db";
+import { neon } from "@neondatabase/serverless";
 import { detectPixKeyType } from "@/lib/pix-validator";
 
 /**
@@ -16,7 +16,7 @@ import { detectPixKeyType } from "@/lib/pix-validator";
  * - Usar API da adquirente que tenha acesso ao DICT
  */
 export async function POST(request: Request) {
-  const dbSql = sql;
+  const sql = neon(process.env.DATABASE_URL!);
   
   try {
     const session = await getSession();

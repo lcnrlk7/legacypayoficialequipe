@@ -1,10 +1,10 @@
 import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 import { NextResponse } from "next/server";
-import { sql } from "@/lib/db";
+import { neon } from "@neondatabase/serverless";
 import { getSession } from "@/lib/auth";
 
 export async function GET() {
-  const dbSql = sql;
+  const sql = neon(process.env.DATABASE_URL!);
   
   try {
     // SEGURANCA: Verificar se e admin
@@ -112,7 +112,7 @@ export async function GET() {
 
 // Pay pending commissions
 export async function POST(request: Request) {
-  const dbSql = sql;
+  const sql = neon(process.env.DATABASE_URL!);
   
   try {
     // SEGURANCA: Verificar se e admin

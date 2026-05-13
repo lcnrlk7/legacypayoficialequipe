@@ -32,21 +32,15 @@ export async function sendPushNotification(
   userId: string,
   payload: PushNotificationPayload
 ): Promise<{ success: boolean; sent: number; failed: number }> {
-  console.log("[v0] sendPushNotification called:", { userId, title: payload.title });
-  
   if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY) {
     console.log("[v0] VAPID keys not configured, skipping push notification");
     return { success: false, sent: 0, failed: 0 };
   }
 
-  console.log("[v0] VAPID keys configured, searching subscriptions for user:", userId);
-
   // Buscar todas as subscriptions do usuário
   const subscriptions = await sql`
     SELECT * FROM push_subscriptions WHERE user_id = ${userId}
   `;
-
-  console.log("[v0] Found subscriptions:", subscriptions?.length || 0);
 
   if (!subscriptions || subscriptions.length === 0) {
     console.log("[v0] No push subscriptions found for user:", userId);

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql } from "@/lib/db";
+import { neon } from "@neondatabase/serverless";
 import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 
+const sql = neon(process.env.DATABASE_URL!);
 
 export const dynamic = "force-dynamic";
 

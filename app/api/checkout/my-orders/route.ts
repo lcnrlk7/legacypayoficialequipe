@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
+import { getUser } from "@/lib/auth";
 
 export async function GET() {
   try {
-    const user = await getCurrentUser();
+    const user = await getUser();
     
     if (!user) {
       return NextResponse.json({ error: "Nao autorizado" }, { status: 401 });

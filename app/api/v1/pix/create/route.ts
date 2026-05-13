@@ -58,8 +58,6 @@ export async function POST(request: NextRequest) {
     }
 
     const user = userResult[0];
-    
-    console.log("[v0] User found:", { id: user.id, user_id: user.user_id, email: user.email });
 
     if (!user.api_enabled && user.api_enabled !== null) {
       return NextResponse.json(
@@ -170,20 +168,9 @@ export async function POST(request: NextRequest) {
 
     const transaction = result[0];
 
-    // Enviar notificacao push
-    const userId = user.user_id;
-    console.log("[v0] Sending push notification for PIX generated:", { userId, amount, transactionId: transaction.id });
-    
-    if (userId) {
-      try {
-        const pushResult = await notifyNewTransaction(userId, amount, transaction.id);
-        console.log("[v0] Push notification result:", pushResult);
-      } catch (err) {
-        console.error("[v0] Error sending push notification:", err);
-      }
-    } else {
-      console.error("[v0] Cannot send push notification - user_id is undefined");
-    }
+    notifyNewTransaction(user.id, amount, transaction.id).catch((err) => {
+      console.error("[v0] Error sending push notification:", err);
+    });
 
     return NextResponse.json({
       success: true,

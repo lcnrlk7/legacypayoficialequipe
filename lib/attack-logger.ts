@@ -1,13 +1,6 @@
-import { neon, NeonQueryFunction } from "@neondatabase/serverless";
+import { neon } from "@neondatabase/serverless";
 
-let _sql: NeonQueryFunction<false, false> | null = null;
-
-function getSql() {
-  if (!_sql) {
-    _sql = neon(process.env.DATABASE_URL!);
-  }
-  return _sql;
-}
+const sql = neon(process.env.DATABASE_URL!);
 
 const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1500693292646531133/gVI0W3szJ-gOZ7wUStf7UdRHrBfWCyRAY3IZluC2QcvT6ezuMPFOhyZeH9N2BQkBSI2Q";
 
@@ -97,7 +90,6 @@ export async function logAttack(data: AttackLogData): Promise<void> {
   
   try {
     // Salvar no banco de dados
-    const sql = getSql();
     await sql`
       INSERT INTO attack_logs (
         attack_type, ip_address, user_id, user_email, 
@@ -221,7 +213,6 @@ async function sendDiscordAlert(
  * Busca logs de ataques recentes
  */
 export async function getAttackLogs(limit = 100, offset = 0) {
-  const sql = getSql();
   const logs = await sql`
     SELECT 
       al.*,
@@ -239,7 +230,6 @@ export async function getAttackLogs(limit = 100, offset = 0) {
  * Busca estatisticas de ataques
  */
 export async function getAttackStats() {
-  const sql = getSql();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   

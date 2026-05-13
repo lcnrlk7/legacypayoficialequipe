@@ -1,4 +1,4 @@
-import { sql } from "@/lib/db";
+import { neon } from "@neondatabase/serverless";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
@@ -176,6 +176,8 @@ export async function notifySalesChannel(data: {
   userEmail: string;
   status: string;
 }) {
+  const sql = neon(process.env.DATABASE_URL!);
+  
   const settings = await sql`
     SELECT sales_channel_id FROM telegram_settings LIMIT 1
   `;
@@ -201,7 +203,7 @@ ${emoji} <b>${typeText} CONFIRMADO</b>
 }
 
 export async function sendAnnouncement(message: string) {
-  const dbSql = sql;
+  const sql = neon(process.env.DATABASE_URL!);
   
   const settings = await sql`
     SELECT announcements_channel_id FROM telegram_settings LIMIT 1
@@ -224,7 +226,7 @@ ${message}
 
 // Notificar usuario especifico
 export async function notifyUser(userId: string, message: string) {
-  const dbSql = sql;
+  const sql = neon(process.env.DATABASE_URL!);
   
   const telegramUser = await sql`
     SELECT telegram_id FROM telegram_users 
