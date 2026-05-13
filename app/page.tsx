@@ -37,12 +37,6 @@ export default function Home() {
           </nav>
           
           <div className="flex items-center gap-2 md:gap-3">
-            <Link href="/auth/login" className="px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm text-gray-300 hover:text-white transition-colors">
-              Entrar
-            </Link>
-            <Link href="/auth/register" className="px-3 md:px-5 py-1.5 md:py-2 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full text-xs md:text-sm font-medium text-black hover:shadow-lg hover:shadow-orange-500/25 transition-all">
-              Criar conta
-            </Link>
           </div>
         </div>
       </header>
@@ -91,81 +85,59 @@ export default function Home() {
               </div>
             </div>
             
-            {/* Right - Dashboard Mockup */}
-            <div className="relative">
-              <div className="relative bg-[#111111] rounded-2xl border border-white/10 p-4 shadow-2xl shadow-black/50">
-                {/* Dashboard Header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <Image src="/logo.png" alt="Legacy Pay" width={100} height={28} className="h-6 w-auto" />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center">
-                      <span className="text-xs">A</span>
-                    </div>
-                  </div>
-                </div>
+            {/* Right - Character Animation */}
+            <div className="relative flex items-center justify-center">
+              <div className="relative">
+                {/* Avatar Image */}
+                <Image 
+                  src="/avatars/avatar-1.jpg" 
+                  alt="LegacyPay Mascot" 
+                  width={400} 
+                  height={400}
+                  className="w-full max-w-sm md:max-w-md lg:max-w-lg object-contain filter drop-shadow-2xl"
+                  priority
+                />
                 
-                {/* Dashboard Content */}
-                <div className="bg-[#0d0d0d] rounded-xl p-4">
-                  <div className="text-xs text-gray-500 mb-3">Resumo geral</div>
-                  
-                  {/* Stats Row */}
-                  <div className="grid grid-cols-4 gap-4 mb-4">
-                    <div>
-                      <div className="text-xs text-gray-500">Receita total</div>
-                      <div className="text-lg font-bold text-white">R$ 98.765,43</div>
-                      <div className="text-xs text-green-500">+8.2%</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500">Transações</div>
-                      <div className="text-lg font-bold text-white">12.543</div>
-                      <div className="text-xs text-green-500">+8.2%</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500">Aprovação</div>
-                      <div className="text-lg font-bold text-white">96,8%</div>
-                      <div className="text-xs text-green-500">+2%</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-gray-500">Chargebacks</div>
-                      <div className="text-lg font-bold text-white">0,32%</div>
-                      <div className="text-xs text-red-500">-0.1%</div>
-                    </div>
-                  </div>
-                  
-                  {/* Chart Area */}
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-[#151515] rounded-lg p-3">
-                      <div className="text-xs text-gray-500 mb-2">Volume de Vendas</div>
-                      <div className="h-24 flex items-end gap-1">
-                        {[40, 65, 45, 70, 55, 80, 60, 75, 85, 70, 90, 75].map((h, i) => (
-                          <div key={i} className="flex-1 bg-gradient-to-t from-orange-600 to-orange-400 rounded-t" style={{ height: `${h}%` }} />
-                        ))}
-                      </div>
-                    </div>
-                    <div className="bg-[#151515] rounded-lg p-3">
-                      <div className="text-xs text-gray-500 mb-2">Status das Transações</div>
-                      <div className="flex items-center justify-center h-24">
-                        <div className="relative w-20 h-20">
-                          <svg className="w-full h-full -rotate-90">
-                            <circle cx="40" cy="40" r="35" stroke="#1f1f1f" strokeWidth="6" fill="none" />
-                            <circle cx="40" cy="40" r="35" stroke="#f97316" strokeWidth="6" fill="none" strokeDasharray="200" strokeDashoffset="10" />
-                          </svg>
-                          <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-sm font-bold">96.8%</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Glow effect */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-orange-500/20 to-orange-600/20 rounded-2xl blur-xl -z-10" />
+                {/* Glowing effect around avatar */}
+                <div className="absolute inset-0 bg-gradient-to-t from-orange-500/30 to-transparent rounded-full blur-3xl -z-10" />
               </div>
               
-              {/* Floating elements */}
+              {/* Feature badges around character */}
+              <div className="absolute top-8 right-0 bg-[#1a1a1a] border border-orange-500/30 rounded-lg px-4 py-2 backdrop-blur-sm hover:border-orange-500/60 transition-colors">
+                <div className="flex flex-col gap-1 text-xs md:text-sm">
+                  <div className="text-gray-400">Na Legacy Pay tem</div>
+                  <div className="text-white font-semibold">Suporte 24/h</div>
+                </div>
+              </div>
+              
+              <div className="absolute top-1/3 -left-4 bg-[#1a1a1a] border border-orange-500/30 rounded-lg px-4 py-2 backdrop-blur-sm hover:border-orange-500/60 transition-colors">
+                <div className="flex flex-col gap-1 text-xs md:text-sm">
+                  <div className="text-gray-400">Na Legacy Pay tem</div>
+                  <div className="text-white font-semibold">Integrações facilitadas</div>
+                </div>
+              </div>
+              
+              <div className="absolute bottom-16 right-8 bg-[#1a1a1a] border border-orange-500/30 rounded-lg px-4 py-2 backdrop-blur-sm hover:border-orange-500/60 transition-colors">
+                <div className="flex flex-col gap-1 text-xs md:text-sm">
+                  <div className="text-gray-400">Na Legacy Pay tem</div>
+                  <div className="text-white font-semibold">Múltiplas rotas</div>
+                </div>
+              </div>
+              
+              <div className="absolute bottom-8 left-12 bg-[#1a1a1a] border border-orange-500/30 rounded-lg px-4 py-2 backdrop-blur-sm hover:border-orange-500/60 transition-colors">
+                <div className="flex items-center gap-2">
+                  <Image src="/images/pix-logo.png" alt="PIX" width={20} height={20} className="w-5 h-5" />
+                </div>
+              </div>
+              
+              <div className="absolute -bottom-2 left-0 bg-[#1a1a1a] border border-orange-500/30 rounded-lg px-4 py-2 backdrop-blur-sm hover:border-orange-500/60 transition-colors">
+                <div className="flex flex-col gap-1 text-xs md:text-sm">
+                  <div className="text-gray-400">Na Legacy Pay tem</div>
+                  <div className="text-white font-semibold">Saque em PIX.</div>
+                </div>
+              </div>
+              
+              {/* Floating orbs */}
               <div className="absolute -top-4 -right-4 w-20 h-20 bg-orange-500/20 rounded-full blur-2xl" />
               <div className="absolute -bottom-4 -left-4 w-16 h-16 bg-orange-600/20 rounded-full blur-xl" />
             </div>
@@ -495,10 +467,6 @@ export default function Home() {
                 <p className="text-sm md:text-base text-gray-400 mb-4 md:mb-6">
                   Transforme sua operação, aumente suas conversões e escale seu negócio com tecnologia de ponta.
                 </p>
-                <Link href="/auth/register" className="inline-flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full text-sm md:text-base font-medium text-black hover:shadow-xl hover:shadow-orange-500/30 transition-all">
-                  Criar minha conta agora
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
               </div>
               
               <div className="grid grid-cols-3 gap-4 md:gap-6">
