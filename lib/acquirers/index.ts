@@ -949,8 +949,9 @@ export async function getSystemFeesForUser(userId: string): Promise<FeeConfig> {
       const isWithdrawalPercentage = acq.withdrawal_fee_is_percentage ?? false;
       
       routeFees = {
-        // Se taxa de entrada e percentual, usa fee_percentage, senao usa fixed_fee
-        pixFixedFee: isFeePercentage ? 0 : Number(acq.fixed_fee) || 0,
+        // Taxa fixa sempre e considerada (pode ser 0)
+        // Taxa percentual e usada se fee_is_percentage = true
+        pixFixedFee: Number(acq.fixed_fee) || 0,
         pixPercentageFee: isFeePercentage ? Number(acq.fee_percentage) || 0 : 0,
         withdrawalFee: Number(acq.withdrawal_fee) || 0,
         withdrawalFeeIsPercentage: isWithdrawalPercentage,
