@@ -70,6 +70,13 @@ export async function GET() {
     `;
     results.push("bot_users.low_balance_alert_at column added");
 
+    // Adicionar coluna custom_fixed_fee em profiles se nao existir
+    await sql`
+      ALTER TABLE profiles 
+      ADD COLUMN IF NOT EXISTS custom_fixed_fee NUMERIC(10,2) DEFAULT NULL
+    `;
+    results.push("profiles.custom_fixed_fee column added");
+
     return NextResponse.json({
       success: true,
       message: "Todas as migracoes aplicadas com sucesso",

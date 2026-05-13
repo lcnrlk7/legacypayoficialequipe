@@ -135,7 +135,10 @@ export async function PUT(request: Request) {
         await sql`UPDATE profiles SET custom_fee_percentage = ${data.custom_fee_percentage}, updated_at = NOW() WHERE id = ${userId}`;
       }
       if (data.fixed_fee !== undefined) {
-        await sql`UPDATE profiles SET fixed_fee = ${data.fixed_fee}, updated_at = NOW() WHERE id = ${userId}`;
+        await sql`UPDATE profiles SET custom_fixed_fee = ${data.fixed_fee}, updated_at = NOW() WHERE id = ${userId}`;
+      }
+      if (data.custom_fixed_fee !== undefined) {
+        await sql`UPDATE profiles SET custom_fixed_fee = ${data.custom_fixed_fee}, updated_at = NOW() WHERE id = ${userId}`;
       }
       if (data.balance !== undefined) {
         await sql`UPDATE profiles SET balance = ${data.balance}, updated_at = NOW() WHERE id = ${userId}`;

@@ -990,10 +990,17 @@ export async function getSystemFeesForUser(userId: string): Promise<FeeConfig> {
       console.log(`[Acquirer] Usuario ${userId} - Usando taxa LEGADA de entrada: ${legacyFeePercentage}%`);
     }
     
-    // Taxa fixa de deposito personalizada (PIX In) - mantem legado por enquanto
-    const userFixedFee = user?.fixed_fee;
-    if (userFixedFee !== null && userFixedFee !== undefined && String(userFixedFee).trim() !== '') {
-      fees.pixFixedFee = Number(userFixedFee);
+    // Taxa fixa de deposito personalizada (PIX In)
+    // Prioridade: custom_fixed_fee > fixed_fee (legado)
+    const customFixedFee = user?.custom_fixed_fee;
+    const legacyFixedFee = user?.fixed_fee;
+    
+    if (customFixedFee !== null && customFixedFee !== undefined && String(customFixedFee).trim() !== '') {
+      fees.pixFixedFee = Number(customFixedFee);
+      console.log(`[Acquirer] Usuario ${userId} - Usando taxa fixa PERSONALIZADA: R$${customFixedFee}`);
+    } else if (legacyFixedFee !== null && legacyFixedFee !== undefined && String(legacyFixedFee).trim() !== '') {
+      fees.pixFixedFee = Number(legacyFixedFee);
+      console.log(`[Acquirer] Usuario ${userId} - Usando taxa fixa LEGADA: R$${legacyFixedFee}`);
     }
     
     // Taxa de saque personalizada (PIX Out)

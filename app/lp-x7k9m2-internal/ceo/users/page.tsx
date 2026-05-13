@@ -918,7 +918,7 @@ const openEditModal = (user: UserProfile) => {
                       className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      White: R$ 1,50 | Black: R$ 0,00
+                      White: R$ 0,70 | Black: R$ 0,00
                     </p>
                   </div>
                 </div>
@@ -949,7 +949,7 @@ const openEditModal = (user: UserProfile) => {
                     className="w-full px-4 py-2.5 bg-secondary border border-border rounded-xl text-white placeholder:text-muted-foreground focus:outline-none focus:border-primary/50"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    MisticPay: R$ 2,00 | Medusa: R$ 5,00
+                    White: 2% | Black: 5%
                   </p>
                 </div>
               </div>
@@ -966,9 +966,9 @@ const openEditModal = (user: UserProfile) => {
                         ...editForm,
                         acquirer_id: selectedAcquirer.id,
                         route_type: selectedAcquirer.route_type,
-                        fee_percentage: selectedAcquirer.fee_percentage.toString(),
-                        withdrawal_fee: selectedAcquirer.withdrawal_fee.toString(),
-                        fixed_fee: "0",
+                        fee_percentage: selectedAcquirer.fee_percentage?.toString() || "0",
+                        withdrawal_fee: selectedAcquirer.withdrawal_fee?.toString() || "0",
+                        fixed_fee: selectedAcquirer.fixed_fee?.toString() || "0",
                       });
                     }
                   }}
