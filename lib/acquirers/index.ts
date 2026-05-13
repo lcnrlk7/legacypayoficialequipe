@@ -463,9 +463,7 @@ export async function createWithdrawal(
         const misticPayKeyType = convertToMisticPayKeyType(pixKeyType) || mapPixKeyType(pixKey);
         
         // URL do webhook para receber notificações de status do saque
-        const webhookUrl = process.env.NEXT_PUBLIC_APP_URL 
-          ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/misticpay`
-          : "https://legacypay.site/api/webhooks/misticpay";
+        const webhookUrl = "https://www.legacypay.site/api/webhooks/misticpay";
         
         console.log(`[MisticPay] Saque: valor=${amountToSend}, pixKey=${pixKey}, tipo=${misticPayKeyType}, webhook=${webhookUrl}`);
 
@@ -530,7 +528,7 @@ export async function createWithdrawal(
         }
 
         // URL do webhook para receber status do saque
-        const withdrawalWebhookUrl = "https://legacypay.site/api/webhooks/medusa";
+        const withdrawalWebhookUrl = "https://www.legacypay.site/api/webhooks/medusa";
 
         // A Medusa cobra R$ 5 de taxa que é descontada do valor enviado
         // Para o usuário receber o valor líquido correto, enviamos: valor + taxa_medusa
@@ -578,7 +576,7 @@ export async function createWithdrawal(
     const beneficiaryName = user?.name || "Usuario LegacyPay";
     const beneficiaryDocument = (user?.cpf_cnpj || "00000000000").replace(/\D/g, "");
 
-    const withdrawalWebhookUrl = "https://legacypay.site/api/webhooks/medusa";
+    const withdrawalWebhookUrl = "https://www.legacypay.site/api/webhooks/medusa";
     
     // Medusa White taxa de saque e R$ 5,00
     const MEDUSA_WHITE_WITHDRAWAL_FEE = 5.00;
@@ -611,11 +609,9 @@ export async function createWithdrawal(
 
   case "venopag": {
     // Venopag - Rota White
-    const client = new Venopag({
-      clientId: config.api_key,
-      clientSecret: config.api_secret || "",
-    });
-
+    // NOTA: VenoPag pode dar erro de IP nao configurado
+    // Nesse caso, usar MisticPay como fallback para saques
+    
     // Buscar dados do usuario para o saque
     let beneficiaryName = "Cliente LegacyPay";
     let beneficiaryDocument = "00000000000";
@@ -630,18 +626,62 @@ export async function createWithdrawal(
       }
     }
 
-    const webhookUrl = process.env.NEXT_PUBLIC_APP_URL 
-      ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/venopag`
-      : "https://legacypay.site/api/webhooks/venopag";
+    // Tentar usar MisticPay para saques da rota White (mesmo fluxo que VenoPag)
+    // MisticPay eh mais confiavel e nao tem problema de IP
+    console.log(`[Venopag->MisticPay] Usando MisticPay para saque da rota WHITE: valor=${amount}, pixKey=${pixKey}`);
+    
+    const misticPayConfig = await getAcquirerByCode("misticpay");
+    if (misticPayConfig) {
+      const misticClient = new MisticPay({
+        clientId: misticPayConfig.api_key,
+        clientSecret: misticPayConfig.api_secret || "",
+      });
 
-    // Venopag cobra 1% de taxa para saques
-    // Nossa margem adicional e 3%, total 4% para usuario
-    // A taxa da Venopag e descontada do valor, entao enviamos o valor exato
-    console.log(`[Venopag] Iniciando saque: valor=${amount}, pixKey=${pixKey}, beneficiario=${beneficiaryName}`);
+      const MISTICPAY_WITHDRAWAL_FEE = 0.50;
+      const amountToSend = amount + MISTICPAY_WITHDRAWAL_FEE;
+      
+      const misticPayKeyType = convertToMisticPayKeyType(pixKeyType) || mapPixKeyType(pixKey);
+      const webhookUrl = "https://www.legacypay.site/api/webhooks/misticpay";
+      
+      console.log(`[MisticPay via Venopag] Saque: valor=${amountToSend}, pixKey=${pixKey}, tipo=${misticPayKeyType}`);
+
+      try {
+        const result = await misticClient.withdraw({
+          amount: amountToSend,
+          pixKey,
+          pixKeyType: misticPayKeyType,
+          description: `Saque PIX - ${beneficiaryName}`,
+          projectWebhook: webhookUrl,
+        });
+
+        if (result.success && result.data) {
+          console.log("[MisticPay via Venopag] Saque criado com sucesso:", result.data);
+          return {
+            success: true,
+            withdrawalId: String(result.data.transactionId),
+            status: result.data.status,
+          };
+        }
+        return { success: false, error: result.error || "Erro ao criar saque via MisticPay" };
+      } catch (withdrawError) {
+        const errorMessage = withdrawError instanceof Error ? withdrawError.message : "Erro desconhecido";
+        console.error("[MisticPay via Venopag] Erro:", errorMessage);
+        return { success: false, error: errorMessage };
+      }
+    }
+    
+    // Se MisticPay nao estiver disponivel, tentar VenoPag diretamente
+    const client = new Venopag({
+      clientId: config.api_key,
+      clientSecret: config.api_secret || "",
+    });
+
+    const webhookUrl = "https://www.legacypay.site/api/webhooks/venopag";
+    console.log(`[Venopag] Tentando saque direto: valor=${amount}, pixKey=${pixKey}`);
 
     try {
       const result = await client.createSimpleCashOut(
-        amount, // Venopag recebe valor em reais
+        amount,
         beneficiaryName,
         beneficiaryDocument,
         pixKey,
@@ -655,6 +695,11 @@ export async function createWithdrawal(
           withdrawalId: result.e2e,
           status: result.status || "pending",
         };
+      }
+      
+      // Se erro de IP, informar de forma clara
+      if (result.error && result.error.toLowerCase().includes("ip")) {
+        return { success: false, error: "IP do servidor não autorizado na VenoPag. Entre em contato com o suporte." };
       }
       return { success: false, error: result.error || "Erro ao criar saque Venopag" };
     } catch (withdrawError) {
