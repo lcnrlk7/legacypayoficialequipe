@@ -168,8 +168,8 @@ export async function POST(request: NextRequest) {
 
     const transaction = result[0];
 
-    console.log("[v0] Sending push notification for PIX generated:", { userId: user.id, amount, transactionId: transaction.id });
-    notifyNewTransaction(user.id, amount, transaction.id).catch((err) => {
+    console.log("[v0] Sending push notification for PIX generated:", { userId: user.user_id, amount, transactionId: transaction.id });
+    notifyNewTransaction(user.user_id, amount, transaction.id).catch((err) => {
       console.error("[v0] Error sending push notification:", err);
     });
 
