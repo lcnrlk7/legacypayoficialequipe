@@ -609,9 +609,11 @@ export async function createWithdrawal(
 
   case "venopag": {
     // Venopag - Rota White
-    // NOTA: VenoPag pode dar erro de IP nao configurado
-    // Nesse caso, usar MisticPay como fallback para saques
-    
+    const client = new Venopag({
+      clientId: config.api_key,
+      clientSecret: config.api_secret || "",
+    });
+
     // Buscar dados do usuario para o saque
     let beneficiaryName = "Cliente LegacyPay";
     let beneficiaryDocument = "00000000000";
@@ -626,58 +628,8 @@ export async function createWithdrawal(
       }
     }
 
-    // Tentar usar MisticPay para saques da rota White (mesmo fluxo que VenoPag)
-    // MisticPay eh mais confiavel e nao tem problema de IP
-    console.log(`[Venopag->MisticPay] Usando MisticPay para saque da rota WHITE: valor=${amount}, pixKey=${pixKey}`);
-    
-    const misticPayConfig = await getAcquirerByCode("misticpay");
-    if (misticPayConfig) {
-      const misticClient = new MisticPay({
-        clientId: misticPayConfig.api_key,
-        clientSecret: misticPayConfig.api_secret || "",
-      });
-
-      const MISTICPAY_WITHDRAWAL_FEE = 0.50;
-      const amountToSend = amount + MISTICPAY_WITHDRAWAL_FEE;
-      
-      const misticPayKeyType = convertToMisticPayKeyType(pixKeyType) || mapPixKeyType(pixKey);
-      const webhookUrl = "https://www.legacypay.site/api/webhooks/misticpay";
-      
-      console.log(`[MisticPay via Venopag] Saque: valor=${amountToSend}, pixKey=${pixKey}, tipo=${misticPayKeyType}`);
-
-      try {
-        const result = await misticClient.withdraw({
-          amount: amountToSend,
-          pixKey,
-          pixKeyType: misticPayKeyType,
-          description: `Saque PIX - ${beneficiaryName}`,
-          projectWebhook: webhookUrl,
-        });
-
-        if (result.success && result.data) {
-          console.log("[MisticPay via Venopag] Saque criado com sucesso:", result.data);
-          return {
-            success: true,
-            withdrawalId: String(result.data.transactionId),
-            status: result.data.status,
-          };
-        }
-        return { success: false, error: result.error || "Erro ao criar saque via MisticPay" };
-      } catch (withdrawError) {
-        const errorMessage = withdrawError instanceof Error ? withdrawError.message : "Erro desconhecido";
-        console.error("[MisticPay via Venopag] Erro:", errorMessage);
-        return { success: false, error: errorMessage };
-      }
-    }
-    
-    // Se MisticPay nao estiver disponivel, tentar VenoPag diretamente
-    const client = new Venopag({
-      clientId: config.api_key,
-      clientSecret: config.api_secret || "",
-    });
-
     const webhookUrl = "https://www.legacypay.site/api/webhooks/venopag";
-    console.log(`[Venopag] Tentando saque direto: valor=${amount}, pixKey=${pixKey}`);
+    console.log(`[Venopag] Saque: valor=${amount}, pixKey=${pixKey}, beneficiario=${beneficiaryName}`);
 
     try {
       const result = await client.createSimpleCashOut(
@@ -695,11 +647,6 @@ export async function createWithdrawal(
           withdrawalId: result.e2e,
           status: result.status || "pending",
         };
-      }
-      
-      // Se erro de IP, informar de forma clara
-      if (result.error && result.error.toLowerCase().includes("ip")) {
-        return { success: false, error: "IP do servidor não autorizado na VenoPag. Entre em contato com o suporte." };
       }
       return { success: false, error: result.error || "Erro ao criar saque Venopag" };
     } catch (withdrawError) {
