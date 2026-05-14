@@ -56,8 +56,11 @@ const MAIN_DOMAINS = [
 // Dominio dedicado para todos os checkouts
 const CHECKOUT_DOMAIN = 'pay-checkout-pagamentoseguros.online'
 
-// Dominio do app (dashboard de usuario e admin)
+// Dominio do app (dashboard de usuario)
 const APP_DOMAIN = 'app.legacypay.site'
+
+// Dominio do painel CEO/Admin
+const CEO_DOMAIN = 'ceo.legacypay.site'
 
 function isMainDomain(hostname: string): boolean {
   return MAIN_DOMAINS.some(domain => 
@@ -70,6 +73,11 @@ function isMainDomain(hostname: string): boolean {
 function isAppDomain(hostname: string): boolean {
   const cleanHostname = hostname.replace(/^www\./, '').split(':')[0]
   return cleanHostname === APP_DOMAIN || cleanHostname === `www.${APP_DOMAIN}`
+}
+
+function isCeoDomain(hostname: string): boolean {
+  const cleanHostname = hostname.replace(/^www\./, '').split(':')[0]
+  return cleanHostname === CEO_DOMAIN || cleanHostname === `www.${CEO_DOMAIN}`
 }
 
 function isCheckoutDomain(hostname: string): boolean {
@@ -111,7 +119,39 @@ export async function middleware(request: NextRequest) {
     return await handleAuth(request)
   }
   
-  // Se for dominio do app (app.legacypay.site) - dashboard de usuario e admin
+  // Se for dominio do CEO (ceo.legacypay.site) - painel admin exclusivo
+  if (isCeoDomain(hostname)) {
+    // Ignora arquivos estaticos
+    if (
+      pathname.startsWith('/_next') ||
+      pathname.startsWith('/api') ||
+      pathname.includes('.') // arquivos com extensao
+    ) {
+      return await handleAuth(request)
+    }
+    
+    // Se acessar a raiz, redireciona para login da equipe ou painel CEO
+    if (pathname === '/' || pathname === '') {
+      const teamUser = request.cookies.get('team_session')?.value
+      
+      if (teamUser) {
+        // Se tem sessao de equipe, vai para o painel CEO
+        const url = request.nextUrl.clone()
+        url.pathname = '/lp-x7k9m2-internal/ceo'
+        return NextResponse.redirect(url)
+      } else {
+        // Se nao tem sessao, vai para login da equipe
+        const url = request.nextUrl.clone()
+        url.pathname = '/lp-x7k9m2-internal/team-login'
+        return NextResponse.redirect(url)
+      }
+    }
+    
+    // Para outras rotas no CEO domain, segue fluxo normal de auth
+    return await handleAuth(request)
+  }
+  
+  // Se for dominio do app (app.legacypay.site) - dashboard de usuario
   if (isAppDomain(hostname)) {
     // Ignora arquivos estaticos
     if (
@@ -125,14 +165,8 @@ export async function middleware(request: NextRequest) {
     // Se acessar a raiz do app, redireciona para login ou dashboard
     if (pathname === '/' || pathname === '') {
       const user = request.cookies.get('auth-token')?.value
-      const teamUser = request.cookies.get('team_session')?.value
       
-      if (teamUser) {
-        // Se tem sessao de equipe, vai para o painel admin
-        const url = request.nextUrl.clone()
-        url.pathname = '/lp-x7k9m2-internal/ceo'
-        return NextResponse.redirect(url)
-      } else if (user) {
+      if (user) {
         // Se tem sessao de usuario, vai para dashboard
         const url = request.nextUrl.clone()
         url.pathname = '/dashboard'
