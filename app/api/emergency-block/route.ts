@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
 
 // API de emergencia para bloquear usuario fraudulento
-// REMOVER APOS USO - v2
+// REMOVER APOS USO - v3 - sem coluna notes
 export async function GET(request: NextRequest) {
   const secret = request.nextUrl.searchParams.get("secret");
   const userId = request.nextUrl.searchParams.get("userId");
