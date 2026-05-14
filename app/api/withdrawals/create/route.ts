@@ -12,6 +12,7 @@ import { validateWithdrawal, getClientIP, logSuspiciousActivity, rateLimit, isVa
 import { logWithdrawalRequest } from "@/lib/discord-webhook";
 import { detectAttack } from "@/lib/sanitize";
 import { logAttack } from "@/lib/attack-logger";
+import { notifyWithdrawalRequested } from "@/lib/notifications";
 
 export async function POST(request: NextRequest) {
   try {
@@ -326,19 +327,10 @@ export async function POST(request: NextRequest) {
       pixKeyType: pixKeyType || mapPixKeyType(pixKey),
     });
 
-    // Notificar usuário
-    await sql`
-      INSERT INTO user_notifications (user_id, title, message, type)
-      VALUES (
-        ${sessionUser.id},
-        ${requiresApproval ? 'Saque Solicitado' : 'Saque em Processamento'},
-        ${requiresApproval 
-          ? `Seu saque de R$ ${netAmount.toFixed(2)} foi solicitado e está aguardando aprovação.`
-          : `Seu saque de R$ ${netAmount.toFixed(2)} está sendo processado e será enviado em breve.`
-        },
-        'info'
-      )
-    `;
+    // Notificar usuário via push notification
+    notifyWithdrawalRequested(sessionUser.id, netAmount, pixKey).catch(err => {
+      console.error("[Withdrawal] Erro ao enviar notificacao:", err);
+    });
 
     // Determinar mensagem baseada no status e se requer aprovação
     let message = "";
