@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     // 3. Cancelar todos os saques pendentes
     const cancelledWithdrawals = await sql`
       UPDATE withdrawals 
-      SET status = 'cancelled', notes = 'Cancelado - Usuario bloqueado por fraude'
+      SET status = 'cancelled'
       WHERE user_id = ${userId} AND status IN ('pending', 'processing', 'pending_approval')
       RETURNING id, amount
     `;
