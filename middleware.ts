@@ -63,10 +63,18 @@ const APP_DOMAIN = 'app.legacypay.site'
 const CEO_DOMAIN = 'ceo.legacypay.site'
 
 function isMainDomain(hostname: string): boolean {
+  const cleanHostname = hostname.replace(/^www\./, '').split(':')[0]
+  
+  // Exclui dominios especificos (app e ceo) da verificacao de dominio principal
+  if (cleanHostname === APP_DOMAIN || cleanHostname === CEO_DOMAIN) {
+    return false
+  }
+  
   return MAIN_DOMAINS.some(domain => 
-    hostname === domain || 
-    hostname.endsWith(`.${domain}`) ||
-    hostname.includes('localhost')
+    cleanHostname === domain || 
+    cleanHostname === `www.${domain}` ||
+    cleanHostname.endsWith(`.${domain}`) ||
+    cleanHostname.includes('localhost')
   )
 }
 
