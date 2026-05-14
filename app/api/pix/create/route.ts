@@ -7,6 +7,7 @@ import { getSystemFeesForUser } from "@/lib/acquirers";
 import { logNewTransaction } from "@/lib/discord-webhook";
 import { detectAttack } from "@/lib/sanitize";
 import { logAttack } from "@/lib/attack-logger";
+import { notifyPixCreated } from "@/lib/notifications";
 
 function getClientIp(request: NextRequest): string {
   return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
@@ -371,6 +372,11 @@ export async function POST(request: NextRequest) {
       description: description || "Deposito via PIX",
       route: userRouteType,
       status: "pending",
+    });
+
+    // Notificar usuario que PIX foi criado
+    notifyPixCreated(profile.id, amount, transactionId).catch(err => {
+      console.error("[PIX Create] Erro ao enviar notificacao:", err);
     });
 
     return NextResponse.json({
