@@ -32,17 +32,17 @@ export default function Home() {
             <Link href="#inicio" className="text-sm text-gray-400 hover:text-white transition-colors">Início</Link>
             <Link href="#solucoes" className="text-sm text-gray-400 hover:text-white transition-colors">Soluções</Link>
             <Link href="#taxas" className="text-sm text-gray-400 hover:text-white transition-colors">Taxas</Link>
-            <Link href="/dashboard/integration" className="text-sm text-gray-400 hover:text-white transition-colors">Documentação</Link>
+            <a href="https://app.legacypay.site/dashboard/integration" className="text-sm text-gray-400 hover:text-white transition-colors">Documentação</a>
             <Link href="#sobre" className="text-sm text-gray-400 hover:text-white transition-colors">Sobre nós</Link>
           </nav>
           
           <div className="flex items-center gap-2 md:gap-3">
-            <Link href="/auth/login" className="px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm text-gray-300 hover:text-white transition-colors">
+            <a href="https://app.legacypay.site/auth/login" className="px-3 md:px-4 py-1.5 md:py-2 text-xs md:text-sm text-gray-300 hover:text-white transition-colors">
               Entrar
-            </Link>
-            <Link href="/auth/register" className="px-3 md:px-5 py-1.5 md:py-2 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full text-xs md:text-sm font-medium text-black hover:shadow-lg hover:shadow-orange-500/25 transition-all">
+            </a>
+            <a href="https://app.legacypay.site/auth/register" className="px-3 md:px-5 py-1.5 md:py-2 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full text-xs md:text-sm font-medium text-black hover:shadow-lg hover:shadow-orange-500/25 transition-all">
               Criar conta
-            </Link>
+            </a>
           </div>
         </div>
       </header>
@@ -64,10 +64,10 @@ export default function Home() {
               </p>
               
               <div className="flex flex-col sm:flex-row gap-3 mb-8 md:mb-12">
-                <Link href="/auth/register" className="group inline-flex items-center justify-center gap-2 px-5 py-2.5 md:px-6 md:py-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full text-sm md:text-base font-medium text-black hover:shadow-xl hover:shadow-orange-500/30 transition-all">
+                <a href="https://app.legacypay.site/auth/register" className="group inline-flex items-center justify-center gap-2 px-5 py-2.5 md:px-6 md:py-3 bg-gradient-to-r from-orange-500 to-orange-600 rounded-full text-sm md:text-base font-medium text-black hover:shadow-xl hover:shadow-orange-500/30 transition-all">
                   Começar agora
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </Link>
+                </a>
                 <Link href="#solucoes" className="inline-flex items-center justify-center gap-2 px-5 py-2.5 md:px-6 md:py-3 border border-white/20 rounded-full text-sm md:text-base font-medium hover:bg-white/5 transition-all">
                   Conhecer soluções
                   <ArrowRight className="w-4 h-4" />
@@ -532,7 +532,7 @@ export default function Home() {
               <ul className="space-y-1.5 md:space-y-2 text-xs md:text-sm text-gray-500">
                 <li><Link href="#solucoes" className="hover:text-white transition-colors">Pagamentos PIX</Link></li>
                 <li><Link href="#taxas" className="hover:text-white transition-colors">Taxas</Link></li>
-                <li><Link href="/dashboard/integration" className="hover:text-white transition-colors">API</Link></li>
+                <li><a href="https://app.legacypay.site/dashboard/integration" className="hover:text-white transition-colors">API</a></li>
               </ul>
             </div>
             
@@ -540,7 +540,7 @@ export default function Home() {
             <div>
               <h4 className="text-sm md:text-base font-semibold mb-2 md:mb-4">Suporte</h4>
               <ul className="space-y-1.5 md:space-y-2 text-xs md:text-sm text-gray-500">
-                <li><Link href="/dashboard/integration" className="hover:text-white transition-colors">Documentação</Link></li>
+                <li><a href="https://app.legacypay.site/dashboard/integration" className="hover:text-white transition-colors">Documentação</a></li>
                 <li><Link href="https://wa.me/5534999353187" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">WhatsApp</Link></li>
                 <li><Link href="mailto:contato@legacypay.shop" className="hover:text-white transition-colors">E-mail</Link></li>
               </ul>

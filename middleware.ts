@@ -114,8 +114,36 @@ export async function middleware(request: NextRequest) {
     return NextResponse.rewrite(url)
   }
   
-  // Se for dominio principal (www.legacypay.site), segue fluxo normal de auth
+  // Se for dominio principal (www.legacypay.site) - APENAS landing page
   if (isMainDomain(hostname)) {
+    // Ignora arquivos estaticos e API
+    if (
+      pathname.startsWith('/_next') ||
+      pathname.startsWith('/api') ||
+      pathname.includes('.') // arquivos com extensao
+    ) {
+      return await handleAuth(request)
+    }
+    
+    // Redireciona rotas de auth para app.legacypay.site
+    if (pathname.startsWith('/auth/')) {
+      const url = new URL(`https://app.legacypay.site${pathname}${request.nextUrl.search}`)
+      return NextResponse.redirect(url)
+    }
+    
+    // Redireciona dashboard para app.legacypay.site
+    if (pathname.startsWith('/dashboard')) {
+      const url = new URL(`https://app.legacypay.site${pathname}${request.nextUrl.search}`)
+      return NextResponse.redirect(url)
+    }
+    
+    // Redireciona painel admin para ceo.legacypay.site
+    if (pathname.startsWith('/lp-x7k9m2-internal')) {
+      const url = new URL(`https://ceo.legacypay.site${pathname}${request.nextUrl.search}`)
+      return NextResponse.redirect(url)
+    }
+    
+    // Outras rotas da landing page seguem normalmente
     return await handleAuth(request)
   }
   
