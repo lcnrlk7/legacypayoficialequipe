@@ -31,6 +31,12 @@ export async function GET() {
     `;
     results.push("profiles.push_subscription column added");
 
+    // Adicionar colunas de bloqueio de usuario
+    await sql`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS is_blocked BOOLEAN DEFAULT false`;
+    await sql`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS block_reason TEXT`;
+    await sql`ALTER TABLE profiles ADD COLUMN IF NOT EXISTS blocked_at TIMESTAMP`;
+    results.push("profiles.is_blocked, block_reason, blocked_at columns added");
+
     // Adicionar coluna notifications_push em profiles se nao existir
     await sql`
       ALTER TABLE profiles 
