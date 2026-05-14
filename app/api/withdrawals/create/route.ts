@@ -158,12 +158,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Buscar saldo e KYC atual diretamente do banco (não do token que pode estar desatualizado)
+    // Buscar saldo, KYC e status de bloqueio diretamente do banco
     const profileResult = await sql`
-      SELECT balance, kyc_status FROM profiles WHERE id = ${sessionUser.id}
+      SELECT balance, kyc_status, is_blocked, is_active, created_at FROM profiles WHERE id = ${sessionUser.id}
     `;
     const currentBalance = Number(profileResult[0]?.balance) || 0;
     const currentKycStatus = profileResult[0]?.kyc_status;
+    const isBlocked = profileResult[0]?.is_blocked;
+    const isActive = profileResult[0]?.is_active;
+    const createdAt = profileResult[0]?.created_at;
+
+    // SEGURANCA: Verificar se conta esta ativa
+    if (!isActive) {
+      return NextResponse.json(
+        { error: "Conta desativada. Entre em contato com o suporte." },
+        { status: 403 }
+      );
+    }
+
+    // SEGURANCA: Verificar se usuario esta bloqueado
+    if (isBlocked) {
+      return NextResponse.json(
+        { error: "Conta bloqueada. Entre em contato com o suporte." },
+        { status: 403 }
+      );
+    }
+
+    // SEGURANCA: Verificar se conta e muito nova (minimo 24h para sacar)
+    if (createdAt) {
+      const accountAge = (Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60);
+      if (accountAge < 24) {
+        return NextResponse.json(
+          { error: "Conta muito recente. Aguarde 24 horas após o cadastro para realizar saques." },
+          { status: 403 }
+        );
+      }
+    }
 
     if (currentKycStatus !== "approved") {
       return NextResponse.json(

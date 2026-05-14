@@ -151,7 +151,7 @@ export async function validateWithdrawal(
   try {
     // 1. Verificar se o usuario existe e esta ativo
     const user = await sql`
-      SELECT id, balance, kyc_status, is_active, created_at
+      SELECT id, balance, kyc_status, is_active, is_blocked, created_at
       FROM profiles WHERE id = ${userId}
     `;
 
@@ -159,17 +159,48 @@ export async function validateWithdrawal(
       return { valid: false, reason: "Usuario inativo ou nao encontrado" };
     }
 
-    // 2. Verificar KYC aprovado
+    // 2. SEGURANCA: Verificar se usuario esta bloqueado
+    if (user[0].is_blocked) {
+      return { valid: false, reason: "Conta bloqueada" };
+    }
+
+    // 3. Verificar KYC aprovado
     if (user[0].kyc_status !== "approved") {
       return { valid: false, reason: "KYC nao aprovado" };
     }
 
-    // 3. Verificar saldo suficiente
+    // 4. SEGURANCA: Verificar se conta e muito nova (minimo 24h para sacar)
+    const createdAt = new Date(user[0].created_at);
+    const now = new Date();
+    const hoursSinceCreation = (now.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
+    if (hoursSinceCreation < 24) {
+      return { valid: false, reason: "Conta muito recente. Aguarde 24 horas apos cadastro para sacar." };
+    }
+
+    // 5. SEGURANCA: Verificar se saldo corresponde a transacoes reais
+    const realBalance = await sql`
+      SELECT 
+        COALESCE(SUM(CASE WHEN t.status = 'paid' THEN t.net_amount ELSE 0 END), 0) as total_deposits,
+        COALESCE((SELECT SUM(w.amount + COALESCE(w.fee, 0)) FROM withdrawals w WHERE w.user_id = ${userId} AND w.status IN ('completed', 'processing', 'pending')), 0) as total_withdrawals
+      FROM transactions t
+      WHERE t.user_id = ${userId}
+    `;
+    
+    const calculatedBalance = Number(realBalance[0]?.total_deposits || 0) - Number(realBalance[0]?.total_withdrawals || 0);
+    const currentBalance = Number(user[0].balance);
+    
+    // Se o saldo atual for maior que o calculado, algo esta errado
+    if (currentBalance > calculatedBalance + 1) { // +1 para margem de erro de arredondamento
+      await logSuspiciousActivity(userId, "BALANCE_MISMATCH", `Saldo atual: ${currentBalance}, Calculado: ${calculatedBalance}`, "system");
+      return { valid: false, reason: "Erro na verificacao de saldo. Entre em contato com o suporte." };
+    }
+
+    // 6. Verificar saldo suficiente
     if (Number(user[0].balance) < amount) {
       return { valid: false, reason: "Saldo insuficiente" };
     }
 
-    // 4. Verificar valor minimo e maximo
+    // 7. Verificar valor minimo e maximo
     if (amount < 20) {
       return { valid: false, reason: "Valor minimo de saque: R$ 20,00" };
     }
@@ -178,7 +209,7 @@ export async function validateWithdrawal(
       return { valid: false, reason: "Valor maximo de saque: R$ 50.000,00" };
     }
 
-    // 5. Rate limit de saques (maximo 3 por hora)
+    // 8. Rate limit de saques (maximo 3 por hora)
     const recentWithdrawals = await sql`
       SELECT COUNT(*) as count FROM withdrawals
       WHERE user_id = ${userId}
@@ -189,7 +220,7 @@ export async function validateWithdrawal(
       return { valid: false, reason: "Limite de saques por hora atingido" };
     }
 
-    // 6. Verificar se a chave PIX ja foi usada por outro usuario
+    // 9. Verificar se a chave PIX ja foi usada por outro usuario
     const pixKeyUsedByOthers = await sql`
       SELECT user_id FROM withdrawals
       WHERE pix_key = ${pixKey}

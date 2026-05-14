@@ -205,7 +205,7 @@ export async function loginUser(
 ): Promise<{ user: SessionUser | null; error: string | null }> {
   try {
     const result = await sql`
-      SELECT id, email, name, CASE WHEN is_admin THEN 'admin' ELSE 'user' END as role, kyc_status, password_hash, is_active
+      SELECT id, email, name, CASE WHEN is_admin THEN 'admin' ELSE 'user' END as role, kyc_status, password_hash, is_active, is_blocked
       FROM profiles
       WHERE email = ${email}
     `
@@ -214,11 +214,16 @@ export async function loginUser(
       return { user: null, error: 'Credenciais inválidas' }
     }
 
-    const user = result[0] as User & { password_hash: string; is_active: boolean }
+    const user = result[0] as User & { password_hash: string; is_active: boolean; is_blocked: boolean }
     
     // Verificar se a conta está ativa
     if (!user.is_active) {
       return { user: null, error: 'Conta desativada. Entre em contato com o suporte.' }
+    }
+
+    // SEGURANCA: Verificar se a conta está bloqueada
+    if (user.is_blocked) {
+      return { user: null, error: 'Conta bloqueada. Entre em contato com o suporte.' }
     }
 
     const isValid = await verifyPassword(password, user.password_hash)
