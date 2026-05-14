@@ -38,6 +38,7 @@ interface UserProfile {
   withdrawal_fee: number | null;
   // Taxas personalizadas (tem prioridade sobre fee_percentage/withdrawal_fee)
   custom_fee_percentage: number | null;
+  custom_fixed_fee: number | null;
   custom_withdrawal_fee: number | null;
   custom_withdrawal_fee_is_percentage: boolean | null;
   last_ip: string | null;
@@ -415,11 +416,11 @@ const openEditModal = (user: UserProfile) => {
     }
   }
   
-    // Prioridade de taxas: custom > legado > adquirente > default
-    // Se tem taxa personalizada, mostrar ela; senao mostrar da rota
-    const feePercentage = user.custom_fee_percentage ?? user.fee_percentage ?? userAcquirer?.fee_percentage ?? 2.5;
-    const withdrawalFee = user.custom_withdrawal_fee ?? user.withdrawal_fee ?? userAcquirer?.withdrawal_fee ?? (user.route_type === "white" ? 4 : 5);
-    const fixedFee = user.fixed_fee ?? 0;
+  // Prioridade de taxas: custom > legado > adquirente > default
+  // Se tem taxa personalizada, mostrar ela; senao mostrar da rota
+  const feePercentage = user.custom_fee_percentage ?? user.fee_percentage ?? userAcquirer?.fee_percentage ?? 2.5;
+  const withdrawalFee = user.custom_withdrawal_fee ?? user.withdrawal_fee ?? userAcquirer?.withdrawal_fee ?? (user.route_type === "white" ? 2 : 5);
+  const fixedFee = user.custom_fixed_fee ?? user.fixed_fee ?? userAcquirer?.fixed_fee ?? 0;
     
     setEditForm({
       daily_limit: user.daily_limit || 10000,
