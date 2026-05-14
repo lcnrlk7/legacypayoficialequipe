@@ -56,12 +56,20 @@ const MAIN_DOMAINS = [
 // Dominio dedicado para todos os checkouts
 const CHECKOUT_DOMAIN = 'pay-checkout-pagamentoseguros.online'
 
+// Dominio do app (dashboard de usuario e admin)
+const APP_DOMAIN = 'app.legacypay.site'
+
 function isMainDomain(hostname: string): boolean {
   return MAIN_DOMAINS.some(domain => 
     hostname === domain || 
     hostname.endsWith(`.${domain}`) ||
     hostname.includes('localhost')
   )
+}
+
+function isAppDomain(hostname: string): boolean {
+  const cleanHostname = hostname.replace(/^www\./, '').split(':')[0]
+  return cleanHostname === APP_DOMAIN || cleanHostname === `www.${APP_DOMAIN}`
 }
 
 function isCheckoutDomain(hostname: string): boolean {
@@ -98,8 +106,46 @@ export async function middleware(request: NextRequest) {
     return NextResponse.rewrite(url)
   }
   
-  // Se for dominio principal, segue fluxo normal de auth
+  // Se for dominio principal (www.legacypay.site), segue fluxo normal de auth
   if (isMainDomain(hostname)) {
+    return await handleAuth(request)
+  }
+  
+  // Se for dominio do app (app.legacypay.site) - dashboard de usuario e admin
+  if (isAppDomain(hostname)) {
+    // Ignora arquivos estaticos
+    if (
+      pathname.startsWith('/_next') ||
+      pathname.startsWith('/api') ||
+      pathname.includes('.') // arquivos com extensao
+    ) {
+      return await handleAuth(request)
+    }
+    
+    // Se acessar a raiz do app, redireciona para login ou dashboard
+    if (pathname === '/' || pathname === '') {
+      const user = request.cookies.get('auth-token')?.value
+      const teamUser = request.cookies.get('team_session')?.value
+      
+      if (teamUser) {
+        // Se tem sessao de equipe, vai para o painel admin
+        const url = request.nextUrl.clone()
+        url.pathname = '/lp-x7k9m2-internal/ceo'
+        return NextResponse.redirect(url)
+      } else if (user) {
+        // Se tem sessao de usuario, vai para dashboard
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard'
+        return NextResponse.redirect(url)
+      } else {
+        // Se nao tem sessao, vai para login
+        const url = request.nextUrl.clone()
+        url.pathname = '/auth/login'
+        return NextResponse.redirect(url)
+      }
+    }
+    
+    // Para outras rotas no app domain, segue fluxo normal de auth
     return await handleAuth(request)
   }
   
