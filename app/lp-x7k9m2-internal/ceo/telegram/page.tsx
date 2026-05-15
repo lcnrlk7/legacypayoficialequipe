@@ -625,7 +625,7 @@ export default function TelegramPage() {
                   Novidade
                 </button>
                 <button
-                  onClick={() => setMessage("🔥 <b>PROMOCAO!</b>\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n[Detalhes da promocao]\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📱 Bot: @Legacypay_bot")}
+                  onClick={() => setMessage("🔥 <b>PROMOCAO!</b>\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n[Detalhes da promocao]\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n📱 Bot: @hyperionpay_bot")}
                   className="px-3 py-1.5 bg-purple-500/10 text-purple-500 rounded-lg text-sm hover:bg-purple-500/20 transition-colors"
                 >
                   Promocao
@@ -676,12 +676,12 @@ export default function TelegramPage() {
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
-                      value="@Legacypay_bot"
+                      value="@hyperionpay_bot"
                       disabled
                       className="flex-1 px-4 py-2.5 bg-muted border border-border rounded-xl text-foreground"
                     />
                     <button
-                      onClick={() => copyToClipboard("@Legacypay_bot")}
+                      onClick={() => copyToClipboard("@hyperionpay_bot")}
                       className="p-2.5 bg-muted border border-border rounded-xl hover:bg-muted/80 transition-colors"
                     >
                       {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
