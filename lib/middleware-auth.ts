@@ -1,3 +1,4 @@
+// Middleware de autenticacao - v2
 import { jwtVerify } from 'jose'
 import { NextResponse, type NextRequest } from 'next/server'
 
