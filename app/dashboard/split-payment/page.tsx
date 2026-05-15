@@ -4,332 +4,261 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Loader2, CheckCircle2, Clock, ArrowRight, Copy, QrCode, RefreshCw } from "lucide-react"
+import { Loader2, CheckCircle2, Copy, QrCode, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 
-interface Parcela {
-  id: string
-  valor: number
-  status: "pending" | "waiting" | "paid"
-  copyPaste?: string
-  transactionId?: string
-}
+export default function DividirPagamentoPage() {
+  const [inputValor, setInputValor] = useState("")
+  const [listaValores, setListaValores] = useState<number[]>([])
+  const [pixAtual, setPixAtual] = useState<{qrCode: string, copiaCola: string, valor: number} | null>(null)
+  const [indiceParcela, setIndiceParcela] = useState(0)
+  const [parcelasPagas, setParcelasPagas] = useState<number[]>([])
+  const [processando, setProcessando] = useState(false)
+  const [textoCopied, setTextoCopied] = useState(false)
 
-function dividirEmParcelas(valorTotal: number): number[] {
-  const parcelas: number[] = []
-  let restante = valorTotal
-  const valoresBase = [1500, 1600, 1700, 1800, 1900, 2000, 1550, 1650, 1750, 1850, 1950]
-  let index = 0
-  
-  while (restante > 0) {
-    if (restante <= 2000) {
-      parcelas.push(restante)
-      break
-    } else {
-      const valorParcela = valoresBase[index % valoresBase.length]
-      parcelas.push(valorParcela)
-      restante -= valorParcela
-      index++
-    }
-  }
-  
-  return parcelas
-}
-
-export default function SplitPaymentPage() {
-  const [valorTotal, setValorTotal] = useState("")
-  const [descricao, setDescricao] = useState("")
-  const [parcelas, setParcelas] = useState<Parcela[]>([])
-  const [parcelaAtual, setParcelaAtual] = useState(0)
-  const [loading, setLoading] = useState(false)
-  const [etapa, setEtapa] = useState<"input" | "payment">("input")
-  const [copied, setCopied] = useState(false)
-
-  const parcelasPagas = parcelas.filter(p => p.status === "paid").length
-  const valorPago = parcelas.filter(p => p.status === "paid").reduce((acc, p) => acc + p.valor, 0)
-  const progresso = parcelas.length > 0 ? (parcelasPagas / parcelas.length) * 100 : 0
-  const previewParcelas = valorTotal ? dividirEmParcelas(Number(valorTotal)) : []
-
-  const iniciarPagamento = () => {
-    if (!valorTotal || Number(valorTotal) < 100) {
-      toast.error("Valor minimo: R$ 100,00")
-      return
-    }
-    
-    const valores = dividirEmParcelas(Number(valorTotal))
-    const novasParcelas: Parcela[] = valores.map((valor, index) => ({
-      id: `parcela_${index + 1}_${Date.now()}`,
-      valor,
-      status: "pending" as const
-    }))
-    
-    setParcelas(novasParcelas)
-    setParcelaAtual(0)
-    setEtapa("payment")
-  }
-
-  const gerarQrCode = async (index: number) => {
-    const parcela = parcelas[index]
-    if (!parcela) {
-      toast.error("Parcela nao encontrada")
+  // Criar lista de valores divididos
+  const criarParcelas = () => {
+    const total = parseFloat(inputValor.replace(",", "."))
+    if (!total || total < 100) {
+      toast.error("Valor minimo R$ 100")
       return
     }
 
-    setLoading(true)
+    const valores: number[] = []
+    let restante = total
+    const bases = [1500, 1600, 1700, 1800, 1900, 2000]
+    let i = 0
+
+    while (restante > 0) {
+      if (restante <= 2000) {
+        valores.push(restante)
+        break
+      }
+      const v = bases[i % bases.length]
+      valores.push(v)
+      restante -= v
+      i++
+    }
+
+    setListaValores(valores)
+    setIndiceParcela(0)
+    setParcelasPagas([])
+    setPixAtual(null)
+    toast.success(`${valores.length} parcelas criadas`)
+  }
+
+  // Chamar API para gerar PIX - IDENTICO A WALLET
+  const chamarApiPix = async () => {
+    const valorParcela = listaValores[indiceParcela]
+    if (!valorParcela) return
+
+    setProcessando(true)
 
     try {
-      const response = await fetch("/api/pix/create", {
+      const resp = await fetch("/api/pix/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: parcela.valor,
-          description: descricao || `Pagamento ${index + 1}/${parcelas.length} - LegacyPay`,
+          amount: valorParcela,
+          description: `Parcela ${indiceParcela + 1}/${listaValores.length}`,
         }),
       })
 
-      const data = await response.json()
+      const json = await resp.json()
 
-      if (!response.ok) {
-        throw new Error(data.error || "Erro ao gerar QR Code")
+      if (!resp.ok) {
+        throw new Error(json.error || "Falha ao gerar")
       }
 
-      const novasParcelas = [...parcelas]
-      novasParcelas[index] = {
-        ...novasParcelas[index],
-        copyPaste: data.copyPaste,
-        transactionId: data.transactionId,
-        status: "waiting"
-      }
-      setParcelas(novasParcelas)
-      toast.success("QR Code gerado!")
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao gerar QR Code")
+      setPixAtual({
+        qrCode: json.qrCodeBase64 || json.qrCode || "",
+        copiaCola: json.copyPaste || "",
+        valor: valorParcela
+      })
+
+      toast.success("PIX gerado!")
+    } catch (e: any) {
+      toast.error(e.message || "Erro")
     } finally {
-      setLoading(false)
+      setProcessando(false)
     }
   }
 
-  const verificarPagamento = async (index: number) => {
-    const parcela = parcelas[index]
-    if (!parcela?.transactionId) return
+  // Copiar codigo
+  const copiarCodigo = () => {
+    if (!pixAtual?.copiaCola) return
+    navigator.clipboard.writeText(pixAtual.copiaCola)
+    setTextoCopied(true)
+    toast.success("Copiado!")
+    setTimeout(() => setTextoCopied(false), 2000)
+  }
 
-    setLoading(true)
-
-    try {
-      const response = await fetch(`/api/pix/status?transactionId=${parcela.transactionId}`)
-      const data = await response.json()
-
-      if (data.status === "completed" || data.status === "paid") {
-        const novasParcelas = [...parcelas]
-        novasParcelas[index] = { ...novasParcelas[index], status: "paid" }
-        setParcelas(novasParcelas)
-        toast.success(`Parcela ${index + 1} paga!`)
-        
-        if (index < parcelas.length - 1) {
-          setParcelaAtual(index + 1)
-        }
-      } else {
-        toast.info("Pagamento ainda nao confirmado")
-      }
-    } catch (error) {
-      toast.error("Erro ao verificar pagamento")
-    } finally {
-      setLoading(false)
+  // Confirmar pagamento e ir para proxima
+  const confirmarPagamento = () => {
+    setParcelasPagas([...parcelasPagas, indiceParcela])
+    setPixAtual(null)
+    
+    if (indiceParcela < listaValores.length - 1) {
+      setIndiceParcela(indiceParcela + 1)
+      toast.success("Proximo!")
+    } else {
+      toast.success("Todas parcelas pagas!")
     }
   }
 
-  const copiarPix = (texto: string) => {
-    navigator.clipboard.writeText(texto)
-    setCopied(true)
-    toast.success("Codigo copiado!")
-    setTimeout(() => setCopied(false), 2000)
+  // Resetar
+  const resetar = () => {
+    setInputValor("")
+    setListaValores([])
+    setPixAtual(null)
+    setIndiceParcela(0)
+    setParcelasPagas([])
   }
 
-  const reiniciar = () => {
-    setParcelas([])
-    setParcelaAtual(0)
-    setEtapa("input")
-    setValorTotal("")
-    setDescricao("")
-  }
+  const totalPago = parcelasPagas.reduce((acc, idx) => acc + (listaValores[idx] || 0), 0)
 
   return (
-    <div className="container max-w-4xl mx-auto p-4 md:p-6 space-y-6">
+    <div className="max-w-3xl mx-auto p-4 space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Pagamento Dividido</h1>
-        <p className="text-muted-foreground">
-          Divida valores grandes em multiplas transacoes para evitar bloqueios
-        </p>
+        <p className="text-gray-500">Divida valores grandes em parcelas menores</p>
       </div>
 
-      {etapa === "input" ? (
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Valor Total</CardTitle>
-              <CardDescription>
-                Digite o valor que deseja receber. O sistema vai dividir automaticamente em parcelas de ate R$ 2.000
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <label className="text-sm font-medium mb-2 block">Valor (R$)</label>
-                <Input
-                  type="number"
-                  placeholder="Ex: 10000"
-                  value={valorTotal}
-                  onChange={(e) => setValorTotal(e.target.value)}
-                  className="text-lg"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-2 block">Descricao (opcional)</label>
-                <Input
-                  placeholder="Ex: Pagamento de servico"
-                  value={descricao}
-                  onChange={(e) => setDescricao(e.target.value)}
-                />
-              </div>
-              <Button 
-                onClick={iniciarPagamento} 
-                className="w-full"
-                disabled={!valorTotal || Number(valorTotal) < 100}
-              >
-                Gerar Parcelas
-                <ArrowRight className="w-4 h-4 ml-2" />
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Preview das Parcelas</CardTitle>
-              <CardDescription>Veja como o valor sera dividido</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {previewParcelas.length > 0 ? (
-                <div className="space-y-2">
-                  {previewParcelas.map((valor, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
-                      <span className="text-sm text-muted-foreground">Parcela {index + 1}</span>
-                      <span className="font-semibold">R$ {valor.toFixed(2)}</span>
-                    </div>
-                  ))}
-                  <div className="pt-2 border-t flex items-center justify-between">
-                    <span className="font-medium">Total</span>
-                    <span className="font-bold text-primary">
-                      R$ {previewParcelas.reduce((a, b) => a + b, 0).toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <QrCode className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                  <p>Digite um valor para ver as parcelas</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+      {listaValores.length === 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Novo Pagamento</CardTitle>
+            <CardDescription>Digite o valor total para dividir</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Input
+              type="text"
+              placeholder="Ex: 10000"
+              value={inputValor}
+              onChange={(e) => setInputValor(e.target.value)}
+              className="text-xl"
+            />
+            <Button onClick={criarParcelas} className="w-full bg-orange-500 hover:bg-orange-600">
+              Dividir em Parcelas
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
-        <div className="space-y-6">
+        <>
+          {/* Progresso */}
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between mb-4">
+            <CardContent className="py-4">
+              <div className="flex justify-between items-center">
                 <div>
-                  <p className="text-sm text-muted-foreground">Progresso</p>
-                  <p className="text-2xl font-bold">{parcelasPagas} de {parcelas.length} parcelas</p>
+                  <p className="text-sm text-gray-500">Progresso</p>
+                  <p className="text-xl font-bold">{parcelasPagas.length}/{listaValores.length}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-muted-foreground">Valor recebido</p>
-                  <p className="text-2xl font-bold text-primary">R$ {valorPago.toFixed(2)}</p>
+                  <p className="text-sm text-gray-500">Recebido</p>
+                  <p className="text-xl font-bold text-green-500">R$ {totalPago.toFixed(2)}</p>
                 </div>
               </div>
-              <Progress value={progresso} className="h-3" />
+              <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-orange-500 transition-all"
+                  style={{ width: `${(parcelasPagas.length / listaValores.length) * 100}%` }}
+                />
+              </div>
             </CardContent>
           </Card>
 
-          <div className="grid gap-3">
-            {parcelas.map((parcela, index) => (
-              <Card 
-                key={parcela.id}
-                className={`transition-all ${index === parcelaAtual ? "ring-2 ring-primary" : ""} ${parcela.status === "paid" ? "bg-green-500/5 border-green-500/30" : ""}`}
-              >
-                <CardContent className="py-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                        parcela.status === "paid" ? "bg-green-500/20 text-green-500" : 
-                        parcela.status === "waiting" ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"
-                      }`}>
-                        {parcela.status === "paid" ? <CheckCircle2 className="w-5 h-5" /> : 
-                         parcela.status === "waiting" ? <Clock className="w-5 h-5" /> : 
-                         <span className="font-bold">{index + 1}</span>}
-                      </div>
-                      <div>
-                        <p className="font-semibold">Parcela {index + 1}</p>
-                        <p className="text-sm text-muted-foreground">R$ {parcela.valor.toFixed(2)}</p>
-                      </div>
-                    </div>
-                    <Badge variant={parcela.status === "paid" ? "default" : parcela.status === "waiting" ? "secondary" : "outline"}
-                      className={parcela.status === "paid" ? "bg-green-500" : ""}>
-                      {parcela.status === "paid" ? "Pago" : parcela.status === "waiting" ? "Aguardando" : "Pendente"}
-                    </Badge>
-                  </div>
+          {/* Lista de Parcelas */}
+          <div className="space-y-3">
+            {listaValores.map((valor, idx) => {
+              const pago = parcelasPagas.includes(idx)
+              const atual = idx === indiceParcela && !pago
 
-                  {index === parcelaAtual && parcela.status !== "paid" && (
-                    <div className="mt-4 pt-4 border-t">
-                      {!parcela.copyPaste ? (
-                        <Button onClick={() => gerarQrCode(index)} className="w-full" disabled={loading}>
-                          {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <QrCode className="w-4 h-4 mr-2" />}
-                          {loading ? "Gerando..." : "Gerar QR Code"}
-                        </Button>
-                      ) : (
-                        <div className="flex flex-col md:flex-row gap-4 items-center">
-                          <div className="bg-white p-4 rounded-lg">
-                            <img
-                              src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(parcela.copyPaste)}`}
-                              alt="QR Code PIX"
-                              width={180}
-                              height={180}
-                            />
-                          </div>
-                          <div className="flex-1 space-y-3 w-full">
+              return (
+                <Card key={idx} className={atual ? "ring-2 ring-orange-500" : pago ? "opacity-60" : ""}>
+                  <CardContent className="py-4">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${pago ? "bg-green-500 text-white" : atual ? "bg-orange-500 text-white" : "bg-gray-200"}`}>
+                          {pago ? <CheckCircle2 className="w-5 h-5" /> : idx + 1}
+                        </div>
+                        <div>
+                          <p className="font-medium">Parcela {idx + 1}</p>
+                          <p className="text-sm text-gray-500">R$ {valor.toFixed(2)}</p>
+                        </div>
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded ${pago ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
+                        {pago ? "Pago" : "Pendente"}
+                      </span>
+                    </div>
+
+                    {/* Area do PIX - so mostra na parcela atual */}
+                    {atual && (
+                      <div className="mt-4 pt-4 border-t">
+                        {!pixAtual ? (
+                          <Button 
+                            onClick={chamarApiPix} 
+                            disabled={processando}
+                            className="w-full bg-orange-500 hover:bg-orange-600"
+                          >
+                            {processando ? (
+                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando...</>
+                            ) : (
+                              <><QrCode className="w-4 h-4 mr-2" /> Gerar QR Code</>
+                            )}
+                          </Button>
+                        ) : (
+                          <div className="space-y-4">
+                            {/* QR Code */}
+                            <div className="flex justify-center">
+                              <div className="bg-white p-3 rounded-lg border">
+                                <img
+                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(pixAtual.copiaCola)}`}
+                                  alt="QR Code"
+                                  width={180}
+                                  height={180}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Valor */}
+                            <p className="text-center font-bold text-lg">R$ {pixAtual.valor.toFixed(2)}</p>
+
+                            {/* Copia e Cola */}
                             <div>
-                              <p className="text-sm text-muted-foreground mb-1">Codigo PIX Copia e Cola</p>
+                              <p className="text-xs text-gray-500 mb-1">Codigo Copia e Cola:</p>
                               <div className="flex gap-2">
-                                <Input value={parcela.copyPaste} readOnly className="font-mono text-xs" />
-                                <Button variant="outline" size="icon" onClick={() => copiarPix(parcela.copyPaste!)}>
-                                  {copied ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                                <Input 
+                                  value={pixAtual.copiaCola} 
+                                  readOnly 
+                                  className="font-mono text-xs"
+                                />
+                                <Button variant="outline" size="icon" onClick={copiarCodigo}>
+                                  {textoCopied ? <CheckCircle2 className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                                 </Button>
                               </div>
                             </div>
-                            <Button onClick={() => verificarPagamento(index)} disabled={loading} className="w-full">
-                              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-                              Verificar Pagamento
+
+                            {/* Confirmar */}
+                            <Button onClick={confirmarPagamento} className="w-full bg-green-600 hover:bg-green-700">
+                              <CheckCircle2 className="w-4 h-4 mr-2" />
+                              Confirmar Pagamento
                             </Button>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
 
-          <div className="flex gap-3">
-            <Button variant="outline" onClick={reiniciar} className="flex-1">Novo Pagamento</Button>
-            {parcelasPagas === parcelas.length && parcelas.length > 0 && (
-              <Button className="flex-1 bg-green-500 hover:bg-green-600">
-                <CheckCircle2 className="w-4 h-4 mr-2" />
-                Concluido!
-              </Button>
-            )}
-          </div>
-        </div>
+          {/* Botao Resetar */}
+          <Button variant="outline" onClick={resetar} className="w-full">
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Novo Pagamento
+          </Button>
+        </>
       )}
     </div>
   )
