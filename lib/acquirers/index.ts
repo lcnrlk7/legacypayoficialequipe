@@ -1,5 +1,4 @@
 import { sql } from "@/lib/db";
-import { MisticPay, mapPixKeyType } from "./misticpay";
 import { MedusaPayments, MEDUSA_STATUS_MAP } from "./medusa";
 
 export interface AcquirerConfig {
@@ -224,40 +223,6 @@ export async function createPixPayment(
 
   try {
     switch (config.code) {
-      case "misticpay": {
-        const client = new MisticPay({
-          clientId: config.api_key,
-          clientSecret: config.api_secret || "",
-        });
-
-        // URL do webhook para receber notificações de status do depósito
-        const webhookUrl = process.env.NEXT_PUBLIC_APP_URL 
-          ? `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/misticpay`
-          : "https://legacypay.site/api/webhooks/misticpay";
-
-        const result = await client.createPixCharge({
-          amount: amount, // MisticPay recebe valor em REAIS (ex: 4.55 = R$ 4,55)
-          payerName: payerName || "Cliente",
-          payerDocument: payerDocument || "00000000000",
-          transactionId: externalId,
-          description: description || "Pagamento PIX",
-          projectWebhook: webhookUrl, // Webhook para receber status do depósito
-        });
-
-        if (result.success && result.data) {
-          return {
-            success: true,
-            transactionId: result.data.transactionId,
-            qrCode: result.data.qrCode,
-            qrCodeBase64: result.data.qrCodeBase64,
-            copyPaste: result.data.copyPaste,
-            amount: result.data.amount,
-            fee: result.data.fee,
-          };
-        }
-        return { success: false, error: result.error };
-      }
-
       case "medusa": {
         const client = new MedusaPayments({
           secretKey: config.api_key,
@@ -341,37 +306,6 @@ export async function createPixPayment(
 }
 
 /**
- * Converte o tipo de chave PIX do frontend para o formato da MisticPay
- */
-function convertToMisticPayKeyType(keyType?: string): "CPF" | "CNPJ" | "EMAIL" | "TELEFONE" | "CHAVE_ALEATORIA" | null {
-  if (!keyType) return null;
-  
-  const normalized = keyType.toUpperCase().trim();
-  
-  switch (normalized) {
-    case "CPF":
-      return "CPF";
-    case "CNPJ":
-      return "CNPJ";
-    case "EMAIL":
-      return "EMAIL";
-    case "TELEFONE":
-    case "PHONE":
-    case "CELULAR":
-      return "TELEFONE";
-    case "ALEATORIA":
-    case "RANDOM":
-    case "CHAVE_ALEATORIA":
-    case "EVP":
-    case "CHAVE":
-      return "CHAVE_ALEATORIA";
-    default:
-      console.log(`[MisticPay] Tipo de chave desconhecido: ${keyType}, usando detecção automática`);
-      return null;
-  }
-}
-
-/**
  * Solicita saque PIX usando a adquirente configurada para o usuário
  * @param userId - ID do usuário para determinar a rota (white/black)
  */
@@ -392,60 +326,6 @@ export async function createWithdrawal(
 
   try {
     switch (config.code) {
-      case "misticpay": {
-        const client = new MisticPay({
-          clientId: config.api_key,
-          clientSecret: config.api_secret || "",
-        });
-
-        // MisticPay cobra R$ 0,50 de taxa por saque automaticamente
-        // Então enviamos valor + taxa para que o cliente receba o valor correto
-        // Ex: usuário quer receber R$ 80, enviamos R$ 80,50, MisticPay desconta R$ 0,50
-        const MISTICPAY_WITHDRAWAL_FEE = 0.50;
-        const amountToSend = amount + MISTICPAY_WITHDRAWAL_FEE;
-
-        // Verificar saldo disponível na MisticPay antes de tentar o saque
-        try {
-          const balanceResult = await client.getBalance();
-          console.log("[MisticPay] Saldo disponível:", balanceResult.data?.balance);
-          
-          if (balanceResult.success && balanceResult.data && balanceResult.data.balance < amountToSend) {
-            return { 
-              success: false, 
-              error: `Saldo insuficiente na MisticPay. Disponível: R$ ${balanceResult.data.balance.toFixed(2)}, Necessário: R$ ${amountToSend.toFixed(2)}` 
-            };
-          }
-        } catch (balanceError) {
-          console.error("[MisticPay] Erro ao verificar saldo:", balanceError);
-          // Continuar mesmo se não conseguir verificar o saldo
-        }
-
-        // Converter tipo de chave para formato MisticPay (CPF, CNPJ, EMAIL, TELEFONE, CHAVE_ALEATORIA)
-        const misticPayKeyType = convertToMisticPayKeyType(pixKeyType) || mapPixKeyType(pixKey);
-        
-        // URL do webhook para receber notificações de status do saque
-        const webhookUrl = "https://www.legacypay.site/api/webhooks/misticpay";
-        
-        console.log(`[MisticPay] Saque: valor=${amountToSend}, pixKey=${pixKey}, tipo=${misticPayKeyType}, webhook=${webhookUrl}`);
-
-        const result = await client.withdraw({
-          amount: amountToSend, // MisticPay recebe valor em REAIS, não centavos
-          pixKey,
-          pixKeyType: misticPayKeyType,
-          description: description || "Saque PIX",
-          projectWebhook: webhookUrl, // Webhook para receber status do saque
-        });
-
-        if (result.success && result.data) {
-          return {
-            success: true,
-            withdrawalId: String(result.data.transactionId),
-            status: result.data.status,
-          };
-        }
-        return { success: false, error: result.error };
-      }
-
       case "medusa": {
         // Verificar se a licenseKey está configurada (necessária para saques)
         if (!config.api_secret) {
@@ -597,29 +477,6 @@ export async function getTransactionStatus(
 
   try {
     switch (config.code) {
-      case "misticpay": {
-        const client = new MisticPay({
-          clientId: config.api_key,
-          clientSecret: config.api_secret || "",
-        });
-
-        const result = await client.checkTransaction(transactionId);
-
-        if (result.success && result.data) {
-          const statusMap: Record<string, string> = {
-            "PENDENTE": "pending",
-            "COMPLETO": "completed",
-            "FALHA": "failed",
-          };
-          return {
-            success: true,
-            status: statusMap[result.data.status] || "pending",
-            paidAt: result.data.updatedAt,
-          };
-        }
-        return { success: false, error: result.error };
-      }
-
       case "medusa": {
         const client = new MedusaPayments({
           secretKey: config.api_key,
@@ -674,23 +531,6 @@ export async function checkAcquirerBalance(acquirerCode?: string): Promise<Balan
 
   try {
     switch (config.code) {
-      case "misticpay": {
-        const client = new MisticPay({
-          clientId: config.api_key,
-          clientSecret: config.api_secret || "",
-        });
-
-        const result = await client.getBalance();
-
-        if (result.success && result.data) {
-          return {
-            success: true,
-            balance: result.data.balance / 100,
-          };
-        }
-        return { success: false, error: result.error };
-      }
-
       case "medusa": {
         const client = new MedusaPayments({
           secretKey: config.api_key,

@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import { createMisticPayClient } from "@/lib/acquirers/misticpay";
 import { MedusaPayments } from "@/lib/acquirers/medusa";
 import { getSystemFeesForUser } from "@/lib/acquirers";
 import { logNewTransaction } from "@/lib/discord-webhook";
@@ -178,28 +177,7 @@ export async function POST(request: NextRequest) {
     let pixResult: { success: boolean; data?: { qrCode?: string; qrCodeBase64?: string; copyPaste?: string; transactionId?: string; fee?: number }; error?: string };
 
     // Usar cliente correto baseado no adquirente selecionado
-    if (acquirer.code === 'misticpay') {
-      const misticPay = await createMisticPayClient();
-      
-      if (!misticPay) {
-        return NextResponse.json(
-          { error: "Erro ao conectar com MisticPay." },
-          { status: 500 }
-        );
-      }
-
-      // URL do webhook MisticPay - usar domínio de produção
-      const webhookUrl = "https://www.legacypay.site/api/webhooks/misticpay";
-
-      pixResult = await misticPay.createPixCharge({
-        amount,
-        payerName: payerName || profile.name || "Cliente LegacyPay",
-        payerDocument: payerDocument || "00000000000",
-        transactionId,
-        description: description || "Depósito via PIX - LegacyPay",
-        projectWebhook: webhookUrl,
-      });
-    } else if (acquirer.code === 'medusa' || acquirer.code === 'medusa_white') {
+    if (acquirer.code === 'medusa' || acquirer.code === 'medusa_white') {
       try {
         const medusa = new MedusaPayments({
           secretKey: acquirer.api_key,
