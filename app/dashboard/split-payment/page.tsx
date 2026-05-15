@@ -103,13 +103,17 @@ export default function SplitPaymentPage() {
         externalId: parcela.id,
       }
       
+      console.log("[v0] Gerando QR Code para parcela:", index, body)
+      
       const response = await fetch("/api/pix/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
       })
       
       const data = await response.json()
+      console.log("[v0] Resposta da API PIX:", response.status, data)
       
       if (!response.ok || !data.success) {
         throw new Error(data.error || "Erro ao gerar QR Code")
@@ -130,6 +134,7 @@ export default function SplitPaymentPage() {
       toast.success("QR Code gerado!")
       
     } catch (error) {
+      console.error("[v0] Erro ao gerar QR Code:", error)
       toast.error(error instanceof Error ? error.message : "Erro ao gerar QR Code")
     } finally {
       setGerando(false)
