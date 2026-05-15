@@ -254,19 +254,19 @@ export async function createPixPayment(
         });
 
         // URL do webhook para callbacks
-        const webhookUrl = "https://legacypay.site/api/webhooks/medusa";
+        const webhookUrl = "https://hyperionpay.site/api/webhooks/medusa";
 
         // Garantir que todos os parâmetros tenham valores válidos
-        const safePayerName = (payerName && payerName.trim()) ? payerName.trim() : "Cliente LegacyPay";
+        const safePayerName = (payerName && payerName.trim()) ? payerName.trim() : "Cliente Hyperion Pay";
         // CPF fixo para Medusa - igual usado no painel
         const safePayerDocument = "36009722004";
-        const safeDescription = (description && description.trim()) ? description.trim() : "Pagamento PIX - LegacyPay";
+        const safeDescription = (description && description.trim()) ? description.trim() : "Pagamento PIX - Hyperion Pay";
 
         const result = await client.createSimplePixPayment(
           amount * 100, // Converter para centavos
           safePayerName,
           safePayerDocument,
-          "cliente@legacypay.com", // email fixo
+          "cliente@hyperionpay.com", // email fixo
           safeDescription,
           webhookUrl
         );
@@ -292,16 +292,16 @@ export async function createPixPayment(
           licenseKey: config.api_secret
         });
 
-        const webhookUrl = "https://legacypay.site/api/webhooks/medusa";
-        const safePayerName = (payerName && payerName.trim()) ? payerName.trim() : "Cliente LegacyPay";
+        const webhookUrl = "https://hyperionpay.site/api/webhooks/medusa";
+        const safePayerName = (payerName && payerName.trim()) ? payerName.trim() : "Cliente Hyperion Pay";
         const safePayerDocument = "36009722004";
-        const safeDescription = (description && description.trim()) ? description.trim() : "Deposito PIX - LegacyPay";
+        const safeDescription = (description && description.trim()) ? description.trim() : "Deposito PIX - Hyperion Pay";
 
         const result = await client.createSimplePixPayment(
           Math.round(amount * 100),
           safePayerName,
           safePayerDocument,
-          "cliente@legacypay.com",
+          "cliente@hyperionpay.com",
           safeDescription,
           webhookUrl
         );
@@ -393,7 +393,7 @@ export async function createWithdrawal(
         }
 
         // URL do webhook para receber status do saque
-        const withdrawalWebhookUrl = "https://www.legacypay.site/api/webhooks/medusa";
+        const withdrawalWebhookUrl = "https://www.hyperionpay.site/api/webhooks/medusa";
 
         // A Medusa cobra R$ 5 de taxa que é descontada do valor enviado
         // Para o usuário receber o valor líquido correto, enviamos: valor + taxa_medusa
@@ -438,10 +438,10 @@ export async function createWithdrawal(
     // Buscar dados do usuario para o saque
     const userResult = await sql`SELECT name, cpf_cnpj FROM profiles WHERE id = ${userId}`;
     const user = userResult[0];
-    const beneficiaryName = user?.name || "Usuario LegacyPay";
+    const beneficiaryName = user?.name || "Usuario Hyperion Pay";
     const beneficiaryDocument = (user?.cpf_cnpj || "00000000000").replace(/\D/g, "");
 
-    const withdrawalWebhookUrl = "https://www.legacypay.site/api/webhooks/medusa";
+    const withdrawalWebhookUrl = "https://www.hyperionpay.site/api/webhooks/medusa";
     
     // Medusa White taxa de saque e R$ 5,00
     const MEDUSA_WHITE_WITHDRAWAL_FEE = 5.00;
@@ -829,7 +829,7 @@ export function calculateWithdrawalFees(
 }
 
 /**
- * Calcula o lucro do LegacyPay em uma transação PIX
+ * Calcula o lucro do Hyperion Pay em uma transação PIX
  * (diferença entre taxa cobrada do usuário e taxa paga à adquirente)
  */
 export async function calculatePixProfit(
@@ -861,7 +861,7 @@ export async function calculatePixProfit(
 }
 
 /**
- * Calcula o lucro do LegacyPay em um saque
+ * Calcula o lucro do Hyperion Pay em um saque
  */
 export async function calculateWithdrawalProfit(
   amount: number

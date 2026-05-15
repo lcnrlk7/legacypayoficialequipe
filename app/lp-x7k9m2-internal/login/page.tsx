@@ -54,15 +54,15 @@ export default function TeamLoginPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center gap-3 mb-4">
-            <Image src="/logo-icon.png" alt="LegacyPay" width={48} height={48} />
+            <Image src="/images/logo-hyperion.png" alt="Hyperion Pay" width={48} height={48} />
             <div className="flex items-baseline">
-              <span className="text-2xl font-bold text-white">Legacy</span>
+              <span className="text-2xl font-bold text-white">Hyperion</span>
               <span className="text-2xl font-bold text-primary">Pay</span>
             </div>
           </div>
           <h1 className="text-2xl font-bold text-foreground">Painel Interno</h1>
           <p className="text-muted-foreground mt-1">
-            Acesso restrito para equipe LegacyPay
+            Acesso restrito para equipe Hyperion Pay
           </p>
         </div>
 

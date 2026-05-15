@@ -159,7 +159,7 @@ async function sendDiscordAlert(
       ],
       timestamp: new Date().toISOString(),
       footer: {
-        text: "LegacyPay Security System",
+        text: "Hyperion Pay Security System",
       },
     };
     
@@ -207,7 +207,7 @@ async function sendDiscordAlert(
       body: JSON.stringify({
         content,
         embeds: [embed],
-        username: "LegacyPay Security",
+        username: "Hyperion Pay Security",
         avatar_url: "https://cdn-icons-png.flaticon.com/512/6195/6195699.png",
       }),
     });

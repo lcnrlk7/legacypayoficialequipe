@@ -31,7 +31,7 @@ export function KYCBlocker({ kycStatus }: KYCBlockerProps) {
       bgColor: "bg-yellow-500/10",
       borderColor: "border-yellow-500/30",
       title: "Verificação KYC Pendente",
-      description: "Para utilizar todas as funcionalidades da LegacyPay, você precisa completar a verificação de identidade (KYC).",
+      description: "Para utilizar todas as funcionalidades da Hyperion Pay, você precisa completar a verificação de identidade (KYC).",
       showButton: true,
       buttonText: "Completar Verificação",
     },
@@ -74,7 +74,7 @@ export function KYCBlocker({ kycStatus }: KYCBlockerProps) {
       >
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-6">
-          <Image src="/logo-icon.png" alt="LegacyPay" width={40} height={40} />
+          <Image src="/images/logo-hyperion.png" alt="Hyperion Pay" width={40} height={40} />
           <div className="flex items-baseline">
             <span className="text-xl font-bold text-white">Legacy</span>
             <span className="text-xl font-bold text-primary">Pay</span>

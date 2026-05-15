@@ -352,23 +352,23 @@ export default function TelegramPage() {
                   </a>
                   
                   <a
-                    href="https://t.me/legacypaybot"
+                    href="https://t.me/hyperionpaybot"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 p-3 bg-green-500/10 rounded-xl hover:bg-green-500/20 transition-colors"
                   >
                     <TrendingUp className="w-4 h-4 text-green-500" />
-                    <span className="text-sm font-medium text-foreground">@legacypaybot</span>
+                    <span className="text-sm font-medium text-foreground">@hyperionpaybot</span>
                   </a>
                   
                   <a
-                    href="https://t.me/legacypayavisos"
+                    href="https://t.me/hyperionpayavisos"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 p-3 bg-purple-500/10 rounded-xl hover:bg-purple-500/20 transition-colors"
                   >
                     <Bell className="w-4 h-4 text-purple-500" />
-                    <span className="text-sm font-medium text-foreground">@legacypayavisos</span>
+                    <span className="text-sm font-medium text-foreground">@hyperionpayavisos</span>
                   </a>
                   
                   <a
@@ -585,7 +585,7 @@ export default function TelegramPage() {
           <div className="bg-card border border-border rounded-2xl p-6">
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-foreground mb-2">Enviar Aviso</h3>
-              <p className="text-muted-foreground">Envie uma mensagem para o canal @legacypayavisos</p>
+              <p className="text-muted-foreground">Envie uma mensagem para o canal @hyperionpayavisos</p>
             </div>
 
             <div className="space-y-4">
@@ -597,7 +597,7 @@ export default function TelegramPage() {
                   Manutencao
                 </button>
                 <button
-                  onClick={() => setMessage("🎉 <b>NOVIDADE!</b>\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n[Sua mensagem aqui]\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n🌐 https://www.legacypay.site")}
+                  onClick={() => setMessage("🎉 <b>NOVIDADE!</b>\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n[Sua mensagem aqui]\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n🌐 https://www.hyperionpay.site")}
                   className="px-3 py-1.5 bg-green-500/10 text-green-500 rounded-lg text-sm hover:bg-green-500/20 transition-colors"
                 >
                   Novidade
@@ -685,16 +685,16 @@ export default function TelegramPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
                   <p className="text-sm font-medium text-foreground mb-1">Canal de Vendas</p>
-                  <a href="https://t.me/legacypaybot" target="_blank" rel="noopener noreferrer" className="text-green-500 hover:underline">
-                    @legacypaybot
+                  <a href="https://t.me/hyperionpaybot" target="_blank" rel="noopener noreferrer" className="text-green-500 hover:underline">
+                    @hyperionpaybot
                   </a>
                   <p className="text-xs text-muted-foreground mt-2">Depositos, saques, novos usuarios</p>
                 </div>
                 
                 <div className="p-4 bg-purple-500/10 border border-purple-500/20 rounded-xl">
                   <p className="text-sm font-medium text-foreground mb-1">Canal de Avisos</p>
-                  <a href="https://t.me/legacypayavisos" target="_blank" rel="noopener noreferrer" className="text-purple-500 hover:underline">
-                    @legacypayavisos
+                  <a href="https://t.me/hyperionpayavisos" target="_blank" rel="noopener noreferrer" className="text-purple-500 hover:underline">
+                    @hyperionpayavisos
                   </a>
                   <p className="text-xs text-muted-foreground mt-2">Comunicados, manutencoes, promocoes</p>
                 </div>

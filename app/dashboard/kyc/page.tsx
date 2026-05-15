@@ -230,7 +230,7 @@ export default function KYCPage() {
                   </h3>
                   <p className="text-muted-foreground max-w-md">
                     Sua identidade foi verificada com sucesso. Você tem acesso completo 
-                    a todas as funcionalidades da LegacyPay, incluindo saques e transferências.
+                    a todas as funcionalidades da Hyperion Pay, incluindo saques e transferências.
                   </p>
                 </div>
               </div>

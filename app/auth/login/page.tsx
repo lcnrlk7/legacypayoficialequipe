@@ -101,9 +101,9 @@ export default function LoginPage() {
         <div className="bg-card border border-border rounded-2xl p-8">
           {/* Logo */}
           <div className="flex items-center justify-center gap-3 mb-8">
-            <Image src="/logo-icon.png" alt="LegacyPay" width={48} height={48} />
+            <Image src="/images/logo-hyperion.png" alt="Hyperion Pay" width={48} height={48} />
             <div className="flex items-baseline">
-              <span className="text-2xl font-bold text-white">Legacy</span>
+              <span className="text-2xl font-bold text-white">Hyperion</span>
               <span className="text-2xl font-bold text-primary">Pay</span>
             </div>
           </div>

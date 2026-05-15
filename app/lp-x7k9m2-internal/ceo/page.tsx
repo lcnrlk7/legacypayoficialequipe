@@ -191,7 +191,7 @@ export default function CEODashboard() {
       <div>
         <h1 className="text-2xl font-bold text-white mb-2">Dashboard CEO</h1>
         <p className="text-muted-foreground">
-          Visão geral do sistema LegacyPay
+          Visao geral do sistema Hyperion Pay
         </p>
       </div>
 

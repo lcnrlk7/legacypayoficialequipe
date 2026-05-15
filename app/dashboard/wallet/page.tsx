@@ -197,7 +197,7 @@ const handleDeposit = async () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: amount,
-          description: "Depósito via PIX - LegacyPay",
+          description: "Depósito via PIX - Hyperion Pay",
         }),
       });
 

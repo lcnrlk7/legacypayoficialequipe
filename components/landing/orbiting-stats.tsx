@@ -47,7 +47,7 @@ export function OrbitingStats() {
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-500/30 to-purple-500/30 blur-2xl"></div>
           <div className="absolute text-center">
-            <div className="text-4xl font-bold text-white">LegacyPay</div>
+            <div className="text-4xl font-bold text-white">Hyperion Pay</div>
             <p className="text-sm text-gray-400 mt-2">Ecossistema Financeiro</p>
           </div>
         </div>

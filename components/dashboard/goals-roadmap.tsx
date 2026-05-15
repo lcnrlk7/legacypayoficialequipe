@@ -35,7 +35,7 @@ const simulationRewards = [
     name: "Pulseira Exclusiva", 
     value: 20000, 
     label: "R$ 20K Faturados",
-    description: "Uma pulseira exclusiva LegacyPay para celebrar seus primeiros R$ 20K!",
+    description: "Uma pulseira exclusiva Hyperion Pay para celebrar seus primeiros R$ 20K!",
     icon: "bracelet",
     level: "Conquista Bronze"
   },
@@ -65,7 +65,7 @@ const simulationRewards = [
     name: "Placa 1M", 
     value: 1000000, 
     label: "R$ 1M Faturados",
-    description: "Placa premium pelo primeiro milhao faturado na LegacyPay!",
+    description: "Placa premium pelo primeiro milhao faturado na Hyperion Pay!",
     icon: "plaque",
     level: "Conquista Diamante"
   },
@@ -75,7 +75,7 @@ const simulationRewards = [
     name: "Evento Top Sellers", 
     value: 1000000, 
     label: "Evento Exclusivo",
-    description: "Convite para o evento anual dos maiores sellers da plataforma LegacyPay!",
+    description: "Convite para o evento anual dos maiores sellers da plataforma Hyperion Pay!",
     icon: "event",
     level: "Conquista Lendario"
   },

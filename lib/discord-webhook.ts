@@ -1,4 +1,4 @@
-// Sistema de Logs para Discord - LegacyPay
+// Sistema de Logs para Discord - Hyperion Pay
 // Envia logs em tempo real para webhooks do Discord com embeds personalizadas
 
 // Importa waitUntil dinamicamente para evitar erro quando nao disponivel
@@ -26,7 +26,7 @@ const COLORS = {
   error: 0xef4444,      // Vermelho
   warning: 0xf59e0b,    // Amarelo
   info: 0x3b82f6,       // Azul
-  primary: 0xf97316,    // Laranja (cor da LegacyPay)
+  primary: 0xf97316,    // Laranja (cor da Hyperion Pay)
   purple: 0x8b5cf6,     // Roxo
   pink: 0xec4899,       // Rosa
 };
@@ -72,8 +72,8 @@ function sendDiscordWebhook(
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username: "LegacyPay Logs",
-          avatar_url: "https://legacypay.site/logo.png",
+          username: "Hyperion Pay Logs",
+          avatar_url: "https://hyperionpay.site/logo.png",
           ...payload,
         }),
       });
@@ -156,7 +156,7 @@ export function logNewTransaction(data: {
       { name: "CPF/CNPJ", value: maskDocument(data.payerDocument || ""), inline: true },
       { name: "Status", value: "`AGUARDANDO PAGAMENTO`", inline: true },
     ],
-    footer: { text: `LegacyPay • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
     thumbnail: { url: "https://cdn-icons-png.flaticon.com/512/6404/6404655.png" },
     author: { name: "Sistema de Transacoes", icon_url: "https://cdn-icons-png.flaticon.com/512/2489/2489756.png" },
@@ -195,7 +195,7 @@ export function logTransactionStatusUpdate(data: {
       { name: "Novo Status", value: `\`${data.newStatus.toUpperCase()}\``, inline: true },
       { name: "Pagador", value: data.payerName || "N/A", inline: true },
     ],
-    footer: { text: `LegacyPay • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
     author: { name: "Atualizacao de Transacao", icon_url: "https://cdn-icons-png.flaticon.com/512/1827/1827933.png" },
   };
@@ -232,7 +232,7 @@ export function logWithdrawalRequest(data: {
       { name: "Chave PIX", value: `\`${data.pixKey}\``, inline: true },
       { name: "Status", value: "`PENDENTE`", inline: true },
     ],
-    footer: { text: `LegacyPay • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
     thumbnail: { url: "https://cdn-icons-png.flaticon.com/512/2830/2830284.png" },
     author: { name: "Sistema de Saques", icon_url: "https://cdn-icons-png.flaticon.com/512/2489/2489756.png" },
@@ -268,7 +268,7 @@ export function logWithdrawalStatusUpdate(data: {
       { name: "Novo Status", value: `\`${data.newStatus.toUpperCase()}\``, inline: true },
       { name: "Chave PIX", value: `\`${data.pixKey}\``, inline: true },
     ],
-    footer: { text: `LegacyPay • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
     author: { name: "Atualizacao de Saque", icon_url: "https://cdn-icons-png.flaticon.com/512/1827/1827933.png" },
   };
@@ -303,7 +303,7 @@ export function logNewUser(data: {
       { name: "Telefone", value: data.phone || "N/A", inline: true },
       { name: "Codigo Indicacao", value: data.referralCode || "N/A", inline: true },
     ],
-    footer: { text: `LegacyPay • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
     thumbnail: { url: "https://cdn-icons-png.flaticon.com/512/1077/1077114.png" },
     author: { name: "Sistema de Cadastro", icon_url: "https://cdn-icons-png.flaticon.com/512/681/681392.png" },
@@ -335,7 +335,7 @@ export function logKYCSubmission(data: {
       { name: "Documentos Enviados", value: `${data.documentsCount} arquivo(s)`, inline: true },
       { name: "Status", value: "`PENDENTE`", inline: true },
     ],
-    footer: { text: `LegacyPay • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
     thumbnail: { url: "https://cdn-icons-png.flaticon.com/512/4436/4436481.png" },
     author: { name: "Sistema de KYC", icon_url: "https://cdn-icons-png.flaticon.com/512/6195/6195699.png" },
@@ -367,7 +367,7 @@ export function logKYCStatusUpdate(data: {
       { name: "Status Anterior", value: `\`${data.oldStatus.toUpperCase()}\``, inline: true },
       { name: "Novo Status", value: `\`${data.newStatus.toUpperCase()}\``, inline: true },
     ],
-    footer: { text: `LegacyPay • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
     author: { name: "Atualizacao de KYC", icon_url: "https://cdn-icons-png.flaticon.com/512/1827/1827933.png" },
   };
@@ -410,9 +410,9 @@ export function logSystemEvent(data: {
     description: data.description,
     color: colorMap[data.type],
     fields: data.fields || [],
-    footer: { text: `LegacyPay • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
-    author: { name: "Sistema LegacyPay", icon_url: iconMap[data.type] },
+    author: { name: "Sistema Hyperion Pay", icon_url: iconMap[data.type] },
   };
 
   sendDiscordWebhook(DISCORD_WEBHOOKS.sistema, { embeds: [embed] });
@@ -434,7 +434,7 @@ export function logAdminAction(data: {
       { name: "Email", value: maskEmail(data.adminEmail), inline: true },
       { name: "Acao", value: data.action, inline: false },
     ],
-    footer: { text: `LegacyPay • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
     thumbnail: { url: "https://cdn-icons-png.flaticon.com/512/3135/3135715.png" },
     author: { name: "Painel Admin", icon_url: "https://cdn-icons-png.flaticon.com/512/2099/2099058.png" },
@@ -469,7 +469,7 @@ export function logLogin(data: {
       { name: "Email", value: maskEmail(data.userEmail), inline: true },
       { name: "IP", value: data.ip || "N/A", inline: true },
     ],
-    footer: { text: `LegacyPay • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
     author: { name: "Sistema de Login", icon_url: "https://cdn-icons-png.flaticon.com/512/2889/2889676.png" },
   };
@@ -500,7 +500,7 @@ export function logAPIUsage(data: {
       { name: "Endpoint", value: `\`${data.method} ${data.endpoint}\``, inline: false },
       { name: "Status", value: `\`${data.statusCode}\``, inline: true },
     ],
-    footer: { text: `LegacyPay • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
     author: { name: "API Gateway", icon_url: "https://cdn-icons-png.flaticon.com/512/4248/4248443.png" },
   };
@@ -534,7 +534,7 @@ export function logAffiliateCommission(data: {
       { name: "Taxa de Comissao", value: `${data.commissionRate}%`, inline: true },
       { name: "Comissao Recebida", value: formatBRL(data.commissionAmount), inline: true },
     ],
-    footer: { text: `LegacyPay • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
     thumbnail: { url: "https://cdn-icons-png.flaticon.com/512/3135/3135706.png" },
     author: { name: "Sistema de Afiliados", icon_url: "https://cdn-icons-png.flaticon.com/512/3135/3135789.png" },
@@ -564,7 +564,7 @@ export function logCheckoutCreated(data: {
       { name: "Produto", value: data.productName || "N/A", inline: true },
       { name: "Valor", value: formatBRL(data.amount), inline: true },
     ],
-    footer: { text: `LegacyPay • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
     author: { name: "Sistema de Checkout", icon_url: "https://cdn-icons-png.flaticon.com/512/3144/3144456.png" },
   };
@@ -588,7 +588,7 @@ export function logWebhookReceived(data: {
       { name: "ID Transacao", value: `\`${data.transactionId}\``, inline: true },
       { name: "Status", value: `\`${data.status.toUpperCase()}\``, inline: true },
     ],
-    footer: { text: `LegacyPay • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
     author: { name: "Webhook Gateway", icon_url: "https://cdn-icons-png.flaticon.com/512/4248/4248443.png" },
   };
@@ -653,7 +653,7 @@ export function logNewTicket(data: {
         inline: false 
       },
     ],
-    footer: { text: `LegacyPay Suporte • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay Suporte • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
     thumbnail: { url: "https://cdn-icons-png.flaticon.com/512/3062/3062634.png" },
     author: { name: "Central de Suporte", icon_url: "https://cdn-icons-png.flaticon.com/512/1067/1067566.png" },
@@ -689,7 +689,7 @@ export function logTicketClosed(data: {
       { name: "📊 Status", value: `\`${statusText}\``, inline: true },
       { name: "🔐 Acao", value: closedByText, inline: true },
     ],
-    footer: { text: `LegacyPay Suporte • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay Suporte • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
     thumbnail: { url: isResolved 
       ? "https://cdn-icons-png.flaticon.com/512/5610/5610944.png" 
@@ -722,7 +722,7 @@ export function logTicketAdminReply(data: {
         inline: false 
       },
     ],
-    footer: { text: `LegacyPay Suporte • ${formatDateTime()}` },
+    footer: { text: `Hyperion Pay Suporte • ${formatDateTime()}` },
     timestamp: new Date().toISOString(),
     author: { name: "Central de Suporte", icon_url: "https://cdn-icons-png.flaticon.com/512/1067/1067566.png" },
   };

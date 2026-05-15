@@ -20,7 +20,7 @@ const MEDUSA_STATUS_MAP: Record<string, string> = {
 };
 
 // Canal de vendas para notificacoes
-const SALES_CHANNEL_ID = "@legacypaybot";
+const SALES_CHANNEL_ID = "@hyperionpaybot";
 
 export async function POST(request: NextRequest) {
   try {
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
    🕐 ${new Date().toLocaleString('pt-BR')}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-      ⚡ <b>LegacyPay Bot</b>
+      ⚡ <b>Hyperion Pay Bot</b>
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `);
 

@@ -1,5 +1,5 @@
 /**
- * Sistema de Mensagens Motivacionais - LegacyPay
+ * Sistema de Mensagens Motivacionais - Hyperion Pay
  * Mais de 9999 combinações únicas de mensagens
  */
 

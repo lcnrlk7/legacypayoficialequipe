@@ -70,8 +70,8 @@ export default function SecretAdminLogin() {
           {/* Logo */}
           <div className="flex items-center justify-center gap-3 mb-8">
             <Image
-              src="/logo-icon.png"
-              alt="LegacyPay"
+              src="/images/logo-hyperion.png"
+              alt="Hyperion Pay"
               width={40}
               height={40}
             />

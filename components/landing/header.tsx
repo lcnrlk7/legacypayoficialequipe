@@ -11,7 +11,7 @@ const navLinks = [
   { href: "/docs", label: "API Docs" },
   { href: "#faq", label: "FAQ" },
   { href: "https://wa.me/5534999353187", label: "WhatsApp", external: true, icon: "whatsapp" },
-  { href: "https://discord.gg/legacypay", label: "Suporte", external: true, icon: "discord" },
+  { href: "https://discord.gg/hyperionpay", label: "Suporte", external: true, icon: "discord" },
 ];
 
 export function Header() {

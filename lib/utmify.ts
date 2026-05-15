@@ -211,7 +211,7 @@ export async function sendPixEventToUtmify(
 
   const payload: UTMifyOrderPayload = {
     orderId: transaction.external_id || transaction.id,
-    platform: "LegacyPay",
+    platform: "Hyperion Pay",
     paymentMethod: "pix",
     status: utmifyStatus,
     createdAt: formatDateUTC(transaction.created_at) || formatDateUTC(new Date())!,
@@ -260,15 +260,15 @@ export async function sendPixEventToUtmify(
 export async function testUtmifyConnection(apiToken: string): Promise<{ success: boolean; error?: string }> {
   const testPayload: UTMifyOrderPayload = {
     orderId: `test_${Date.now()}`,
-    platform: "LegacyPay",
+    platform: "Hyperion Pay",
     paymentMethod: "pix",
     status: "paid",
     createdAt: formatDateUTC(new Date())!,
     approvedDate: formatDateUTC(new Date()),
     refundedAt: null,
     customer: {
-      name: "Teste LegacyPay",
-      email: "teste@legacypay.site",
+      name: "Teste Hyperion Pay",
+      email: "teste@hyperionpay.site",
       phone: null,
       document: null,
       country: "BR",
@@ -284,9 +284,9 @@ export async function testUtmifyConnection(apiToken: string): Promise<{ success:
       },
     ],
     trackingParameters: {
-      src: "legacypay_test",
+      src: "hyperionpay_test",
       sck: null,
-      utm_source: "legacypay",
+      utm_source: "hyperionpay",
       utm_campaign: "integration_test",
       utm_medium: "api",
       utm_content: null,

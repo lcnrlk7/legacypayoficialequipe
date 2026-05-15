@@ -8,9 +8,9 @@ function getResend(): Resend {
 }
 
 // Email oficial com domínio verificado
-const FROM_EMAIL = "LegacyPay <noreply@legacypay.shop>";
+const FROM_EMAIL = "Hyperion Pay <noreply@hyperionpay.shop>";
 
-// Logo da LegacyPay
+// Logo da Hyperion Pay
 const LOGO_URL = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-PhlbUzFfJZsj2u0IftrABCtiUFypLu.png";
 
 // Cores da marca
@@ -51,7 +51,7 @@ export async function sendVerificationEmail(
           <!-- Header com Logo -->
           <tr>
             <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(255, 107, 0, 0.08) 0%, transparent 100%);">
-              <img src="${LOGO_URL}" alt="LegacyPay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
+              <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
               <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
                 <span style="color: ${COLORS.primary};">Legacy</span><span style="color: ${COLORS.text};">Pay</span>
               </h1>
@@ -116,7 +116,7 @@ export async function sendVerificationEmail(
                 <tr>
                   <td style="text-align: center;">
                     <p style="margin: 0 0 8px 0; color: ${COLORS.textSubtle}; font-size: 12px;">
-                      © ${new Date().getFullYear()} LegacyPay. Todos os direitos reservados.
+                      © ${new Date().getFullYear()} Hyperion Pay. Todos os direitos reservados.
                     </p>
                     <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 11px;">
                       Este é um email automático. Por favor, não responda.
@@ -130,7 +130,7 @@ export async function sendVerificationEmail(
         
         <!-- Texto fora do card -->
         <p style="margin: 24px 0 0 0; color: ${COLORS.textSubtle}; font-size: 11px; text-align: center;">
-          Enviado com 🧡 pela equipe LegacyPay
+          Enviado com 🧡 pela equipe Hyperion Pay
         </p>
       </td>
     </tr>
@@ -143,7 +143,7 @@ export async function sendVerificationEmail(
     const { error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
-      subject: `${code} - Código de Verificação LegacyPay`,
+      subject: `${code} - Código de Verificação Hyperion Pay`,
       html: htmlContent,
     });
 
@@ -180,7 +180,7 @@ export async function sendWelcomeEmail(
           <!-- Header com Logo -->
           <tr>
             <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(255, 107, 0, 0.08) 0%, transparent 100%);">
-              <img src="${LOGO_URL}" alt="LegacyPay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
+              <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
               <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
                 <span style="color: ${COLORS.primary};">Legacy</span><span style="color: ${COLORS.text};">Pay</span>
               </h1>
@@ -211,7 +211,7 @@ export async function sendWelcomeEmail(
               </div>
               
               <p style="margin: 0 0 28px 0; color: ${COLORS.textMuted}; font-size: 15px; line-height: 1.7; text-align: center;">
-                Agora você faz parte da LegacyPay! Estamos felizes em ter você conosco. Confira o que você pode fazer:
+                Agora você faz parte da Hyperion Pay! Estamos felizes em ter você conosco. Confira o que você pode fazer:
               </p>
               
               <!-- Features -->
@@ -262,7 +262,7 @@ export async function sendWelcomeEmail(
               
               <!-- CTA Button -->
               <div style="text-align: center; margin-bottom: 24px;">
-                <a href="https://legacypay.shop/dashboard" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3);">
+                <a href="https://hyperionpay.shop/dashboard" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3);">
                   Acessar minha conta →
                 </a>
               </div>
@@ -280,7 +280,7 @@ export async function sendWelcomeEmail(
                 <tr>
                   <td style="text-align: center;">
                     <p style="margin: 0 0 8px 0; color: ${COLORS.textSubtle}; font-size: 12px;">
-                      © ${new Date().getFullYear()} LegacyPay. Todos os direitos reservados.
+                      © ${new Date().getFullYear()} Hyperion Pay. Todos os direitos reservados.
                     </p>
                     <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 11px;">
                       Este é um email automático. Por favor, não responda.
@@ -294,7 +294,7 @@ export async function sendWelcomeEmail(
         
         <!-- Texto fora do card -->
         <p style="margin: 24px 0 0 0; color: ${COLORS.textSubtle}; font-size: 11px; text-align: center;">
-          Enviado com 🧡 pela equipe LegacyPay
+          Enviado com 🧡 pela equipe Hyperion Pay
         </p>
       </td>
     </tr>
@@ -307,7 +307,7 @@ export async function sendWelcomeEmail(
     const { error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
-      subject: "🎉 Bem-vindo à LegacyPay!",
+      subject: "🎉 Bem-vindo à Hyperion Pay!",
       html: htmlContent,
     });
 
@@ -375,7 +375,7 @@ export async function sendWithdrawalNotification(
           <!-- Header com Logo -->
           <tr>
             <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(255, 107, 0, 0.08) 0%, transparent 100%);">
-              <img src="${LOGO_URL}" alt="LegacyPay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
+              <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
               <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
                 <span style="color: ${COLORS.primary};">Legacy</span><span style="color: ${COLORS.text};">Pay</span>
               </h1>
@@ -414,7 +414,7 @@ export async function sendWithdrawalNotification(
               
               <!-- CTA Button -->
               <div style="text-align: center; margin-bottom: 24px;">
-                <a href="https://legacypay.shop/dashboard/wallet" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3);">
+                <a href="https://hyperionpay.shop/dashboard/wallet" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3);">
                   Ver detalhes →
                 </a>
               </div>
@@ -432,7 +432,7 @@ export async function sendWithdrawalNotification(
                 <tr>
                   <td style="text-align: center;">
                     <p style="margin: 0 0 8px 0; color: ${COLORS.textSubtle}; font-size: 12px;">
-                      © ${new Date().getFullYear()} LegacyPay. Todos os direitos reservados.
+                      © ${new Date().getFullYear()} Hyperion Pay. Todos os direitos reservados.
                     </p>
                     <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 11px;">
                       Este é um email automático. Por favor, não responda.
@@ -446,7 +446,7 @@ export async function sendWithdrawalNotification(
         
         <!-- Texto fora do card -->
         <p style="margin: 24px 0 0 0; color: ${COLORS.textSubtle}; font-size: 11px; text-align: center;">
-          Enviado com 🧡 pela equipe LegacyPay
+          Enviado com 🧡 pela equipe Hyperion Pay
         </p>
       </td>
     </tr>
@@ -459,7 +459,7 @@ export async function sendWithdrawalNotification(
     const { error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
-      subject: `${config.icon} ${config.title} - LegacyPay`,
+      subject: `${config.icon} ${config.title} - Hyperion Pay`,
       html: htmlContent,
     });
 
@@ -497,7 +497,7 @@ export async function sendDepositNotification(
           <!-- Header com Logo -->
           <tr>
             <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(255, 107, 0, 0.08) 0%, transparent 100%);">
-              <img src="${LOGO_URL}" alt="LegacyPay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
+              <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
               <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
                 <span style="color: ${COLORS.primary};">Legacy</span><span style="color: ${COLORS.text};">Pay</span>
               </h1>
@@ -539,7 +539,7 @@ export async function sendDepositNotification(
               
               <!-- CTA Button -->
               <div style="text-align: center; margin-bottom: 24px;">
-                <a href="https://legacypay.shop/dashboard/wallet" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3);">
+                <a href="https://hyperionpay.shop/dashboard/wallet" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3);">
                   Ver meu saldo →
                 </a>
               </div>
@@ -553,7 +553,7 @@ export async function sendDepositNotification(
                 <tr>
                   <td style="text-align: center;">
                     <p style="margin: 0 0 8px 0; color: ${COLORS.textSubtle}; font-size: 12px;">
-                      © ${new Date().getFullYear()} LegacyPay. Todos os direitos reservados.
+                      © ${new Date().getFullYear()} Hyperion Pay. Todos os direitos reservados.
                     </p>
                     <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 11px;">
                       Este é um email automático. Por favor, não responda.
@@ -567,7 +567,7 @@ export async function sendDepositNotification(
         
         <!-- Texto fora do card -->
         <p style="margin: 24px 0 0 0; color: ${COLORS.textSubtle}; font-size: 11px; text-align: center;">
-          Enviado com 🧡 pela equipe LegacyPay
+          Enviado com 🧡 pela equipe Hyperion Pay
         </p>
       </td>
     </tr>
@@ -580,7 +580,7 @@ export async function sendDepositNotification(
     const { error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
-      subject: `💰 Depósito de R$ ${amount.toFixed(2)} recebido - LegacyPay`,
+      subject: `💰 Depósito de R$ ${amount.toFixed(2)} recebido - Hyperion Pay`,
       html: htmlContent,
     });
 
@@ -619,7 +619,7 @@ export async function sendNotificationEmail(
           <!-- Header com Logo -->
           <tr>
             <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(255, 107, 0, 0.08) 0%, transparent 100%);">
-              <img src="${LOGO_URL}" alt="LegacyPay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
+              <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
               <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
                 <span style="color: ${COLORS.primary};">Legacy</span><span style="color: ${COLORS.text};">Pay</span>
               </h1>
@@ -649,7 +649,7 @@ export async function sendNotificationEmail(
               
               <!-- CTA Button -->
               <div style="text-align: center;">
-                <a href="https://legacypay.shop/dashboard" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3);">
+                <a href="https://hyperionpay.shop/dashboard" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3);">
                   Acessar minha conta →
                 </a>
               </div>
@@ -663,7 +663,7 @@ export async function sendNotificationEmail(
                 <tr>
                   <td style="text-align: center;">
                     <p style="margin: 0 0 8px 0; color: ${COLORS.textSubtle}; font-size: 12px;">
-                      © ${new Date().getFullYear()} LegacyPay. Todos os direitos reservados.
+                      © ${new Date().getFullYear()} Hyperion Pay. Todos os direitos reservados.
                     </p>
                     <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 11px;">
                       Este é um email automático. Por favor, não responda.
@@ -677,7 +677,7 @@ export async function sendNotificationEmail(
         
         <!-- Texto fora do card -->
         <p style="margin: 24px 0 0 0; color: ${COLORS.textSubtle}; font-size: 11px; text-align: center;">
-          Enviado com 🧡 pela equipe LegacyPay
+          Enviado com 🧡 pela equipe Hyperion Pay
         </p>
       </td>
     </tr>
@@ -729,7 +729,7 @@ export async function sendPasswordResetEmail(
           <!-- Header com Logo -->
           <tr>
             <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(255, 107, 0, 0.08) 0%, transparent 100%);">
-              <img src="${LOGO_URL}" alt="LegacyPay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
+              <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
               <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
                 <span style="color: ${COLORS.primary};">Legacy</span><span style="color: ${COLORS.text};">Pay</span>
               </h1>
@@ -783,7 +783,7 @@ export async function sendPasswordResetEmail(
           <tr>
             <td style="padding: 24px 40px; border-top: 1px solid ${COLORS.cardBorder}; text-align: center;">
               <p style="margin: 0 0 8px 0; color: ${COLORS.textMuted}; font-size: 12px;">
-                © ${new Date().getFullYear()} LegacyPay. Todos os direitos reservados.
+                © ${new Date().getFullYear()} Hyperion Pay. Todos os direitos reservados.
               </p>
               <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 11px;">
                 Este é um email automático. Por favor, não responda.
@@ -794,7 +794,7 @@ export async function sendPasswordResetEmail(
         
         <!-- Texto fora do card -->
         <p style="margin: 24px 0 0 0; color: ${COLORS.textSubtle}; font-size: 11px; text-align: center;">
-          Enviado com 🧡 pela equipe LegacyPay
+          Enviado com 🧡 pela equipe Hyperion Pay
         </p>
       </td>
     </tr>
@@ -807,7 +807,7 @@ export async function sendPasswordResetEmail(
     const { error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
-      subject: "🔐 Alteração de Senha - LegacyPay",
+      subject: "🔐 Alteração de Senha - Hyperion Pay",
       html: htmlContent,
     });
 
@@ -848,7 +848,7 @@ export async function sendNewLoginAlert(
           <!-- Header com Logo -->
           <tr>
             <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(255, 107, 0, 0.08) 0%, transparent 100%);">
-              <img src="${LOGO_URL}" alt="LegacyPay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
+              <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
               <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
                 <span style="color: ${COLORS.primary};">Legacy</span><span style="color: ${COLORS.text};">Pay</span>
               </h1>
@@ -907,7 +907,7 @@ export async function sendNewLoginAlert(
           <tr>
             <td style="padding: 32px 40px; background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%); border-top: 1px solid ${COLORS.cardBorder};">
               <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 12px; text-align: center;">
-                © ${new Date().getFullYear()} LegacyPay. Todos os direitos reservados.
+                © ${new Date().getFullYear()} Hyperion Pay. Todos os direitos reservados.
               </p>
             </td>
           </tr>
@@ -923,7 +923,7 @@ export async function sendNewLoginAlert(
     const { error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
-      subject: "Novo acesso na sua conta - LegacyPay",
+      subject: "Novo acesso na sua conta - Hyperion Pay",
       html: htmlContent,
     });
 

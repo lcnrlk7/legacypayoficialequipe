@@ -8,7 +8,7 @@ import { detectPixKeyType } from "@/lib/pix-validator";
  * Consulta dados do destinatario de uma chave PIX
  * 
  * Fluxo:
- * 1. Verifica se a chave pertence a um usuario interno do LegacyPay
+ * 1. Verifica se a chave pertence a um usuario interno do Hyperion Pay
  * 2. Se nao for interno, gera dados baseados no tipo de chave
  * 
  * Para consulta real do DICT (Banco Central), seria necessario:
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     const cleanKey = pixKey.trim();
     const detectedType = keyType || detectPixKeyType(cleanKey);
 
-    // 1. Verificar se a chave pertence a um usuario interno do LegacyPay
+    // 1. Verificar se a chave pertence a um usuario interno do Hyperion Pay
     const internalUser = await sql`
       SELECT p.name, p.cpf_cnpj, pk.key_type, pk.key_value
       FROM pix_keys pk
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
         documentType: docType,
         keyType: (user.key_type || detectedType).toUpperCase(),
         key: cleanKey,
-        bank: "LegacyPay",
+        bank: "Hyperion Pay",
         bankCode: "000",
         internal: true,
       });

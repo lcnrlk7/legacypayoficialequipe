@@ -26,7 +26,7 @@ export function Integrations() {
           className="text-center mb-12"
         >
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
-            LegacyPay esta conectada a integracoes amplas e flexiveis
+            Hyperion Pay esta conectada a integracoes amplas e flexiveis
           </h2>
           
           <p className="text-muted-foreground max-w-2xl mx-auto">

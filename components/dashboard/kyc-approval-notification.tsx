@@ -140,7 +140,7 @@ export function KYCApprovalNotification({ userId, userName, kycApprovalNotified 
                   transition={{ delay: 0.5 }}
                   className="text-muted-foreground mb-6"
                 >
-                  Sua verificação KYC foi concluída com sucesso. Agora você tem acesso completo a todas as funcionalidades da plataforma LegacyPay.
+                  Sua verificação KYC foi concluída com sucesso. Agora você tem acesso completo a todas as funcionalidades da plataforma Hyperion Pay.
                 </motion.p>
 
                 {/* Features unlocked */}

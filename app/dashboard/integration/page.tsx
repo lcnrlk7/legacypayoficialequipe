@@ -1101,7 +1101,7 @@ export default function IntegrationPage() {
                 <div className="bg-secondary/30 rounded-xl p-4">
                   <h4 className="text-sm font-semibold text-foreground mb-2">Base URL</h4>
                   <code className="block p-3 bg-background rounded-lg text-sm font-mono text-primary">
-                    https://legacypay.site/api/v1/integration
+                    https://hyperionpay.site/api/v1/integration
                   </code>
                 </div>
 
@@ -1177,7 +1177,7 @@ export default function IntegrationPage() {
                       </p>
                       <div className="bg-secondary/50 rounded p-2 text-[10px]">
                         <p className="text-muted-foreground"><strong>Quando usar:</strong> Ao receber webhooks de pagamento confirmado</p>
-                        <p className="text-muted-foreground"><strong>Como usar:</strong> Valide o header <code className="text-primary">X-LegacyPay-Signature</code></p>
+                        <p className="text-muted-foreground"><strong>Como usar:</strong> Valide o header <code className="text-primary">X-Hyperion Pay-Signature</code></p>
                       </div>
                     </div>
                   </div>
@@ -1325,7 +1325,7 @@ client.on("interactionCreate", async (interaction) => {
   if (!interaction.isCommand() || interaction.commandName !== "pix") return;
   
   const valor = interaction.options.getNumber("valor");
-  const response = await fetch("https://legacypay.site/api/v1/integration/pix", {
+  const response = await fetch("https://hyperionpay.site/api/v1/integration/pix", {
     method: "POST",
     headers: {
       "Authorization": "Basic " + credentials,
@@ -1370,7 +1370,7 @@ const credentials = Buffer.from(CLIENT_ID + ":" + CLIENT_SECRET).toString("base6
 export async function POST(request: NextRequest) {
   const { amount, orderId, customerName } = await request.json();
 
-  const response = await fetch("https://legacypay.site/api/v1/integration/pix", {
+  const response = await fetch("https://hyperionpay.site/api/v1/integration/pix", {
     method: "POST",
     headers: {
       "Authorization": "Basic " + credentials,
@@ -1387,7 +1387,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json(data);
 }
 
-// Webhook para receber confirmacao: app/api/webhook-legacypay/route.ts
+// Webhook para receber confirmacao: app/api/webhook-hyperionpay/route.ts
 export async function POST(request: NextRequest) {
   const body = await request.json();
   
@@ -1425,7 +1425,7 @@ credentials = base64.b64encode(f"{CLIENT_ID}:{CLIENT_SECRET}".encode()).decode()
 async def criar_pix(amount: float, order_id: str):
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            "https://legacypay.site/api/v1/integration/pix",
+            "https://hyperionpay.site/api/v1/integration/pix",
             headers={
                 "Authorization": f"Basic {credentials}",
                 "Content-Type": "application/json"
@@ -1476,7 +1476,7 @@ $credentials = base64_encode($clientId . ":" . $clientSecret);
 function criarPix($amount, $orderId, $description) {
     global $credentials;
     
-    $ch = curl_init("https://legacypay.site/api/v1/integration/pix");
+    $ch = curl_init("https://hyperionpay.site/api/v1/integration/pix");
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_POST => true,
@@ -1611,7 +1611,7 @@ echo json_encode(["received" => true]);`}
                     <p className="text-xs text-yellow-500 font-medium">Importante: Validacao de Seguranca</p>
                     <p className="text-xs text-muted-foreground mt-1">
                       Sempre valide o header <code className="text-primary">X-Webhook-Signature</code> usando seu webhook_secret 
-                      para garantir que a requisicao veio da LegacyPay.
+                      para garantir que a requisicao veio da Hyperion Pay.
                     </p>
                   </div>
                 </div>
@@ -1638,7 +1638,7 @@ echo json_encode(["received" => true]);`}
                   <code className="block p-3 bg-secondary rounded-lg text-xs font-mono whitespace-pre overflow-x-auto">
 {`const CLIENT_ID = "seu_client_id";
 const CLIENT_SECRET = "seu_client_secret";
-const BASE_URL = "https://legacypay.site/api/v1/integration";
+const BASE_URL = "https://hyperionpay.site/api/v1/integration";
 
 // Criar credenciais em Base64
 const credentials = Buffer.from(

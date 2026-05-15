@@ -11,19 +11,19 @@ import {
 
 const faqs = [
   {
-    question: "O que é o LegacyPay?",
+    question: "O que é o Hyperion Pay?",
     answer:
-      "LegacyPay é uma plataforma de gateway de pagamentos PIX que permite receber e enviar pagamentos de forma rápida, segura e anônima. Oferecemos infraestrutura completa para operações financeiras sem as burocracias tradicionais.",
+      "Hyperion Pay é uma plataforma de gateway de pagamentos PIX que permite receber e enviar pagamentos de forma rápida, segura e anônima. Oferecemos infraestrutura completa para operações financeiras sem as burocracias tradicionais.",
   },
   {
     question: "Preciso fazer verificação de identidade (KYC)?",
     answer:
-      "Não. O LegacyPay opera sem necessidade de KYC complexo. Você pode criar sua conta e começar a operar rapidamente, mantendo sua privacidade.",
+      "Não. O Hyperion Pay opera sem necessidade de KYC complexo. Você pode criar sua conta e começar a operar rapidamente, mantendo sua privacidade.",
   },
   {
     question: "O que significa 'sem MED'?",
     answer:
-      "MED (Mecanismo Especial de Devolução) é um sistema do Banco Central para contestação de transações PIX. No LegacyPay, suas transações são processadas de forma que minimiza riscos de contestações indevidas.",
+      "MED (Mecanismo Especial de Devolução) é um sistema do Banco Central para contestação de transações PIX. No Hyperion Pay, suas transações são processadas de forma que minimiza riscos de contestações indevidas.",
   },
   {
     question: "Como funciona a API?",

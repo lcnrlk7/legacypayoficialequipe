@@ -27,7 +27,7 @@ export function DashboardPreview() {
             <div className="col-span-2 bg-black border-r border-orange-600/20 p-4 flex flex-col">
               <div className="flex items-center gap-2 mb-8 pb-6 border-b border-orange-600/20">
                 <Zap className="w-6 h-6 text-orange-500" />
-                <span className="font-bold text-white">LegacyPay</span>
+                <span className="font-bold text-white">Hyperion Pay</span>
               </div>
 
               <nav className="space-y-3 flex-1">

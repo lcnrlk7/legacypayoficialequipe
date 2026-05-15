@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
       amount,
       transactionId,
       user.id,
-      description || "Pagamento LegacyPay",
+      description || "Pagamento Hyperion Pay",
       payer?.name || "Cliente",
       payer?.document || "00000000000"
     );

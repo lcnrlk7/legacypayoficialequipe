@@ -8,7 +8,7 @@ const benefits = [
   {
     icon: BadgePercent,
     title: "Taxas que fazem sentido para quem vende muito",
-    description: "Na LegacyPay, aplicamos taxas realmente justas, sempre. A taxa varia de 0% a 1% por venda, sem taxas escondidas.",
+    description: "Na Hyperion Pay, aplicamos taxas realmente justas, sempre. A taxa varia de 0% a 1% por venda, sem taxas escondidas.",
     highlight: true,
   },
   {
@@ -42,7 +42,7 @@ export function WhyChoose() {
             className="lg:sticky lg:top-24"
           >
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
-              Por que escolher a LegacyPay?
+              Por que escolher a Hyperion Pay?
             </h2>
             
             <p className="text-muted-foreground text-lg mb-4">
@@ -50,7 +50,7 @@ export function WhyChoose() {
             </p>
             
             <p className="text-muted-foreground mb-6">
-              A LegacyPay combina taxas competitivas, vendas internacionais e recebimento rapido para que voce fique com a maior parte do seu lucro.
+              A Hyperion Pay combina taxas competitivas, vendas internacionais e recebimento rapido para que voce fique com a maior parte do seu lucro.
             </p>
             
             <p className="text-primary font-medium mb-2">Sem burocracia. Sem limitacoes.</p>
@@ -60,7 +60,7 @@ export function WhyChoose() {
               href="/auth/register"
               className="inline-block px-6 py-3 bg-primary text-black font-semibold rounded-xl hover:bg-primary/90 transition-colors"
             >
-              Crie sua conta na LegacyPay
+              Crie sua conta na Hyperion Pay
             </Link>
           </motion.div>
 

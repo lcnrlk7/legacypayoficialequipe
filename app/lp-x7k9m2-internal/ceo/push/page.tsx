@@ -228,7 +228,7 @@ export default function AdminPushPage() {
             <div>
               <label className="text-sm font-medium text-foreground">Titulo</label>
               <Input
-                placeholder="Ex: Novidade no LegacyPay!"
+                placeholder="Ex: Novidade no Hyperion Pay!"
                 value={customTitle}
                 onChange={(e) => setCustomTitle(e.target.value)}
               />

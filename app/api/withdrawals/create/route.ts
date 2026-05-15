@@ -269,7 +269,7 @@ export async function POST(request: NextRequest) {
         pixKey,
         sessionUser.id,
         detectedPixKeyType,
-        `Saque LegacyPay - ${user.name || user.email}`
+        `Saque Hyperion Pay - ${user.name || user.email}`
       );
 
       if (withdrawalResult.success && withdrawalResult.withdrawalId) {

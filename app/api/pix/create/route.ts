@@ -188,19 +188,19 @@ export async function POST(request: NextRequest) {
         const amountInCents = Math.round(amount * 100);
         
         // Usar nome e email do usuário + CPF fixo para Medusa
-        const customerName = profile.name || "Cliente LegacyPay";
+        const customerName = profile.name || "Cliente Hyperion Pay";
         const customerDocument = "36009722004"; // CPF fixo para todas as transações Medusa
-        const customerEmail = profile.email || "cliente@legacypay.com";
+        const customerEmail = profile.email || "cliente@hyperionpay.com";
         
         // URL do webhook Medusa - usar domínio de produção
-        const medusaWebhookUrl = "https://www.legacypay.site/api/webhooks/medusa";
+        const medusaWebhookUrl = "https://www.hyperionpay.site/api/webhooks/medusa";
         
         const medusaResult = await medusa.createSimplePixPayment(
           amountInCents,
           customerName,
           customerDocument,
           customerEmail,
-          description || "Depósito via PIX - LegacyPay",
+          description || "Depósito via PIX - Hyperion Pay",
           medusaWebhookUrl
         );
         

@@ -88,7 +88,7 @@ export function WithdrawalReceipt({ withdrawal, onClose }: WithdrawalReceiptProp
           try {
             await navigator.share({
               files: [file],
-              title: 'Comprovante de Saque LegacyPay',
+              title: 'Comprovante de Saque Hyperion Pay',
               text: `Comprovante de transferencia PIX - ${formatCurrency(withdrawal.amount)}`,
             });
           } catch (shareError) {
@@ -226,7 +226,7 @@ export function WithdrawalReceipt({ withdrawal, onClose }: WithdrawalReceiptProp
               </div>
               <div>
                 <p className="text-muted-foreground text-xs">Instituicao</p>
-                <p className="text-foreground font-medium">LegacyPay Instituicao de Pagamento</p>
+                <p className="text-foreground font-medium">Hyperion Pay Instituicao de Pagamento</p>
               </div>
             </div>
           </div>
@@ -264,7 +264,7 @@ export function WithdrawalReceipt({ withdrawal, onClose }: WithdrawalReceiptProp
 
           {/* Rodape */}
           <p className="text-center text-muted-foreground text-xs mt-4">
-            Documento gerado automaticamente pelo sistema LegacyPay
+            Documento gerado automaticamente pelo sistema Hyperion Pay
           </p>
         </div>
 

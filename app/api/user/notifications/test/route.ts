@@ -9,7 +9,7 @@ const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "UUxI4O8-FbRouAevSmBQ
 
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
-    "mailto:suporte@legacypay.site",
+    "mailto:suporte@hyperionpay.site",
     VAPID_PUBLIC_KEY,
     VAPID_PRIVATE_KEY
   );
@@ -54,8 +54,8 @@ export async function POST(request: Request) {
         const payload = JSON.stringify({
           title: "Teste de Notificacao",
           body: "Suas notificacoes push estao funcionando! Voce recebera alertas de vendas aqui.",
-          icon: "/logo-icon.png",
-          badge: "/logo-icon.png",
+          icon: "/images/logo-hyperion.png",
+          badge: "/images/logo-hyperion.png",
           tag: "test-notification",
           data: {
             type: "test",
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
       // Em producao, usar algo como:
       // await sendEmail({
       //   to: user.email,
-      //   subject: "Teste de Notificacao - LegacyPay",
+      //   subject: "Teste de Notificacao - Hyperion Pay",
       //   body: "Este e um email de teste..."
       // });
 

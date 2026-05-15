@@ -25,7 +25,7 @@ const footerLinks = {
   ],
   Suporte: [
     { label: "FAQ", href: "#faq" },
-    { label: "Discord", href: "https://discord.gg/legacypay", external: true },
+    { label: "Discord", href: "https://discord.gg/hyperionpay", external: true },
     { label: "Central de Ajuda", href: "https://discord.gg/hyperionpay", external: true },
     { label: "Developers", href: "/docs" },
   ],

@@ -200,8 +200,8 @@ export default function StatusPage() {
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-3 group">
               <Image
-                src="/logo-icon.png"
-                alt="LegacyPay"
+                src="/images/logo-hyperion.png"
+                alt="Hyperion Pay"
                 width={36}
                 height={36}
                 className="group-hover:scale-105 transition-transform"
@@ -411,7 +411,7 @@ export default function StatusPage() {
         <div className="text-center py-8 border-t border-border">
           <p className="text-sm text-muted-foreground">
             Problemas? Entre em contato pelo{" "}
-            <a href="https://discord.gg/legacypay" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+            <a href="https://discord.gg/hyperionpay" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
               Discord
             </a>{" "}
             ou{" "}

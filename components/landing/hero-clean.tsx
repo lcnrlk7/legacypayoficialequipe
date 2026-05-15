@@ -102,10 +102,10 @@ export function HeroClean() {
             {/* Dashboard Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800/80">
               <div className="flex items-center gap-3">
-                {/* Logo LegacyPay */}
+                {/* Logo Hyperion Pay */}
                 <Image 
                   src="/images/logo.png" 
-                  alt="LegacyPay" 
+                  alt="Hyperion Pay" 
                   width={24} 
                   height={24}
                   className="object-contain"

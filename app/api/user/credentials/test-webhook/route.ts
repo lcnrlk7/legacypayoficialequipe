@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
         fee: 2.50,
         net_amount: 97.50,
         status: "completed",
-        payer_name: "Teste LegacyPay",
+        payer_name: "Teste Hyperion Pay",
         payer_document: "12345678900",
         paid_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
@@ -94,9 +94,9 @@ export async function POST(request: NextRequest) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-LegacyPay-Signature": signature,
-          "X-LegacyPay-Event": "payment.test",
-          "X-LegacyPay-Timestamp": testPayload.timestamp,
+          "X-Hyperion Pay-Signature": signature,
+          "X-Hyperion Pay-Event": "payment.test",
+          "X-Hyperion Pay-Timestamp": testPayload.timestamp,
         },
         body: JSON.stringify(testPayload),
       })
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
         response_body: responseBody || null,
         error: webhookError,
         test_payload: testPayload,
-        signature_header: "X-LegacyPay-Signature",
+        signature_header: "X-Hyperion Pay-Signature",
       },
     })
   } catch (error) {

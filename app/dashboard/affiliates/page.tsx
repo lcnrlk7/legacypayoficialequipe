@@ -166,7 +166,7 @@ export default function AffiliatesPage() {
             onClick={() => {
               if (navigator.share) {
                 navigator.share({
-                  title: "LegacyPay - Convite",
+                  title: "Hyperion Pay - Convite",
                   text: "Use meu codigo de convite e ganhe beneficios!",
                   url: referralLink
                 });

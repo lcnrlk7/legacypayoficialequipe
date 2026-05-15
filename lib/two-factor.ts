@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 import { sql } from "@/lib/db";
 import crypto from "crypto";
 
-const APP_NAME = "LegacyPay";
+const APP_NAME = "Hyperion Pay";
 
 // Criar objeto TOTP
 function createTOTP(secret: string, email: string): OTPAuth.TOTP {

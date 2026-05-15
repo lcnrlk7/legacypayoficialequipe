@@ -72,7 +72,7 @@ export default function AttendantLayout({
       {/* Logo */}
       <div className="p-6 border-b border-border">
         <Link href="/lp-x7k9m2-internal/attendant" className="flex items-center gap-3">
-          <Image src="/logo-icon.png" alt="LegacyPay" width={40} height={40} />
+          <Image src="/images/logo-hyperion.png" alt="Hyperion Pay" width={40} height={40} />
           <div>
             <div className="flex items-baseline">
               <span className="text-xl font-bold text-foreground">Legacy</span>

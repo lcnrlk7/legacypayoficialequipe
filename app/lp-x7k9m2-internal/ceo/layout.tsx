@@ -232,7 +232,7 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
       {/* Mobile Header */}
       <header className="lg:hidden glass sticky top-0 z-50 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Image src="/logo-icon.png" alt="LegacyPay" width={32} height={32} />
+          <Image src="/images/logo-hyperion.png" alt="Hyperion Pay" width={32} height={32} />
           <span className="font-semibold text-foreground">Admin CEO</span>
         </div>
         <div className="flex items-center gap-2">
@@ -262,8 +262,8 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
               <div className="relative">
                 <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full" />
                 <Image
-                  src="/logo-icon.png"
-                  alt="LegacyPay"
+                  src="/images/logo-hyperion.png"
+                  alt="Hyperion Pay"
                   width={40}
                   height={40}
                   className="relative drop-shadow-lg"
@@ -271,7 +271,7 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
               </div>
               <div>
                 <div className="flex items-baseline">
-                  <span className="font-bold text-foreground">Legacy</span>
+                  <span className="font-bold text-foreground">Hyperion</span>
                   <span className="font-bold text-primary">Pay</span>
                 </div>
                 <span className="text-xs text-red-400 font-medium">Painel CEO</span>
@@ -365,14 +365,14 @@ export default function CEOLayout({ children }: { children: React.ReactNode }) {
                 <div className="p-6 border-b border-border">
                   <div className="flex items-center gap-3">
                     <Image
-                      src="/logo-icon.png"
-                      alt="LegacyPay"
+                      src="/images/logo-hyperion.png"
+                      alt="Hyperion Pay"
                       width={36}
                       height={36}
                     />
                     <div>
                       <div className="flex items-baseline">
-                        <span className="font-bold text-foreground">Legacy</span>
+                        <span className="font-bold text-foreground">Hyperion</span>
                         <span className="font-bold text-primary">Pay</span>
                       </div>
                       <span className="text-xs text-muted-foreground">

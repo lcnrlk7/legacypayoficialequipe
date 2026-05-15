@@ -169,7 +169,7 @@ export function Hero() {
               {/* Mock Dashboard UI */}
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <Image src="/logo-icon.png" alt="Logo" width={32} height={32} />
+                  <Image src="/images/logo-hyperion.png" alt="Logo" width={32} height={32} />
                   <span className="font-semibold text-white">Dashboard</span>
                 </div>
                 <div className="flex items-center gap-2">

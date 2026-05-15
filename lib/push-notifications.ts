@@ -5,7 +5,7 @@ import { sql } from "@/lib/db";
 // Para gerar: npx web-push generate-vapid-keys
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "";
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
-const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:contato@legacypay.shop";
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:contato@hyperionpay.shop";
 
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
@@ -367,7 +367,7 @@ export async function sendMotivationalMessage(userId: string): Promise<void> {
   if (!message) return;
 
   await sendPushNotification(userId, {
-    title: "LegacyPay",
+    title: "Hyperion Pay",
     body: message,
     tag: `motivation-${Date.now()}`,
     data: {
@@ -385,7 +385,7 @@ export async function sendMotivationalToAll(): Promise<{ success: boolean; sent:
   if (!message) return { success: false, sent: 0, failed: 0 };
 
   return sendPushToAllUsers({
-    title: "LegacyPay",
+    title: "Hyperion Pay",
     body: message,
     tag: `motivation-broadcast-${Date.now()}`,
     data: {

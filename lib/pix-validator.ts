@@ -471,7 +471,7 @@ export function calculateWithdrawalFee(
   fixedFee: number = 5, 
   acquirerFee: number = 5
 ): { amount: number; fee: number; acquirerFee: number; totalFee: number; netAmount: number; total: number } {
-  // Taxa fixa da LegacyPay + Taxa fixa da adquirente (Medusa/MisticPay)
+  // Taxa fixa da Hyperion Pay + Taxa fixa da adquirente (Medusa/MisticPay)
   const totalFee = fixedFee + acquirerFee;
   const netAmount = amount - totalFee;
   

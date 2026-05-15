@@ -61,7 +61,7 @@ export function AwardPlates() {
         >
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
             <span className="text-white">Premiacoes </span>
-            <span className="text-primary">LegacyPay</span>
+            <span className="text-primary">Hyperion Pay</span>
           </h2>
           
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">

@@ -85,7 +85,7 @@ export function RewardsProgram() {
                   <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/30 to-primary/30 rounded-2xl blur-2xl" />
                   <Image
                     src="/images/rewards/placa-1m.png"
-                    alt="Placa 1 Milhao Faturados LegacyPay"
+                    alt="Placa 1 Milhao Faturados Hyperion Pay"
                     width={224}
                     height={224}
                     className="relative rounded-xl object-contain border border-yellow-500/30 shadow-2xl"
@@ -93,7 +93,7 @@ export function RewardsProgram() {
                 </div>
                 
                 {/* Label */}
-                <p className="text-sm text-yellow-400 font-semibold mb-4">LegacyPay</p>
+                <p className="text-sm text-yellow-400 font-semibold mb-4">Hyperion Pay</p>
                 
                 <p className="text-xs text-zinc-400 leading-relaxed">
                   Um marco extraordinario. Parabens por alcancar 1 milhao em faturamento! Seu esforco, dedicacao e visao te trouxeram ate aqui. Que essa conquista seja apenas o comeco de um legado ainda maior.
@@ -102,7 +102,7 @@ export function RewardsProgram() {
               
               {/* Label below card */}
               <div className="text-center mt-6">
-                <p className="text-sm text-muted-foreground">1 MILHAO FATURADOS - <span className="text-yellow-400">LegacyPay</span></p>
+                <p className="text-sm text-muted-foreground">1 MILHAO FATURADOS - <span className="text-yellow-400">Hyperion Pay</span></p>
               </div>
             </div>
           </motion.div>
@@ -121,7 +121,7 @@ export function RewardsProgram() {
             
             {/* Description */}
             <p className="text-muted-foreground text-lg mb-6">
-              Na LegacyPay, o crescimento dos nossos produtores tambem e celebrado.
+              Na Hyperion Pay, o crescimento dos nossos produtores tambem e celebrado.
             </p>
             
             <p className="text-muted-foreground mb-8">
@@ -148,7 +148,7 @@ export function RewardsProgram() {
                 Crie sua conta tambem!
               </Link>
               <Link 
-                href="https://wa.me/5534999353187?text=Ola! Gostaria de saber mais sobre a LegacyPay"
+                href="https://wa.me/5534999353187?text=Ola! Gostaria de saber mais sobre a Hyperion Pay"
                 target="_blank"
                 className="px-6 py-3 bg-zinc-800 text-white rounded-xl hover:bg-zinc-700 transition-colors"
               >

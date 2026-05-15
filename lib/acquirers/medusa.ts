@@ -224,7 +224,7 @@ export class MedusaPayments {
 
     // Garantir que name e email nunca sejam undefined
     const safeName = (payerName || "Cliente").trim() || "Cliente";
-    const safeEmail = (payerEmail || "cliente@legacypay.site").trim() || "cliente@legacypay.site";
+    const safeEmail = (payerEmail || "cliente@hyperionpay.site").trim() || "cliente@hyperionpay.site";
 
     const customer: MedusaCustomer = {
       name: safeName,
@@ -238,8 +238,8 @@ export class MedusaPayments {
 
     const items: MedusaItem[] = [
       {
-        title: description && description.trim() ? description.trim() : "Deposito via PIX - LegacyPay",
-        description: description && description.trim() ? description.trim() : "Deposito via PIX - LegacyPay",
+        title: description && description.trim() ? description.trim() : "Deposito via PIX - Hyperion Pay",
+        description: description && description.trim() ? description.trim() : "Deposito via PIX - Hyperion Pay",
         quantity: 1,
         tangible: false,
         unitPrice: amount,

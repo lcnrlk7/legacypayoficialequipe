@@ -76,10 +76,10 @@ export default function ManagerLayout({
       {/* Logo */}
       <div className="p-6 border-b border-border">
         <Link href="/lp-x7k9m2-internal/manager" className="flex items-center gap-3">
-          <Image src="/logo-icon.png" alt="LegacyPay" width={40} height={40} />
+          <Image src="/images/logo-hyperion.png" alt="Hyperion Pay" width={40} height={40} />
           <div>
             <div className="flex items-baseline">
-              <span className="text-xl font-bold text-foreground">Legacy</span>
+              <span className="text-xl font-bold text-foreground">Hyperion</span>
               <span className="text-xl font-bold text-primary">Pay</span>
             </div>
             <span className="text-xs text-blue-400 flex items-center gap-1">

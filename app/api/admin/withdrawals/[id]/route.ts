@@ -129,7 +129,7 @@ export async function PATCH(
         withdrawal.pix_key,
         withdrawal.user_id,
         withdrawal.pix_key_type || detectPixKeyType(withdrawal.pix_key),
-        `Saque LegacyPay - ${withdrawal.profile_name || withdrawal.profile_email}`
+        `Saque Hyperion Pay - ${withdrawal.profile_name || withdrawal.profile_email}`
       );
 
       if (!withdrawalApiResult.success) {

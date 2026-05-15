@@ -97,7 +97,7 @@ export default function DocsPage() {
     );
   };
 
-  const baseUrl = "https://legacypay.site";
+  const baseUrl = "https://hyperionpay.site";
 
   return (
     <div className="min-h-screen bg-background">
@@ -115,8 +115,8 @@ export default function DocsPage() {
             <div className="h-6 w-px bg-border" />
             <div className="flex items-center gap-2">
               <Image
-                src="/logo-icon.png"
-                alt="LegacyPay"
+                src="/images/logo-hyperion.png"
+                alt="Hyperion Pay"
                 width={32}
                 height={32}
                 className="w-8 h-8"
@@ -201,10 +201,10 @@ export default function DocsPage() {
               >
                 <div>
                   <h1 className="text-4xl font-bold text-foreground mb-4">
-                    API LegacyPay
+                    API Hyperion Pay
                   </h1>
                   <p className="text-lg text-muted-foreground leading-relaxed">
-                    Bem-vindo a documentacao da API LegacyPay. Aqui voce encontra tudo que precisa
+                    Bem-vindo a documentacao da API Hyperion Pay. Aqui voce encontra tudo que precisa
                     para integrar nosso gateway de pagamentos PIX ao seu sistema.
                   </p>
                 </div>
@@ -329,11 +329,11 @@ export default function DocsPage() {
                         <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded">Seguranca</span>
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">
-                        Chave para validar que as notificacoes vieram da LegacyPay.
+                        Chave para validar que as notificacoes vieram da Hyperion Pay.
                       </p>
                       <code className="text-xs bg-secondary px-2 py-1 rounded text-primary">whsec_xxxxxxxxxxxxxxxx</code>
                       <p className="text-xs text-muted-foreground mt-2">
-                        <strong>Uso:</strong> Valide o header <code className="text-primary">X-LegacyPay-Signature</code> usando HMAC-SHA256
+                        <strong>Uso:</strong> Valide o header <code className="text-primary">X-Hyperion Pay-Signature</code> usando HMAC-SHA256
                       </p>
                     </div>
                   </div>
@@ -1052,7 +1052,7 @@ app.post('/webhook', (req, res) => {
                   </div>
                   <p className="text-lg text-muted-foreground">
                     Copie o prompt abaixo e cole na sua IA (ChatGPT, Claude, Copilot, etc.) para integrar
-                    a API LegacyPay automaticamente ao seu projeto.
+                    a API Hyperion Pay automaticamente ao seu projeto.
                   </p>
                 </div>
 
@@ -1248,11 +1248,11 @@ app.post('/webhook', (req, res) => {
 }
 
 // Prompts para IA
-const fullIntegrationPrompt = `Preciso integrar a API de pagamentos PIX da LegacyPay ao meu projeto.
+const fullIntegrationPrompt = `Preciso integrar a API de pagamentos PIX da Hyperion Pay ao meu projeto.
 
 ## Informacoes da API
 
-**URL Base:** https://api.legacypay.site
+**URL Base:** https://api.hyperionpay.site
 **Autenticacao:** Bearer Token no header Authorization
 **Minha API Key:** SUA_API_KEY (substitua pela sua chave real)
 
@@ -1300,9 +1300,9 @@ Por favor, crie uma integracao completa para meu projeto com:
 5. Tratamento de erros adequado
 6. Tipagem TypeScript (se aplicavel)`;
 
-const chargePrompt = `Preciso criar cobrancas PIX com QR Code usando a API LegacyPay.
+const chargePrompt = `Preciso criar cobrancas PIX com QR Code usando a API Hyperion Pay.
 
-**URL Base:** https://api.legacypay.site
+**URL Base:** https://api.hyperionpay.site
 **Minha API Key:** SUA_API_KEY
 
 **Endpoint:** POST /v1/pix/charge
@@ -1337,9 +1337,9 @@ Crie uma funcao que:
 3. Retorne o QR Code (base64) e codigo copia e cola
 4. Trate erros adequadamente`;
 
-const webhookPrompt = `Preciso configurar um webhook para receber notificacoes de pagamento da LegacyPay.
+const webhookPrompt = `Preciso configurar um webhook para receber notificacoes de pagamento da Hyperion Pay.
 
-**URL Base:** https://api.legacypay.site
+**URL Base:** https://api.hyperionpay.site
 **Minha API Key:** SUA_API_KEY
 
 **Eventos disponiveis:**
@@ -1374,9 +1374,9 @@ Crie um endpoint webhook que:
 3. Processe os eventos (charge.paid, etc)
 4. Retorne 200 OK para confirmar recebimento`;
 
-const transferPrompt = `Preciso enviar transferencias PIX automaticamente usando a API LegacyPay.
+const transferPrompt = `Preciso enviar transferencias PIX automaticamente usando a API Hyperion Pay.
 
-**URL Base:** https://api.legacypay.site
+**URL Base:** https://api.hyperionpay.site
 **Minha API Key:** SUA_API_KEY
 
 **Endpoint:** POST /v1/pix/transfer

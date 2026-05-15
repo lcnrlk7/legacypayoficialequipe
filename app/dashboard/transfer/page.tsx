@@ -239,7 +239,7 @@ export default function TransferPage() {
             Transferir
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Envie dinheiro para outros usuarios LegacyPay sem taxas
+            Envie dinheiro para outros usuarios Hyperion Pay sem taxas
           </p>
         </div>
         <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/20">

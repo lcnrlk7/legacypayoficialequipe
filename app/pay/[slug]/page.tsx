@@ -64,7 +64,7 @@ export async function generateMetadata({ params }: PageProps) {
   const data = checkout as any;
   
   // Usar titulo customizado se existir, senao usa o padrao
-  const title = data.seo_title || `LegacyPay - ${data.name || "Checkout"}`;
+  const title = data.seo_title || `Hyperion Pay - ${data.name || "Checkout"}`;
   
   // Configurar favicon customizado se existir
   const icons = data.favicon_url 

@@ -8,7 +8,7 @@ const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
 
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
   webpush.setVapidDetails(
-    "mailto:suporte@legacypay.site",
+    "mailto:suporte@hyperionpay.site",
     VAPID_PUBLIC_KEY,
     VAPID_PRIVATE_KEY
   );
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
         };
 
         const payload = JSON.stringify({
-          title: "Teste LegacyPay",
+          title: "Teste Hyperion Pay",
           body: "Se voce esta vendo isso, as notificacoes estao funcionando!",
           icon: "/icon-192x192.png",
           badge: "/icon-192x192.png",

@@ -19,7 +19,7 @@ interface RewardsProgressProps {
 }
 
 const rewardMilestones: { target: number; name: string; type: string; icon: LucideIcon }[] = [
-  { target: 10000, name: "Pulseira LegacyPay", type: "bracelet", icon: Watch },
+  { target: 10000, name: "Pulseira Hyperion Pay", type: "bracelet", icon: Watch },
   { target: 50000, name: "Placa 50K", type: "plaque_50k", icon: Award },
   { target: 100000, name: "Placa 100K", type: "plaque_100k", icon: Medal },
   { target: 500000, name: "Placa 500K", type: "plaque_500k", icon: Trophy },

@@ -53,7 +53,7 @@ export function CTANew() {
               Pronto para Revolucionar suas Finanças?
             </h2>
             <p className="text-lg md:text-xl text-white/80 max-w-2xl mx-auto">
-              Junte-se a milhares de usuários que já estão economizando com LegacyPay
+              Junte-se a milhares de usuários que já estão economizando com Hyperion Pay
             </p>
           </div>
 

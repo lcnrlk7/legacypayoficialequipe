@@ -28,7 +28,7 @@ const OnboardingContext = createContext<OnboardingContextType | null>(null);
 const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: "welcome",
-    title: "Bem-vindo ao LegacyPay!",
+    title: "Bem-vindo ao Hyperion Pay!",
     description: "Vamos fazer um tour rapido pela plataforma para voce conhecer todas as funcionalidades.",
     target: "[data-onboarding='dashboard']",
     position: "bottom",
