@@ -90,7 +90,7 @@ export async function getActiveAcquirer(): Promise<AcquirerConfig | null> {
 
 /**
  * Busca a adquirente baseado no tipo de rota do usuário
- * @param routeType - 'white' para MisticPay, 'black' para PromissePay
+ * @param routeType - 'white' para Medusa White, 'black' para Medusa
  */
 export async function getAcquirerByRoute(routeType: 'white' | 'black'): Promise<AcquirerConfig | null> {
   try {
