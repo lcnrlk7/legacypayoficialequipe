@@ -37,6 +37,7 @@ import {
   FolderKanban,
   Send,
   Bot,
+  Split,
   type LucideIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -72,6 +73,7 @@ const menuCategories = [
       { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
       { href: "/dashboard/wallet", icon: Wallet, label: "Carteira" },
       { href: "/dashboard/transfer", icon: Send, label: "Transferir" },
+      { href: "/dashboard/split-payment", icon: Split, label: "Pag. Dividido" },
       { href: "/dashboard/transactions", icon: TrendingUp, label: "Transacoes" },
       { href: "/dashboard/reports", icon: FileText, label: "Relatorios" },
     ],
