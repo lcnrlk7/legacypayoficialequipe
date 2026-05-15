@@ -29,11 +29,11 @@ export default function Home() {
           </Link>
           
           <nav className="hidden md:flex items-center gap-8">
-            <Link href="#inicio" className="text-sm text-gray-400 hover:text-white transition-colors">Inicio</Link>
-            <Link href="#solucoes" className="text-sm text-gray-400 hover:text-white transition-colors">Solucoes</Link>
+            <Link href="#inicio" className="text-sm text-gray-400 hover:text-white transition-colors">Início</Link>
+            <Link href="#solucoes" className="text-sm text-gray-400 hover:text-white transition-colors">Soluções</Link>
             <Link href="#taxas" className="text-sm text-gray-400 hover:text-white transition-colors">Taxas</Link>
-            <a href="https://app.hyperionpay.site/dashboard/integration" className="text-sm text-gray-400 hover:text-white transition-colors">Documentacao</a>
-            <Link href="#sobre" className="text-sm text-gray-400 hover:text-white transition-colors">Sobre nos</Link>
+            <a href="https://app.hyperionpay.site/dashboard/integration" className="text-sm text-gray-400 hover:text-white transition-colors">Documentação</a>
+            <Link href="#sobre" className="text-sm text-gray-400 hover:text-white transition-colors">Sobre nós</Link>
           </nav>
           
           <div className="flex items-center gap-2 md:gap-3">
@@ -54,22 +54,22 @@ export default function Home() {
             {/* Left content */}
             <div className="relative z-10">
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold leading-tight mb-4 md:mb-6">
-                A nova geracao de{" "}
+                A nova geração de{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-indigo-600">pagamentos</span>
-                {" "}comeca aqui.
+                {" "}começa aqui.
               </h1>
               
               <p className="text-sm md:text-base lg:text-lg text-gray-400 mb-6 md:mb-8 max-w-lg">
-                Sua propria gateway de pagamentos PIX. Rapida, segura e totalmente escalavel para o seu negocio.
+                Sua própria gateway de pagamentos PIX. Rápida, segura e totalmente escalável para o seu negócio.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-3 mb-8 md:mb-12">
                 <a href="https://app.hyperionpay.site/auth/register" className="group inline-flex items-center justify-center gap-2 px-5 py-2.5 md:px-6 md:py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full text-sm md:text-base font-medium text-white hover:shadow-xl hover:shadow-indigo-500/30 transition-all">
-                  Comecar agora
+                  Começar agora
                   <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                 </a>
                 <Link href="#solucoes" className="inline-flex items-center justify-center gap-2 px-5 py-2.5 md:px-6 md:py-3 border border-white/20 rounded-full text-sm md:text-base font-medium hover:bg-white/5 transition-all">
-                  Conhecer solucoes
+                  Conhecer soluções
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -77,8 +77,8 @@ export default function Home() {
               <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 sm:gap-6 text-xs md:text-sm text-gray-500">
                 <div className="flex items-center gap-2">
                   <Zap className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-500" />
-                  <span>Ativacao rapida</span>
-                  <span className="text-gray-600">em ate 5 min</span>
+                  <span>Ativação rápida</span>
+                  <span className="text-gray-600">em até 5 min</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Shield className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-500" />
@@ -127,7 +127,7 @@ export default function Home() {
                   </div>
                   <div>
                     <div className="text-[10px] text-gray-400">Na Hyperion Pay tem</div>
-                    <div className="text-xs font-semibold text-white">Integracoes facilitadas</div>
+                    <div className="text-xs font-semibold text-white">Integrações facilitadas</div>
                   </div>
                 </div>
               </div>
@@ -140,7 +140,7 @@ export default function Home() {
                   </div>
                   <div>
                     <div className="text-[10px] text-gray-400">Na Hyperion Pay tem</div>
-                    <div className="text-xs font-semibold text-white">Multiplas rotas</div>
+                    <div className="text-xs font-semibold text-white">Múltiplas rotas</div>
                   </div>
                 </div>
               </div>
@@ -171,7 +171,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-8 md:mb-12">
             <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold">
-              Tudo que voce precisa para escalar seu negocio
+              Tudo que você precisa para escalar seu negócio
             </h2>
           </div>
           
@@ -181,9 +181,9 @@ export default function Home() {
               <div className="w-10 h-10 md:w-12 md:h-12 bg-[#0f1225] rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-4 group-hover:bg-indigo-500/10 transition-colors">
                 <Zap className="w-5 h-5 md:w-6 md:h-6 text-indigo-500" />
               </div>
-              <h3 className="text-sm md:text-lg font-semibold mb-1">Pagamentos Instantaneos</h3>
+              <h3 className="text-sm md:text-lg font-semibold mb-1">Pagamentos Instantâneos</h3>
               <p className="text-xs md:text-sm text-gray-500 mt-2 md:mt-3">
-                Receba via PIX com processamento rapido e seguro.
+                Receba via PIX com processamento rápido e seguro.
               </p>
             </div>
             
@@ -192,7 +192,7 @@ export default function Home() {
               <div className="w-10 h-10 md:w-12 md:h-12 bg-[#0f1225] rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-4 group-hover:bg-indigo-500/10 transition-colors">
                 <BarChart3 className="w-5 h-5 md:w-6 md:h-6 text-indigo-500" />
               </div>
-              <h3 className="text-sm md:text-lg font-semibold mb-1">Automacao de Vendas</h3>
+              <h3 className="text-sm md:text-lg font-semibold mb-1">Automação de Vendas</h3>
               <p className="text-xs md:text-sm text-gray-500 mt-2 md:mt-3">
                 Automatize entregas e processos digitais.
               </p>
@@ -203,7 +203,7 @@ export default function Home() {
               <div className="w-10 h-10 md:w-12 md:h-12 bg-[#0f1225] rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-4 group-hover:bg-indigo-500/10 transition-colors">
                 <Users className="w-5 h-5 md:w-6 md:h-6 text-indigo-500" />
               </div>
-              <h3 className="text-sm md:text-lg font-semibold mb-1">Gestao de Afiliados</h3>
+              <h3 className="text-sm md:text-lg font-semibold mb-1">Gestão de Afiliados</h3>
               <p className="text-xs md:text-sm text-gray-500 mt-2 md:mt-3">
                 Crie seu programa de afiliados.
               </p>
@@ -227,7 +227,7 @@ export default function Home() {
               </div>
               <h3 className="text-sm md:text-lg font-semibold mb-1">PIX Seguro</h3>
               <p className="text-xs md:text-sm text-gray-500 mt-2 md:mt-3">
-                Maxima seguranca nas transacoes.
+                Máxima segurança nas transações.
               </p>
             </div>
             
@@ -238,7 +238,7 @@ export default function Home() {
               </div>
               <h3 className="text-sm md:text-lg font-semibold mb-1">API Completa</h3>
               <p className="text-xs md:text-sm text-gray-500 mt-2 md:mt-3">
-                Integracao simples e documentada.
+                Integração simples e documentada.
               </p>
             </div>
           </div>
@@ -253,11 +253,11 @@ export default function Home() {
               {/* Left content */}
               <div>
                 <h2 className="text-3xl lg:text-4xl font-bold mb-4">
-                  Controle total da sua operacao em{" "}
+                  Controle total da sua operação em{" "}
                   <span className="text-indigo-500">tempo real</span>
                 </h2>
                 <p className="text-gray-400 mb-8">
-                  Dashboards avancados, graficos inteligentes e dados em tempo real para voce tomar decisoes rapidas e aumentar seus resultados.
+                  Dashboards avançados, gráficos inteligentes e dados em tempo real para você tomar decisões rápidas e aumentar seus resultados.
                 </p>
                 
                 <div className="space-y-4">
@@ -265,19 +265,19 @@ export default function Home() {
                     <div className="w-6 h-6 bg-indigo-500/20 rounded flex items-center justify-center">
                       <Check className="w-4 h-4 text-indigo-500" />
                     </div>
-                    <span className="text-sm">Graficos em tempo real</span>
+                    <span className="text-sm">Gráficos em tempo real</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-6 h-6 bg-indigo-500/20 rounded flex items-center justify-center">
                       <Check className="w-4 h-4 text-indigo-500" />
                     </div>
-                    <span className="text-sm">Relatorios personalizados</span>
+                    <span className="text-sm">Relatórios personalizados</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-6 h-6 bg-indigo-500/20 rounded flex items-center justify-center">
                       <Check className="w-4 h-4 text-indigo-500" />
                     </div>
-                    <span className="text-sm">Exportacao de dados</span>
+                    <span className="text-sm">Exportação de dados</span>
                   </div>
                 </div>
               </div>
@@ -297,12 +297,12 @@ export default function Home() {
                     <div className="text-xs text-green-500">+12.5%</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Transacoes</div>
+                    <div className="text-xs text-gray-500">Transações</div>
                     <div className="text-lg font-bold">12.543</div>
                     <div className="text-xs text-green-500">+8.2%</div>
                   </div>
                   <div>
-                    <div className="text-xs text-gray-500">Ticket medio</div>
+                    <div className="text-xs text-gray-500">Ticket médio</div>
                     <div className="text-lg font-bold">R$ 78,90</div>
                     <div className="text-xs text-green-500">+5.4%</div>
                   </div>
@@ -331,7 +331,7 @@ export default function Home() {
                     </div>
                   </div>
                   <div className="bg-[#0d1020] rounded-xl p-4">
-                    <div className="text-xs text-gray-500 mb-2">Transacoes por Status</div>
+                    <div className="text-xs text-gray-500 mb-2">Transações por Status</div>
                     <div className="flex items-center justify-center h-28">
                       <div className="relative w-24 h-24">
                         <svg className="w-full h-full -rotate-90">
@@ -388,7 +388,7 @@ export default function Home() {
             {/* PIX - Highlighted */}
             <div className="relative bg-gradient-to-b from-indigo-500/20 to-[#0a0d1a] border border-indigo-500/30 rounded-xl md:rounded-2xl p-4 md:p-8">
               <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-2 md:px-3 py-0.5 md:py-1 bg-indigo-500 rounded-full text-[10px] md:text-xs font-medium text-white whitespace-nowrap">
-                MELHOR CONDICAO
+                MELHOR CONDIÇÃO
               </div>
               <div className="w-10 h-10 md:w-14 md:h-14 bg-indigo-500/20 rounded-lg md:rounded-xl flex items-center justify-center mb-3 md:mb-4 mt-2">
                 <svg className="w-5 h-5 md:w-7 md:h-7 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -396,9 +396,9 @@ export default function Home() {
                   <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                 </svg>
               </div>
-              <h3 className="text-base md:text-xl font-semibold mb-1 md:mb-2">PIX Instantaneo</h3>
+              <h3 className="text-base md:text-xl font-semibold mb-1 md:mb-2">PIX Instantâneo</h3>
               <div className="text-2xl md:text-4xl font-bold text-indigo-500 mb-1 md:mb-2">R$0,50</div>
-              <p className="text-xs md:text-sm text-gray-500">Taxa fixa por transacao.</p>
+              <p className="text-xs md:text-sm text-gray-500">Taxa fixa por transação.</p>
               <p className="text-[10px] md:text-xs text-gray-600 mt-1 md:mt-2">Receba na hora.</p>
             </div>
             
@@ -409,8 +409,8 @@ export default function Home() {
               </div>
               <h3 className="text-base md:text-xl font-semibold mb-1 md:mb-2">API PIX</h3>
               <div className="text-2xl md:text-4xl font-bold text-indigo-500 mb-1 md:mb-2">R$0,50</div>
-              <p className="text-xs md:text-sm text-gray-500">Integracao via API.</p>
-              <p className="text-[10px] md:text-xs text-gray-600 mt-1 md:mt-2">Documentacao completa.</p>
+              <p className="text-xs md:text-sm text-gray-500">Integração via API.</p>
+              <p className="text-[10px] md:text-xs text-gray-600 mt-1 md:mt-2">Documentação completa.</p>
             </div>
           </div>
         </div>
@@ -430,7 +430,7 @@ export default function Home() {
               <div className="w-12 h-12 md:w-16 md:h-16 bg-[#0a0d1a] border border-white/5 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-2 md:mb-4">
                 <Shield className="w-5 h-5 md:w-8 md:h-8 text-indigo-500" />
               </div>
-              <h3 className="text-xs md:text-base font-semibold mb-1">Seguranca Maxima</h3>
+              <h3 className="text-xs md:text-base font-semibold mb-1">Segurança Máxima</h3>
               <p className="text-[10px] md:text-xs text-gray-500 hidden md:block">Dados protegidos com criptografia.</p>
             </div>
             
@@ -447,7 +447,7 @@ export default function Home() {
                 <Headphones className="w-5 h-5 md:w-8 md:h-8 text-indigo-500" />
               </div>
               <h3 className="text-xs md:text-base font-semibold mb-1">Suporte 24/7</h3>
-              <p className="text-[10px] md:text-xs text-gray-500 hidden md:block">Time sempre a disposicao.</p>
+              <p className="text-[10px] md:text-xs text-gray-500 hidden md:block">Time sempre à disposição.</p>
             </div>
             
             <div className="text-center">
@@ -462,7 +462,7 @@ export default function Home() {
               <div className="w-12 h-12 md:w-16 md:h-16 bg-[#0a0d1a] border border-white/5 rounded-xl md:rounded-2xl flex items-center justify-center mx-auto mb-2 md:mb-4">
                 <Clock className="w-5 h-5 md:w-8 md:h-8 text-indigo-500" />
               </div>
-              <h3 className="text-xs md:text-base font-semibold mb-1">Ativacao Rapida</h3>
+              <h3 className="text-xs md:text-base font-semibold mb-1">Ativação Rápida</h3>
               <p className="text-[10px] md:text-xs text-gray-500 hidden md:block">Comece em minutos.</p>
             </div>
           </div>
@@ -480,11 +480,11 @@ export default function Home() {
             <div className="relative z-10 grid lg:grid-cols-2 gap-8 md:gap-12 items-center">
               <div>
                 <h2 className="text-xl md:text-3xl lg:text-4xl font-bold mb-3 md:mb-4">
-                  Hyperion Pay — nao e so uma gateway, e o{" "}
-                  <span className="text-indigo-500">proximo nivel.</span>
+                  Hyperion Pay — não é só uma gateway, é o{" "}
+                  <span className="text-indigo-500">próximo nível.</span>
                 </h2>
                 <p className="text-sm md:text-base text-gray-400 mb-4 md:mb-6">
-                  Transforme sua operacao, aumente suas conversoes e escale seu negocio com tecnologia de ponta.
+                  Transforme sua operação, aumente suas conversões e escale seu negócio com tecnologia de ponta.
                 </p>
                 <Link href="/auth/register" className="inline-flex items-center gap-2 px-4 md:px-6 py-2.5 md:py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full text-sm md:text-base font-medium text-white hover:shadow-xl hover:shadow-indigo-500/30 transition-all">
                   Criar minha conta agora
@@ -495,11 +495,11 @@ export default function Home() {
               <div className="grid grid-cols-3 gap-4 md:gap-6">
                 <div className="text-center">
                   <div className="text-xl md:text-3xl lg:text-4xl font-bold text-indigo-500">+25K</div>
-                  <div className="text-[10px] md:text-sm text-gray-500">Negocios ativos</div>
+                  <div className="text-[10px] md:text-sm text-gray-500">Negócios ativos</div>
                 </div>
                 <div className="text-center">
                   <div className="text-xl md:text-3xl lg:text-4xl font-bold text-indigo-500">+2.5M</div>
-                  <div className="text-[10px] md:text-sm text-gray-500">Transacoes/mes</div>
+                  <div className="text-[10px] md:text-sm text-gray-500">Transações/mês</div>
                 </div>
                 <div className="text-center">
                   <div className="text-xl md:text-3xl lg:text-4xl font-bold text-indigo-500">+R$1B</div>
@@ -540,7 +540,7 @@ export default function Home() {
             <div>
               <h4 className="text-sm md:text-base font-semibold mb-2 md:mb-4">Suporte</h4>
               <ul className="space-y-1.5 md:space-y-2 text-xs md:text-sm text-gray-500">
-                <li><a href="https://app.hyperionpay.site/dashboard/integration" className="hover:text-white transition-colors">Documentacao</a></li>
+                <li><a href="https://app.hyperionpay.site/dashboard/integration" className="hover:text-white transition-colors">Documentação</a></li>
                 <li><Link href="https://wa.me/5534999353187" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">WhatsApp</Link></li>
                 <li><Link href="mailto:contato@hyperionpay.com" className="hover:text-white transition-colors">E-mail</Link></li>
               </ul>
@@ -550,7 +550,7 @@ export default function Home() {
             <div className="hidden lg:block">
               <h4 className="font-semibold mb-4">Empresa</h4>
               <ul className="space-y-2 text-sm text-gray-500">
-                <li><Link href="#sobre" className="hover:text-white transition-colors">Sobre nos</Link></li>
+                <li><Link href="#sobre" className="hover:text-white transition-colors">Sobre nós</Link></li>
                 <li><Link href="https://www.instagram.com/hyperion_pay/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Instagram</Link></li>
                 <li><Link href="https://discord.gg/hyperionpay" target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">Discord</Link></li>
               </ul>
