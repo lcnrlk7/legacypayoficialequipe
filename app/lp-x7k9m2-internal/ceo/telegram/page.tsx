@@ -331,6 +331,28 @@ export default function TelegramPage() {
                       <p className="text-sm text-red-400">{webhook.last_error}</p>
                     </div>
                   )}
+                  
+                  {!webhook?.url && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const res = await fetch("/api/telegram/setup-webhook", { method: "POST" });
+                          const data = await res.json();
+                          if (data.success) {
+                            alert("Webhook ativado com sucesso!");
+                            fetchData();
+                          } else {
+                            alert("Erro: " + data.error);
+                          }
+                        } catch {
+                          alert("Erro ao ativar webhook");
+                        }
+                      }}
+                      className="w-full mt-3 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 text-white font-medium rounded-xl hover:opacity-90 transition-opacity"
+                    >
+                      Ativar Webhook
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -341,15 +363,15 @@ export default function TelegramPage() {
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3">
-                  <a
-                    href="https://t.me/Legacypay_bot"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 p-3 bg-blue-500/10 rounded-xl hover:bg-blue-500/20 transition-colors"
-                  >
-                    <Bot className="w-4 h-4 text-blue-500" />
-                    <span className="text-sm font-medium text-foreground">@Legacypay_bot</span>
-                  </a>
+<a
+                                    href="https://t.me/hyperionpay_bot"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-2 p-3 bg-blue-500/10 rounded-xl hover:bg-blue-500/20 transition-colors"
+                                  >
+                                    <Bot className="w-4 h-4 text-blue-500" />
+                                    <span className="text-sm font-medium text-foreground">@hyperionpay_bot</span>
+                                  </a>
                   
                   <a
                     href="https://t.me/hyperionpaybot"
@@ -372,7 +394,7 @@ export default function TelegramPage() {
                   </a>
                   
                   <a
-                    href="https://discord.gg/ea32hgRSeM"
+                    href="https://discord.gg/hyperionpay"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 p-3 bg-indigo-500/10 rounded-xl hover:bg-indigo-500/20 transition-colors"
