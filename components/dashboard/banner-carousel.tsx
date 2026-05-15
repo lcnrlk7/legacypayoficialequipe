@@ -8,13 +8,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 const banners = [
   {
     id: 1,
-    src: "/images/banners/banner-1.png",
-    alt: "Legacy Pay - A Gateway que impulsiona o seu negócio",
-  },
-  {
-    id: 2,
-    src: "/images/banners/banner-2.png",
-    alt: "Legacy Pay - Gateway feita pra gerar resultados",
+    src: "/images/banner-dashboard.png",
+    alt: "Hyperion Pay - A Gateway que impulsiona o seu negocio",
   },
 ];
 

@@ -47,21 +47,9 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero Section with Banner */}
-      <section id="inicio" className="relative pt-20 md:pt-24 pb-8 md:pb-16 px-4 md:px-6">
+      {/* Hero Section */}
+      <section id="inicio" className="relative pt-24 md:pt-32 pb-8 md:pb-16 px-4 md:px-6">
         <div className="max-w-7xl mx-auto">
-          {/* Banner Image */}
-          <div className="relative w-full rounded-2xl md:rounded-3xl overflow-hidden mb-8 md:mb-12">
-            <Image 
-              src="/images/banner-hyperion.png" 
-              alt="Hyperion Pay - A Gateway que Impulsiona seu Negocio" 
-              width={1920} 
-              height={600}
-              className="w-full h-auto object-cover"
-              priority
-            />
-          </div>
-
           <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
             {/* Left content */}
             <div className="relative z-10">
