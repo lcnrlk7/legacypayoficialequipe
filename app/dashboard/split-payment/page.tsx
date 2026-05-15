@@ -86,15 +86,21 @@ export default function SplitPaymentPage() {
   
   // Gerar QR Code para uma parcela
   const gerarQrParcela = async (index: number, parcelasAtuais?: Parcela[]) => {
+    console.log("[v0] gerarQrParcela chamada - index:", index, "parcelasAtuais:", parcelasAtuais?.length, "parcelas state:", parcelas.length)
+    
     const lista = parcelasAtuais || parcelas
     const parcela = lista[index]
     
+    console.log("[v0] parcela encontrada:", parcela)
+    
     if (!parcela) {
+      console.log("[v0] ERRO: Parcela nao encontrada!")
       toast.error("Parcela nao encontrada")
       return
     }
     
     setGerando(true)
+    console.log("[v0] Chamando API /api/pix/create com amount:", parcela.valor)
     
     try {
       const response = await fetch("/api/pix/create", {
@@ -107,6 +113,7 @@ export default function SplitPaymentPage() {
       })
       
       const data = await response.json()
+      console.log("[v0] Resposta API:", response.status, data)
       
       if (!response.ok) {
         throw new Error(data.error || "Erro ao gerar QR Code")
