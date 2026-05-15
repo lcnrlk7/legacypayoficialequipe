@@ -4,7 +4,7 @@ import { createMisticPayClient } from "@/lib/acquirers/misticpay"
 import { MedusaPayments } from "@/lib/acquirers/medusa"
 
 // API temporaria para testar pagamento dividido
-// REMOVER APOS TESTE
+// REMOVER APOS TESTE - v2 usando acquirer_id
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const email = searchParams.get("email") || "hazertiktok@gmail.com"
