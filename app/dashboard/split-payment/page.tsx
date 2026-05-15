@@ -89,46 +89,47 @@ export default function SplitPaymentPage() {
     const lista = parcelasAtuais || parcelas
     const parcela = lista[index]
     
-    if (!parcela) return
+    if (!parcela) {
+      toast.error("Parcela nao encontrada")
+      return
+    }
     
     setGerando(true)
     
     try {
+      const body = {
+        amount: parcela.valor,
+        description: descricao || `Pagamento ${index + 1}/${lista.length} - LegacyPay`,
+        externalId: parcela.id,
+      }
+      
       const response = await fetch("/api/pix/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount: parcela.valor,
-          description: descricao || `Pagamento ${index + 1}/${lista.length} - LegacyPay`,
-          externalId: parcela.id,
-        }),
+        body: JSON.stringify(body),
       })
       
       const data = await response.json()
-      console.log("[v0] Resposta API PIX:", data)
       
-      if (!response.ok) {
+      if (!response.ok || !data.success) {
         throw new Error(data.error || "Erro ao gerar QR Code")
       }
       
-      if (!data.success) {
-        throw new Error(data.error || "Erro ao gerar QR Code")
-      }
-      
-      // Atualizar parcela com QR Code
-      const novasParcelas = [...lista]
-      novasParcelas[index] = {
-        ...novasParcelas[index],
-        qrCode: data.qrCodeBase64 || data.qrCode || "",
-        copyPaste: data.copyPaste || data.qrCode || "",
-        transactionId: data.transactionId,
-        status: "waiting"
-      }
-      setParcelas(novasParcelas)
-      toast.success("QR Code gerado com sucesso!")
+      // Atualizar parcela com QR Code usando callback do setState para garantir estado atualizado
+      setParcelas(prevParcelas => {
+        const novasParcelas = parcelasAtuais ? [...parcelasAtuais] : [...prevParcelas]
+        novasParcelas[index] = {
+          ...novasParcelas[index],
+          qrCode: data.qrCodeBase64 || data.qrCode || "",
+          copyPaste: data.copyPaste || data.qrCode || "",
+          transactionId: data.transactionId,
+          status: "waiting"
+        }
+        return novasParcelas
+      })
+      toast.success("QR Code gerado!")
       
     } catch (error) {
-      console.error("[v0] Erro ao gerar QR Code:", error)
       toast.error(error instanceof Error ? error.message : "Erro ao gerar QR Code")
     } finally {
       setGerando(false)
