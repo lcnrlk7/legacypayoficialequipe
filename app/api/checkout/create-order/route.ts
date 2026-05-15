@@ -1,6 +1,5 @@
 import { sql } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
-import { createMisticPayClient } from "@/lib/acquirers/misticpay";
 import { MedusaPayments } from "@/lib/acquirers/medusa";
 import { notifyPixGenerated } from "@/lib/push-notifications";
 import { getSystemFeesForUser } from "@/lib/acquirers";
@@ -110,22 +109,7 @@ export async function POST(request: NextRequest) {
       const transactionId = `checkout_${orderId}_${Date.now()}`;
       const description = `Pedido #${orderId} - ${items.map((i: any) => i.product_name).join(', ')}`;
 
-      if (acquirer.code === 'misticpay') {
-        const misticPay = await createMisticPayClient();
-        
-        if (misticPay) {
-          const webhookUrl = "https://legacypay.site/api/webhooks/misticpay";
-          
-          pixResult = await misticPay.createPixCharge({
-            amount: total,
-            payerName: customer.name,
-            payerDocument: customer.cpf || "00000000000",
-            transactionId,
-            description,
-            projectWebhook: webhookUrl,
-          });
-        }
-      } else if (acquirer.code === 'medusa') {
+      if (acquirer.code === 'medusa' || acquirer.code === 'medusa_white') {
         try {
           const medusa = new MedusaPayments({
             secretKey: acquirer.api_key,

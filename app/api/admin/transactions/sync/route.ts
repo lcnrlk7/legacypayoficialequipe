@@ -1,7 +1,7 @@
 import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
-import { createMisticPayClient } from "@/lib/acquirers/misticpay";
+import { MedusaPayments, MEDUSA_STATUS_MAP } from "@/lib/acquirers/medusa";
 
 export const dynamic = "force-dynamic";
 
@@ -34,11 +34,19 @@ export async function GET() {
       });
     }
 
-    const misticPay = await createMisticPayClient();
+    // Buscar adquirente Medusa
+    const acquirerResult = await sql`
+      SELECT api_key, api_secret FROM acquirers WHERE code IN ('medusa', 'medusa_white') AND is_active = true LIMIT 1
+    `;
     
-    if (!misticPay) {
-      return NextResponse.json({ error: "Cliente MisticPay não disponível" }, { status: 500 });
+    if (acquirerResult.length === 0) {
+      return NextResponse.json({ error: "Adquirente não configurada" }, { status: 500 });
     }
+    
+    const medusa = new MedusaPayments({
+      secretKey: acquirerResult[0].api_key,
+      licenseKey: acquirerResult[0].api_secret,
+    });
 
     let synced = 0;
     let failed = 0;
@@ -57,10 +65,10 @@ export async function GET() {
           continue;
         }
 
-        const checkResult = await misticPay.checkTransaction(checkId);
+        const checkResult = await medusa.getTransaction(checkId);
 
-        if (checkResult.success && checkResult.data) {
-          const acquirerStatus = String(checkResult.data.status).toUpperCase();
+        if (checkResult) {
+          const acquirerStatus = String(checkResult.status || "").toUpperCase();
           
           if (acquirerStatus === "COMPLETO" || acquirerStatus === "COMPLETED") {
             // Atualizar para completed

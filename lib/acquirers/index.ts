@@ -22,6 +22,30 @@ export const ROUTE_DISPLAY_NAMES = {
   black: "Gateway Express",
 } as const;
 
+/**
+ * Detecta o tipo de chave PIX automaticamente
+ */
+export function detectPixKeyType(pixKey: string): string {
+  if (!pixKey) return "CHAVE_ALEATORIA";
+  
+  const cleanKey = pixKey.replace(/[^\w@.-]/g, "");
+  
+  // CPF: 11 dígitos
+  if (/^\d{11}$/.test(cleanKey)) return "CPF";
+  
+  // CNPJ: 14 dígitos
+  if (/^\d{14}$/.test(cleanKey)) return "CNPJ";
+  
+  // Email
+  if (/@/.test(cleanKey)) return "EMAIL";
+  
+  // Telefone: +55 ou começa com DDD
+  if (/^\+?55?\d{10,11}$/.test(cleanKey) || /^\d{10,11}$/.test(cleanKey)) return "TELEFONE";
+  
+  // Chave aleatória (EVP)
+  return "CHAVE_ALEATORIA";
+}
+
 export interface PaymentResult {
   success: boolean;
   transactionId?: string;

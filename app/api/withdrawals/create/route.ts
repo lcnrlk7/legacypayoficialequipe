@@ -5,9 +5,9 @@ import {
   getSystemFeesForUser, 
   calculateWithdrawalFees, 
   createWithdrawal as processWithdrawal,
-  getAcquirerForUser
+  getAcquirerForUser,
+  detectPixKeyType
 } from "@/lib/acquirers";
-import { mapPixKeyType } from "@/lib/acquirers/misticpay";
 import { validateWithdrawal, getClientIP, logSuspiciousActivity, rateLimit, isValidPixKey } from "@/lib/security";
 import { logWithdrawalRequest } from "@/lib/discord-webhook";
 import { detectAttack } from "@/lib/sanitize";
@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
 
     // Se não requer aprovação, processar automaticamente
     if (!requiresApproval && acquirer) {
-      const detectedPixKeyType = pixKeyType || mapPixKeyType(pixKey);
+      const detectedPixKeyType = pixKeyType || detectPixKeyType(pixKey);
       
       const withdrawalResult = await processWithdrawal(
         netAmount,
@@ -303,7 +303,7 @@ export async function POST(request: NextRequest) {
       )
       VALUES (
         ${withdrawalId}, ${sessionUser.id},
-        ${totalDebit}, ${totalFee}, ${netAmount}, ${pixKey}, ${pixKeyType || mapPixKeyType(pixKey)},
+        ${totalDebit}, ${totalFee}, ${netAmount}, ${pixKey}, ${pixKeyType || detectPixKeyType(pixKey)},
         ${withdrawalStatus}, ${acquirerWithdrawalId}, NOW()
       )
       RETURNING id, acquirer_withdrawal_id
@@ -354,7 +354,7 @@ export async function POST(request: NextRequest) {
       fee: totalFee,
       netAmount: netAmount,
       pixKey: pixKey,
-      pixKeyType: pixKeyType || mapPixKeyType(pixKey),
+      pixKeyType: pixKeyType || detectPixKeyType(pixKey),
     });
 
     // Notificar usuário via push notification

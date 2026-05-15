@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import { createMisticPayClient } from "@/lib/acquirers/misticpay";
 import { MedusaPayments, MEDUSA_STATUS_MAP } from "@/lib/acquirers/medusa";
 
 export async function GET(request: NextRequest) {
@@ -99,15 +98,9 @@ export async function GET(request: NextRequest) {
       acquirerCode = isNumericId ? 'medusa' : 'misticpay';
     }
 
-    // Fallback: verificar pelo external_id se contém padrões específicos
+    // Fallback: verificar pelo external_id
     if (!acquirerCode && transaction.external_id) {
-      const extId = String(transaction.external_id);
-      // IDs numéricos ou que parecem ser da Medusa
-      if (/^\d+$/.test(extId) || extId.includes('medusa')) {
-        acquirerCode = 'medusa';
-      } else {
-        acquirerCode = 'misticpay';
-      }
+      acquirerCode = 'medusa';
     }
 
     // Último fallback: buscar adquirente ativa padrão
@@ -128,7 +121,7 @@ export async function GET(request: NextRequest) {
         let paidAt: string | null = null;
 
         // Verificar com Medusa
-        if (acquirerCode === 'medusa') {
+        if (acquirerCode === 'medusa' || acquirerCode === 'medusa_white') {
           const acquirerResult = await sql`
             SELECT api_key, api_secret FROM acquirers WHERE code = 'medusa' AND is_active = true LIMIT 1
           `;
@@ -150,26 +143,6 @@ export async function GET(request: NextRequest) {
                 if (checkResult.paidAt || (checkResult.transaction as { paidAt?: string })?.paidAt) {
                   paidAt = checkResult.paidAt || (checkResult.transaction as { paidAt?: string })?.paidAt || null;
                 }
-              }
-            }
-          }
-        } 
-        // Verificar com MisticPay
-        else {
-          const misticPay = await createMisticPayClient();
-
-          if (misticPay) {
-            const checkResult = await misticPay.checkTransaction(
-              transaction.acquirer_transaction_id || transaction.external_id
-            );
-
-            if (checkResult.success && checkResult.data) {
-              const acquirerStatus = checkResult.data.status as string;
-
-              if (acquirerStatus === "COMPLETO") {
-                newStatus = "completed";
-              } else if (acquirerStatus === "FALHA" || acquirerStatus === "CANCELADO") {
-                newStatus = "failed";
               }
             }
           }

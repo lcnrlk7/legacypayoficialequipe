@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { sql } from "@/lib/db";
-import { MisticPay } from "@/lib/acquirers/misticpay";
 
 // Mapeamento de status da Medusa para status interno
 const MEDUSA_STATUS_MAP: Record<string, string> = {
@@ -208,127 +207,11 @@ export async function GET(request: Request) {
 
     console.log(`[Sync Withdrawals] Medusa: ${syncedCount} saques sincronizados.`);
 
-    // ========== SINCRONIZAR SAQUES DA MISTICPAY ==========
-    let misticSyncedCount = 0;
-    
-    try {
-      // Buscar credenciais da MisticPay
-      const misticAcquirer = await sql`
-        SELECT api_key, api_secret 
-        FROM acquirers 
-        WHERE code = 'misticpay' AND is_active = true 
-        LIMIT 1
-      `;
-
-      if (misticAcquirer.length > 0) {
-        const { api_key, api_secret } = misticAcquirer[0];
-        const misticClient = new MisticPay({ clientId: api_key, clientSecret: api_secret });
-
-        // Buscar saques em processamento (UUID indica MisticPay, numérico indica Medusa)
-        const misticWithdrawals = await sql`
-          SELECT id, user_id, amount, net_amount, pix_key, acquirer_withdrawal_id, status
-          FROM withdrawals
-          WHERE status = 'processing'
-            AND acquirer_withdrawal_id IS NOT NULL
-            AND acquirer_withdrawal_id LIKE '%-%'
-          ORDER BY created_at DESC
-          LIMIT 50
-        `;
-
-        console.log(`[Sync Withdrawals] MisticPay: ${misticWithdrawals.length} saques pendentes`);
-
-        for (const withdrawal of misticWithdrawals) {
-          try {
-            const result = await misticClient.checkTransaction(withdrawal.acquirer_withdrawal_id);
-            console.log(`[Sync MisticPay] Resposta para saque ${withdrawal.id}:`, JSON.stringify(result));
-            
-            if (result.success && result.data) {
-              // MisticPay retorna status em result.data.status (que e mapeado de transactionState)
-              const state = (result.data.status || "").toUpperCase();
-              console.log(`[Sync MisticPay] Saque ${withdrawal.id}: estado=${state}`);
-
-              if (state === "COMPLETO" || state === "COMPLETED" || state === "PAID") {
-                // Saque concluído com sucesso
-                await sql`
-                  UPDATE withdrawals 
-                  SET status = 'completed'
-                  WHERE id = ${withdrawal.id}
-                `;
-                
-                // Notificar usuário
-                await sql`
-                  INSERT INTO user_notifications (id, user_id, title, message, type, created_at)
-                  VALUES (
-                    ${crypto.randomUUID()},
-                    ${withdrawal.user_id},
-                    'Saque Concluído!',
-                    ${`Seu saque de R$ ${Number(withdrawal.net_amount).toFixed(2)} foi enviado para sua chave PIX.`},
-                    'success',
-                    NOW()
-                  )
-                `;
-                
-                misticSyncedCount++;
-                results.push({
-                  id: withdrawal.id,
-                  medusaId: withdrawal.acquirer_withdrawal_id,
-                  oldStatus: "processing",
-                  newStatus: "completed",
-                });
-
-              } else if (state === "FALHOU" || state === "FAILED" || state === "CANCELLED" || state === "CANCELADO") {
-                // Saque falhou - devolver saldo
-                await sql`
-                  UPDATE withdrawals 
-                  SET status = 'failed'
-                  WHERE id = ${withdrawal.id}
-                `;
-                
-                // Devolver saldo ao usuário
-                await sql`
-                  UPDATE profiles 
-                  SET balance = balance + ${Number(withdrawal.amount)}
-                  WHERE id = ${withdrawal.user_id}
-                `;
-                
-                // Notificar usuário
-                await sql`
-                  INSERT INTO user_notifications (id, user_id, title, message, type, created_at)
-                  VALUES (
-                    ${crypto.randomUUID()},
-                    ${withdrawal.user_id},
-                    'Saque Falhou',
-                    ${`Seu saque de R$ ${Number(withdrawal.amount).toFixed(2)} falhou. O valor foi devolvido ao seu saldo.`},
-                    'error',
-                    NOW()
-                  )
-                `;
-                
-                misticSyncedCount++;
-                results.push({
-                  id: withdrawal.id,
-                  medusaId: withdrawal.acquirer_withdrawal_id,
-                  oldStatus: "processing",
-                  newStatus: "failed",
-                });
-              }
-            }
-          } catch (err) {
-            console.error(`[Sync MisticPay] Erro ao verificar saque ${withdrawal.id}:`, err);
-          }
-        }
-      }
-    } catch (misticError) {
-      console.error("[Sync Withdrawals] Erro ao sincronizar MisticPay:", misticError);
-    }
-
-    console.log(`[Sync Withdrawals] Concluído. Medusa: ${syncedCount}, MisticPay: ${misticSyncedCount}`);
+    console.log(`[Sync Withdrawals] Concluído. Medusa: ${syncedCount}`);
 
     return NextResponse.json({
       success: true,
-      synced: syncedCount + misticSyncedCount,
-      medusaSynced: syncedCount,
-      misticPaySynced: misticSyncedCount,
+      synced: syncedCount,
       results,
     });
   } catch (error) {

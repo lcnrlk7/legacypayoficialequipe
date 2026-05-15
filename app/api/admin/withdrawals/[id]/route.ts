@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sql } from "@/lib/db";
-import { mapPixKeyType } from "@/lib/acquirers/misticpay";
-import { getAcquirerForUser, createWithdrawal } from "@/lib/acquirers";
+import { getAcquirerForUser, createWithdrawal, detectPixKeyType } from "@/lib/acquirers";
 import { notifyWithdrawalCompleted, notifyWithdrawalFailed } from "@/lib/notifications";
 import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth";
 import { logWithdrawalStatusUpdate, logAdminAction } from "@/lib/discord-webhook";
@@ -129,7 +128,7 @@ export async function PATCH(
         Number(withdrawal.net_amount), // Valor líquido a ser transferido
         withdrawal.pix_key,
         withdrawal.user_id,
-        withdrawal.pix_key_type || mapPixKeyType(withdrawal.pix_key),
+        withdrawal.pix_key_type || detectPixKeyType(withdrawal.pix_key),
         `Saque LegacyPay - ${withdrawal.profile_name || withdrawal.profile_email}`
       );
 
