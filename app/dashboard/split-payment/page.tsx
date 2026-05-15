@@ -367,7 +367,7 @@ export default function SplitPaymentPage() {
                   </div>
                   
                   {/* QR Code da parcela atual */}
-                  {index === parcelaAtual && parcela.status === "waiting" && (
+                  {index === parcelaAtual && (parcela.status === "waiting" || parcela.status === "pending") && (
                     <div className="mt-4 pt-4 border-t">
                       {gerando ? (
                         <div className="flex items-center justify-center py-8">
