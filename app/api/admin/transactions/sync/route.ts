@@ -131,7 +131,7 @@ export async function GET() {
             results.push({ id: tx.id, status: acquirerStatus, action: "Still pending" });
           }
         } else {
-          results.push({ id: tx.id, status: "error", action: checkResult.error || "Check failed" });
+          results.push({ id: tx.id, status: "error", action: "Check failed" });
         }
       } catch (err) {
         results.push({ id: tx.id, status: "error", action: String(err) });
