@@ -95,6 +95,7 @@ export default function SplitPaymentPage() {
     }
     
     setGerando(true)
+    toast.info("Gerando QR Code...")
     
     try {
       const body = {
@@ -102,8 +103,6 @@ export default function SplitPaymentPage() {
         description: descricao || `Pagamento ${index + 1}/${lista.length} - LegacyPay`,
         externalId: parcela.id,
       }
-      
-      console.log("[v0] Gerando QR Code para parcela:", index, body)
       
       const response = await fetch("/api/pix/create", {
         method: "POST",
@@ -113,10 +112,11 @@ export default function SplitPaymentPage() {
       })
       
       const data = await response.json()
-      console.log("[v0] Resposta da API PIX:", response.status, data)
       
       if (!response.ok || !data.success) {
-        throw new Error(data.error || "Erro ao gerar QR Code")
+        toast.error(`Erro: ${data.error || "Erro ao gerar QR Code"}`)
+        setGerando(false)
+        return
       }
       
       // Atualizar parcela com QR Code usando callback do setState para garantir estado atualizado
@@ -134,8 +134,7 @@ export default function SplitPaymentPage() {
       toast.success("QR Code gerado!")
       
     } catch (error) {
-      console.error("[v0] Erro ao gerar QR Code:", error)
-      toast.error(error instanceof Error ? error.message : "Erro ao gerar QR Code")
+      toast.error(error instanceof Error ? error.message : "Erro de conexao")
     } finally {
       setGerando(false)
     }
