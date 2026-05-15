@@ -26,7 +26,7 @@ const footerLinks = {
   Suporte: [
     { label: "FAQ", href: "#faq" },
     { label: "Discord", href: "https://discord.gg/legacypay", external: true },
-    { label: "Central de Ajuda", href: "https://discord.gg/legacypay", external: true },
+    { label: "Central de Ajuda", href: "https://discord.gg/hyperionpay", external: true },
     { label: "Developers", href: "/docs" },
   ],
 };
@@ -40,19 +40,18 @@ export function Footer() {
           <div className="col-span-2">
             <Link href="/" className="flex items-center gap-3 mb-4">
               <Image
-                src="/logo-icon.png"
-                alt="LegacyPay"
+                src="/images/logo-hyperion.png"
+                alt="Hyperion Pay"
                 width={36}
                 height={36}
               />
               <div className="flex items-baseline">
-                <span className="text-xl font-bold text-white">Legacy</span>
+                <span className="text-xl font-bold text-white">Hyperion</span>
                 <span className="text-xl font-bold text-primary">Pay</span>
               </div>
             </Link>
             <p className="text-muted-foreground text-sm max-w-xs mb-6">
-              Gateway de pagamentos PIX rápido, seguro e anônimo. 
-              A melhor infraestrutura para suas operações financeiras.
+              A Gateway que Impulsiona seu Negocio. Pagamentos PIX rapidos, seguros e confiaveis.
             </p>
             <div className="flex items-center gap-3 mb-4 text-sm text-muted-foreground">
               <Home className="w-4 h-4 opacity-70" />
@@ -70,13 +69,13 @@ export function Footer() {
               <span>(34) 99935-3187</span>
             </a>
             <a 
-              href="mailto:legacypayoficial@legacypay.shop" 
+              href="mailto:contato@hyperionpay.com" 
               className="flex items-center gap-3 mb-6 text-sm text-muted-foreground hover:text-primary transition-colors"
             >
               <svg className="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
-              <span>legacypayoficial@legacypay.shop</span>
+              <span>contato@hyperionpay.com</span>
             </a>
             <div className="flex items-center gap-3">
               <a
@@ -91,7 +90,7 @@ export function Footer() {
                 </svg>
               </a>
               <Link
-                href="https://www.instagram.com/legacy_pay/"
+                href="https://www.instagram.com/hyperion_pay/"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-11 h-11 rounded-xl bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 flex items-center justify-center text-white hover:scale-110 hover:shadow-lg hover:shadow-pink-500/30 transition-all duration-300"
@@ -102,7 +101,7 @@ export function Footer() {
                 </svg>
               </Link>
               <Link
-                href="https://discord.gg/legacypay"
+                href="https://discord.gg/hyperionpay"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-11 h-11 rounded-xl bg-[#5865F2] flex items-center justify-center text-white hover:scale-110 hover:shadow-lg hover:shadow-[#5865F2]/30 transition-all duration-300"
@@ -163,7 +162,7 @@ export function Footer() {
               </div>
             </a>
             <Link
-              href="https://www.instagram.com/legacy_pay/"
+              href="https://www.instagram.com/hyperion_pay/"
               target="_blank"
               rel="noopener noreferrer"
               className="group flex items-center gap-3 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600/20 via-pink-500/20 to-orange-400/20 border border-pink-500/30 hover:border-pink-500/60 hover:shadow-lg hover:shadow-pink-500/20 transition-all duration-300"
@@ -174,12 +173,12 @@ export function Footer() {
                 </svg>
               </div>
               <div className="text-left">
-                <span className="text-white font-medium">@legacy_pay</span>
+                <span className="text-white font-medium">@hyperion_pay</span>
                 <p className="text-xs text-muted-foreground">Instagram</p>
               </div>
             </Link>
             <a
-              href="mailto:legacypayoficial@legacypay.shop"
+              href="mailto:contato@hyperionpay.com"
               className="group flex items-center gap-3 px-6 py-3 rounded-xl bg-primary/10 border border-primary/30 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/20 transition-all duration-300"
             >
               <div className="w-10 h-10 rounded-lg bg-primary flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -189,7 +188,7 @@ export function Footer() {
               </div>
               <div className="text-left">
                 <span className="text-white font-medium">Email</span>
-                <p className="text-xs text-muted-foreground">legacypayoficial@legacypay.shop</p>
+                <p className="text-xs text-muted-foreground">contato@hyperionpay.com</p>
               </div>
             </a>
           </div>
@@ -198,7 +197,7 @@ export function Footer() {
         {/* Bottom */}
         <div className="border-t border-border mt-8 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-muted-foreground text-sm">
-            2024 <Link href="/admin/login" className="hover:text-primary transition-colors">LegacyPay</Link>. Todos os direitos reservados.
+            2024 <Link href="/admin/login" className="hover:text-primary transition-colors">Hyperion Pay</Link>. Todos os direitos reservados.
           </p>
           <div className="flex items-center gap-6">
             <Link

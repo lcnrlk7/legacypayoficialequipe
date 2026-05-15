@@ -9,15 +9,15 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "LegacyPay - Sua Carteira Digital",
+  title: "Hyperion Pay - A Gateway que Impulsiona seu Negocio",
   description:
-    "Receba e envie PIX de forma anônima, sem MED ou bloqueios e sem KYC. Infraestrutura completa para você operar com tranquilidade.",
-  keywords: ["PIX", "pagamentos", "carteira digital", "fintech", "gateway"],
+    "Receba e envie PIX de forma rapida e segura. Infraestrutura completa para você operar com tranquilidade.",
+  keywords: ["PIX", "pagamentos", "carteira digital", "fintech", "gateway", "Hyperion Pay"],
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "LegacyPay",
+    title: "Hyperion Pay",
   },
   formatDetection: {
     telephone: false,
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#ff6a00",
+  themeColor: "#4f46e5",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -40,8 +40,8 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className="bg-background" suppressHydrationWarning>
       <head>
-        <link rel="icon" type="image/png" href="/logo-lp.png" />
-        <link rel="apple-touch-icon" href="/logo-lp.png" />
+        <link rel="icon" type="image/png" href="/favicon.png" />
+        <link rel="apple-touch-icon" href="/favicon.png" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="mobile-web-app-capable" content="yes" />
       </head>

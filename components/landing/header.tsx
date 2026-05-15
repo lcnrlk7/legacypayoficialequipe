@@ -49,8 +49,8 @@ export function Header() {
               >
                 <div className="absolute inset-0 bg-primary/30 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300" />
                 <Image
-                  src="/logo-icon.png"
-                  alt="LegacyPay"
+                  src="/images/logo-hyperion.png"
+                  alt="Hyperion Pay"
                   width={40}
                   height={40}
                   className="relative z-10"
@@ -58,7 +58,7 @@ export function Header() {
                 />
               </motion.div>
               <div className="flex items-baseline">
-                <span className="text-xl font-bold text-white tracking-tight">Legacy</span>
+                <span className="text-xl font-bold text-white tracking-tight">Hyperion</span>
                 <span className="text-xl font-bold text-primary tracking-tight">Pay</span>
               </div>
             </Link>

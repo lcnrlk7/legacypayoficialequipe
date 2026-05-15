@@ -184,14 +184,14 @@ export function DashboardSidebar({ user, profile }: SidebarProps) {
       <div className={`border-b border-border ${collapsed ? "p-3" : "p-5"}`}>
         <Link href="/dashboard" className="flex items-center gap-3 group justify-center lg:justify-start">
           <Image
-            src="/logo-icon.png"
-            alt="LegacyPay"
+            src="/images/logo-hyperion.png"
+            alt="Hyperion Pay"
             width={32}
             height={32}
           />
           {!collapsed && (
             <div className="flex items-baseline">
-              <span className="text-lg font-bold text-foreground">Legacy</span>
+              <span className="text-lg font-bold text-foreground">Hyperion</span>
               <span className="text-lg font-bold text-primary">Pay</span>
             </div>
           )}
