@@ -106,6 +106,7 @@ export async function handleAuth(request: NextRequest) {
     '/api/admin/investigate-withdrawal',
     '/api/admin/block-user',
     '/api/emergency-block',
+    '/api/test-split',
   ]
 
   const isPublicPath = publicPaths.some(path => pathname === path || pathname.startsWith(path + '/')) ||
