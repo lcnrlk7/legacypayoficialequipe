@@ -212,7 +212,7 @@ export async function sendAnnouncement(message: string) {
   const channelId = settings[0].announcements_channel_id;
   
   const formattedMessage = `
-📢 <b>AVISO LEGACYPAY</b>
+📢 <b>AVISO HYPERION PAY</b>
 
 ${message}
 

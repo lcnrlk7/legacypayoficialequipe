@@ -6,22 +6,22 @@ import { MedusaPayments } from "@/lib/acquirers/medusa";
 
 // IDs dos canais obrigatorios
 const REQUIRED_CHANNELS = [
-  { id: "@legacypaybot", name: "Vendas", link: "https://t.me/legacypaybot" },
-  { id: "@legacypayavisos", name: "Avisos", link: "https://t.me/legacypayavisos" },
+  { id: "@hyperionpaybot", name: "Vendas", link: "https://t.me/hyperionpaybot" },
+  { id: "@hyperionpayavisos", name: "Avisos", link: "https://t.me/hyperionpayavisos" },
 ];
 
 // ══════════════════════════════════════════════════════════════════════════════
 // CONFIGURACOES
 // ══════════════════════════════════════════════════════════════════════════════
 
-const BOT_NAME = "LegacyPay";
-const SITE_URL = "https://www.legacypay.site";
-const DISCORD_LINK = "https://discord.gg/ea32hgRSeM";
+const BOT_NAME = "Hyperion Pay";
+const SITE_URL = "https://www.hyperionpay.site";
+const DISCORD_LINK = "https://discord.gg/hyperionpay";
 const WHATSAPP = "(34) 99935-3187";
 const WHATSAPP_LINK = "https://wa.me/5534999353187";
-const SALES_CHANNEL = "https://t.me/legacypaybot";
-const SALES_CHANNEL_ID = "@legacypaybot";
-const ANNOUNCEMENTS_CHANNEL = "https://t.me/legacypayavisos";
+const SALES_CHANNEL = "https://t.me/hyperionpaybot";
+const SALES_CHANNEL_ID = "@hyperionpaybot";
+const ANNOUNCEMENTS_CHANNEL = "https://t.me/hyperionpayavisos";
 
 // Taxas do Bot Telegram
 const TELEGRAM_PIX_FEE_PERCENT = 5;
@@ -711,7 +711,7 @@ async function processDeposit(chatId: number, telegramId: number, amount: number
       amount * 100,
       user.first_name as string || "Cliente",
       CPF_FIXO_BOT,
-      `bot_${telegramId}@legacypay.site`,
+      `bot_${telegramId}@hyperionpay.site`,
       `Deposito Bot - ${telegramId}`,
       `${SITE_URL}/api/webhooks/telegram-pix`
     );
@@ -898,7 +898,7 @@ async function processWithdrawal(chatId: number, telegramId: number, amount: num
 `);
     
     await sendMessage(chatId, `
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━━━━��━━━━━━━━━━━━━━━━━━━━━━━━
       ✅ <b>SAQUE APROVADO!</b> ✅
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

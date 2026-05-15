@@ -1,8 +1,8 @@
 import { sql } from "@/lib/db";
 
 // Constantes de links
-const SITE_URL = "https://www.legacypay.site";
-const DISCORD_LINK = "https://discord.gg/ea32hgRSeM";
+const SITE_URL = "https://www.hyperionpay.site";
+const DISCORD_LINK = "https://discord.gg/hyperionpay";
 const WHATSAPP_LINK = "https://wa.me/5534999353187";
 
 // Enviar mensagem para um chat/canal
@@ -68,7 +68,7 @@ export async function notifyDeposit(userId: string, amount: number, fee: number)
 🕐 <b>Data:</b> ${now}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ <b>LegacyPay</b> - Pagamentos Rapidos
+⚡ <b>Hyperion Pay</b> - Pagamentos Rapidos
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
   
@@ -122,7 +122,7 @@ ${emoji} <b>${statusText}</b> ${emoji}
 🕐 <b>Data:</b> ${now}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ <b>LegacyPay</b> - Pagamentos Rapidos
+⚡ <b>Hyperion Pay</b> - Pagamentos Rapidos
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
   
@@ -335,7 +335,7 @@ export async function sendInactivityReminder(telegramId: number, username: strin
 
 Ola${username ? ", " + username : ""}! 
 
-Faz <b>${daysSinceLastActivity} dias</b> que voce nao usa o LegacyPay.
+Faz <b>${daysSinceLastActivity} dias</b> que voce nao usa o Hyperion Pay.
 
 🎁 Que tal fazer um deposito hoje?
 
@@ -347,7 +347,7 @@ Faz <b>${daysSinceLastActivity} dias</b> que voce nao usa o LegacyPay.
 📱 Use /depositar para comecar!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ <b>LegacyPay</b> - Sempre aqui para voce!
+⚡ <b>Hyperion Pay</b> - Sempre aqui para voce!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
   
@@ -389,7 +389,7 @@ ${codeSection}
 📱 Aproveite agora mesmo!
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ <b>LegacyPay</b> - Oportunidade limitada!
+⚡ <b>Hyperion Pay</b> - Oportunidade limitada!
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
   
