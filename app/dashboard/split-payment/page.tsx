@@ -105,8 +105,13 @@ export default function SplitPaymentPage() {
       })
       
       const data = await response.json()
+      console.log("[v0] Resposta API PIX:", data)
       
       if (!response.ok) {
+        throw new Error(data.error || "Erro ao gerar QR Code")
+      }
+      
+      if (!data.success) {
         throw new Error(data.error || "Erro ao gerar QR Code")
       }
       
@@ -114,14 +119,16 @@ export default function SplitPaymentPage() {
       const novasParcelas = [...lista]
       novasParcelas[index] = {
         ...novasParcelas[index],
-        qrCode: data.qrCodeBase64 || data.qrCode,
-        copyPaste: data.copyPaste || data.qrCode,
+        qrCode: data.qrCodeBase64 || data.qrCode || "",
+        copyPaste: data.copyPaste || data.qrCode || "",
         transactionId: data.transactionId,
         status: "waiting"
       }
       setParcelas(novasParcelas)
+      toast.success("QR Code gerado com sucesso!")
       
     } catch (error) {
+      console.error("[v0] Erro ao gerar QR Code:", error)
       toast.error(error instanceof Error ? error.message : "Erro ao gerar QR Code")
     } finally {
       setGerando(false)
@@ -366,16 +373,27 @@ export default function SplitPaymentPage() {
                           <Loader2 className="w-8 h-8 animate-spin text-primary" />
                           <span className="ml-2">Gerando QR Code...</span>
                         </div>
-                      ) : parcela.qrCode ? (
+                      ) : parcela.qrCode || parcela.copyPaste ? (
                         <div className="flex flex-col md:flex-row gap-4 items-center">
                           <div className="bg-white p-4 rounded-lg">
-                            <Image
-                              src={`data:image/png;base64,${parcela.qrCode}`}
-                              alt="QR Code PIX"
-                              width={200}
-                              height={200}
-                              className="w-48 h-48"
-                            />
+                            {/* Se o qrCode for base64 de imagem, usa Image; senao usa QRCode generator */}
+                            {parcela.qrCode && parcela.qrCode.length > 500 ? (
+                              <Image
+                                src={parcela.qrCode.startsWith("data:") ? parcela.qrCode : `data:image/png;base64,${parcela.qrCode}`}
+                                alt="QR Code PIX"
+                                width={200}
+                                height={200}
+                                className="w-48 h-48"
+                              />
+                            ) : (
+                              <img
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(parcela.copyPaste || parcela.qrCode || "")}`}
+                                alt="QR Code PIX"
+                                width={200}
+                                height={200}
+                                className="w-48 h-48"
+                              />
+                            )}
                           </div>
                           <div className="flex-1 space-y-3">
                             <div>
