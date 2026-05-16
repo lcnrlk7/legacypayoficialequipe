@@ -20,26 +20,27 @@ export default function DividirPagamentoPage() {
   // Criar lista de valores divididos
   const criarParcelas = () => {
     const total = parseFloat(inputValor.replace(",", "."))
-    if (!total || total < 100) {
-      toast.error("Valor minimo R$ 100,00")
+    if (!total || total < 10) {
+      toast.error("Valor minimo R$ 10,00")
       return
     }
 
+    // Dividir em parcelas iguais baseado no valor total
+    // Maximo de R$ 500 por parcela para garantir aprovacao
+    const maxParcela = 500
+    const numParcelas = Math.ceil(total / maxParcela)
+    const valorBase = Math.floor((total / numParcelas) * 100) / 100
+    
     const valores: number[] = []
-    let restante = total
-    const bases = [1500, 1600, 1700, 1800, 1900, 2000]
-    let i = 0
-
-    while (restante > 0) {
-      if (restante <= 2000) {
-        valores.push(restante)
-        break
-      }
-      const v = bases[i % bases.length]
-      valores.push(v)
-      restante -= v
-      i++
+    let somaParcial = 0
+    
+    for (let i = 0; i < numParcelas - 1; i++) {
+      valores.push(valorBase)
+      somaParcial += valorBase
     }
+    // Ultima parcela pega o restante para garantir que soma = total
+    const ultima = Math.round((total - somaParcial) * 100) / 100
+    valores.push(ultima)
 
     setListaValores(valores)
     setIndiceParcela(0)
@@ -51,22 +52,29 @@ export default function DividirPagamentoPage() {
   // Chamar API para gerar PIX - IDENTICO A WALLET
   const chamarApiPix = async () => {
     const valorParcela = listaValores[indiceParcela]
-    if (!valorParcela) return
+    if (!valorParcela || valorParcela <= 0) return
+
+    // Arredondar para 2 casas decimais
+    const valorLimpo = Math.round(valorParcela * 100) / 100
 
     setProcessando(true)
     setErroUltimo(null)
 
     try {
+      console.log("[v0] Split PIX - enviando amount:", valorLimpo)
+      
       const resp = await fetch("/api/pix/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: valorParcela,
-          description: `Deposito via PIX - Hyperion Pay`,
+          amount: valorLimpo,
+          description: "Deposito via PIX - Hyperion Pay",
         }),
       })
 
       const text = await resp.text()
+      console.log("[v0] Split PIX - status:", resp.status, "response:", text.substring(0, 200))
+      
       let json: any
       try {
         json = JSON.parse(text)
