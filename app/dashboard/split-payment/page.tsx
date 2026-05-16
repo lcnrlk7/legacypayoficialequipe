@@ -55,8 +55,6 @@ export default function DividirPagamentoPage() {
     setProcessando(true)
 
     try {
-      console.log("[v0] Gerando PIX para parcela", indiceParcela + 1, "valor:", valorParcela)
-      
       const resp = await fetch("/api/pix/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -66,18 +64,21 @@ export default function DividirPagamentoPage() {
         }),
       })
 
-      const json = await resp.json()
-      console.log("[v0] Resposta PIX:", JSON.stringify(json).substring(0, 300))
+      const text = await resp.text()
+      let json: any
+      try {
+        json = JSON.parse(text)
+      } catch {
+        throw new Error("Resposta invalida do servidor")
+      }
 
       if (!resp.ok) {
-        throw new Error(json.error || "Falha ao gerar")
+        throw new Error(json.error || `Erro ${resp.status}`)
       }
 
       // Pegar o copyPaste - pode vir como copyPaste, copy_paste, qrCode ou qrCodeBase64
       const copiaCola = json.copyPaste || json.copy_paste || json.qrCode || json.qrCodeBase64 || ""
       const qrCode = json.qrCodeBase64 || json.qrCode || copiaCola || ""
-
-      console.log("[v0] copiaCola length:", copiaCola.length, "qrCode length:", qrCode.length)
 
       if (!copiaCola && !qrCode) {
         throw new Error("PIX gerado mas sem codigo. Tente novamente.")
@@ -91,7 +92,6 @@ export default function DividirPagamentoPage() {
 
       toast.success("PIX gerado!")
     } catch (e: any) {
-      console.error("[v0] Erro ao gerar PIX:", e)
       toast.error(e.message || "Erro ao gerar PIX")
     } finally {
       setProcessando(false)
