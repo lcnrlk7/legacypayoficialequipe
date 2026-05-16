@@ -516,7 +516,7 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                     setSelectedMilestone(nextAvailableReward);
                     setShowModal(true);
                   }}
-                  className="w-full bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90 mb-4"
+                  className="w-full bg-gradient-to-r from-primary to-indigo-500 hover:from-primary/90 hover:to-indigo-500/90 mb-4"
                 >
                   <Gift className="w-4 h-4 mr-2" />
                   Resgatar Premiacao
@@ -535,7 +535,7 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                       initial={{ width: 0 }}
                       animate={{ width: `${progressPercent}%` }}
                       transition={{ duration: 1 }}
-                      className="h-full bg-gradient-to-r from-primary to-orange-400 rounded-full"
+                      className="h-full bg-gradient-to-r from-primary to-indigo-400 rounded-full"
                     />
                   </div>
                   <p className="text-xs text-center text-muted-foreground mt-2">
@@ -556,7 +556,7 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                   setShowSimulation(true);
                   setCurrentRewardIndex(0);
                 }}
-                className="w-full bg-gradient-to-r from-primary to-orange-500 hover:from-primary/90 hover:to-orange-500/90"
+                className="w-full bg-gradient-to-r from-primary to-indigo-500 hover:from-primary/90 hover:to-indigo-500/90"
               >
                 <Play className="w-4 h-4 mr-2" />
                 Iniciar Simulacao
@@ -677,7 +677,7 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
               </div>
 
               {/* Active Mode Badge */}
-              <div className="bg-gradient-to-r from-primary to-orange-500 text-primary-foreground text-center py-2 px-4 rounded-lg text-sm font-medium mb-6">
+              <div className="bg-gradient-to-r from-primary to-indigo-500 text-primary-foreground text-center py-2 px-4 rounded-lg text-sm font-medium mb-6">
                 Modo Simulacao Ativo
               </div>
 
@@ -753,7 +753,7 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                     initial={{ width: 0 }}
                     animate={{ width: `${((currentRewardIndex + 1) / simulationRewards.length) * 100}%` }}
                     transition={{ duration: 0.3 }}
-                    className="h-full bg-gradient-to-r from-primary to-orange-400 rounded-full"
+                    className="h-full bg-gradient-to-r from-primary to-indigo-400 rounded-full"
                   />
                 </div>
               </div>
@@ -852,7 +852,7 @@ export function GoalsRoadmap({ totalRevenue, userId }: GoalsRoadmapProps) {
                     </p>
                     <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
                       <div 
-                        className="h-full bg-gradient-to-r from-primary to-orange-400 rounded-full transition-all"
+                        className="h-full bg-gradient-to-r from-primary to-indigo-400 rounded-full transition-all"
                         style={{ width: `${Math.min((totalRevenue / previewMilestone.value) * 100, 100)}%` }}
                       />
                     </div>
