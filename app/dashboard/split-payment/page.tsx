@@ -61,8 +61,6 @@ export default function DividirPagamentoPage() {
     setErroUltimo(null)
 
     try {
-      console.log("[v0] Split PIX - enviando amount:", valorLimpo)
-      
       const resp = await fetch("/api/pix/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -73,17 +71,16 @@ export default function DividirPagamentoPage() {
       })
 
       const text = await resp.text()
-      console.log("[v0] Split PIX - status:", resp.status, "response:", text.substring(0, 200))
-      
       let json: any
       try {
         json = JSON.parse(text)
       } catch {
-        throw new Error("Resposta invalida do servidor")
+        throw { message: "Falha na conexao. Tente novamente.", code: "REDE-003" }
       }
 
       if (!resp.ok) {
-        throw new Error(json.error || `Erro ${resp.status}`)
+        const code = json.code || "SPLIT-ERR"
+        throw { message: `${json.error || "Erro ao gerar PIX"} (${code})`, code }
       }
 
       // Pegar o copyPaste - pode vir como copyPaste, copy_paste, qrCode ou qrCodeBase64
@@ -102,7 +99,7 @@ export default function DividirPagamentoPage() {
 
       toast.success("PIX gerado!")
     } catch (e: any) {
-      const msg = e.message || "Erro ao gerar PIX"
+      const msg = e.message || "Erro ao gerar PIX. Tente novamente. (SPLIT-500)"
       setErroUltimo(msg)
       toast.error(msg)
     } finally {
