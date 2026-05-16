@@ -7,8 +7,9 @@ function getResend(): Resend {
 
 const FROM_EMAIL = "Hyperion Pay <noreply@hyperionpayments.online>";
 
-const MASCOT_URL = "https://hyperionpay.com.br/mascote.png";
-const LOGO_ICON_URL = "https://hyperionpay.com.br/logo-icon.png";
+// URLs permanentes do Vercel Blob (sempre acessiveis, independente do dominio)
+const MASCOT_URL = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/mascote-3q2tQJspA2i2FZswc9TgIR7bgtnhvw.png";
+const LOGO_ICON_URL = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/logo%20sem%20fundo-o9FNksnCjy2Ho8RyeK6Tc1ouqvzbIm.png";
 
 const C = {
   bg: "#030014",
