@@ -2,22 +2,21 @@ import { Resend } from "resend";
 
 // Função para obter a instância do Resend
 function getResend(): Resend {
-  // Usar a API key diretamente para evitar problemas de cache de variáveis de ambiente
-  const apiKey = "re_d6rdAK4W_3ZhUjLBsyzMvL88AKJjwX9JF";
+  const apiKey = process.env.RESEND_API_KEY || "";
   return new Resend(apiKey);
 }
 
 // Email oficial com domínio verificado
-const FROM_EMAIL = "Hyperion Pay <noreply@hyperionpay.shop>";
+const FROM_EMAIL = "Hyperion Pay <noreply@hyperionpay.com.br>";
 
-// Logo da Hyperion Pay
-const LOGO_URL = "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-PhlbUzFfJZsj2u0IftrABCtiUFypLu.png";
+// Logo da Hyperion Pay (mascote)
+const LOGO_URL = "https://hyperionpay.com.br/mascote.png";
 
 // Cores da marca
 const COLORS = {
-  primary: "#FF6B00",
-  primaryLight: "#FF8C00",
-  primaryDark: "#E55A00",
+  primary: "#4f46e5",
+  primaryLight: "#6366f1",
+  primaryDark: "#4338ca",
   background: "#0a0a0a",
   cardBg: "#111111",
   cardBorder: "#1f1f1f",
@@ -46,14 +45,14 @@ export async function sendVerificationEmail(
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.background}; padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(255, 107, 0, 0.15);">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.15);">
           
           <!-- Header com Logo -->
           <tr>
-            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(255, 107, 0, 0.08) 0%, transparent 100%);">
+            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, transparent 100%);">
               <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
               <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                <span style="color: ${COLORS.primary};">Legacy</span><span style="color: ${COLORS.text};">Pay</span>
+                <span style="color: ${COLORS.primary};">Hyperion</span><span style="color: ${COLORS.text};"> Pay</span>
               </h1>
               <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 15px;">Sua plataforma de pagamentos</p>
             </td>
@@ -80,13 +79,13 @@ export async function sendVerificationEmail(
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 32px;">
                 <tr>
                   <td align="center">
-                    <table cellpadding="0" cellspacing="0" style="background-color: #1a1a1a; border: 3px solid ${COLORS.primary}; border-radius: 16px; box-shadow: 0 0 30px rgba(255, 107, 0, 0.25);">
+                    <table cellpadding="0" cellspacing="0" style="background-color: #1a1a1a; border: 3px solid ${COLORS.primary}; border-radius: 16px; box-shadow: 0 0 30px rgba(79, 70, 229, 0.25);">
                       <tr>
                         <td style="padding: 28px 40px; text-align: center;">
                           <p style="margin: 0 0 16px 0; color: #a1a1aa; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; opacity: 1 !important;">Seu código de verificação</p>
                           <table cellpadding="0" cellspacing="0" align="center">
                             <tr>
-                              <td style="font-family: 'Courier New', Courier, monospace; font-size: 48px; font-weight: 700; color: #FF6B00 !important; letter-spacing: 16px; padding: 8px 16px; background-color: #0d0d0d; border-radius: 12px; border: 1px solid #333333; mso-line-height-rule: exactly; line-height: 56px;">${code}</td>
+                              <td style="font-family: 'Courier New', Courier, monospace; font-size: 48px; font-weight: 700; color: #4f46e5 !important; letter-spacing: 16px; padding: 8px 16px; background-color: #0d0d0d; border-radius: 12px; border: 1px solid #333333; mso-line-height-rule: exactly; line-height: 56px;">${code}</td>
                             </tr>
                           </table>
                         </td>
@@ -97,7 +96,7 @@ export async function sendVerificationEmail(
               </table>
               
               <!-- Info expiracao -->
-              <div style="background: rgba(255, 107, 0, 0.08); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+              <div style="background: rgba(79, 70, 229, 0.08); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
                 <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 14px; text-align: center;">
                   ⏱️ Este código expira em <strong style="color: ${COLORS.primary};">10 minutos</strong>
                 </p>
@@ -175,14 +174,14 @@ export async function sendWelcomeEmail(
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.background}; padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(255, 107, 0, 0.15);">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.15);">
           
           <!-- Header com Logo -->
           <tr>
-            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(255, 107, 0, 0.08) 0%, transparent 100%);">
+            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, transparent 100%);">
               <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
               <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                <span style="color: ${COLORS.primary};">Legacy</span><span style="color: ${COLORS.text};">Pay</span>
+                <span style="color: ${COLORS.primary};">Hyperion</span><span style="color: ${COLORS.text};"> Pay</span>
               </h1>
               <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 15px;">Sua plataforma de pagamentos</p>
             </td>
@@ -262,7 +261,7 @@ export async function sendWelcomeEmail(
               
               <!-- CTA Button -->
               <div style="text-align: center; margin-bottom: 24px;">
-                <a href="https://hyperionpay.shop/dashboard" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3);">
+                <a href="https://hyperionpay.com.br/dashboard" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);">
                   Acessar minha conta →
                 </a>
               </div>
@@ -370,14 +369,14 @@ export async function sendWithdrawalNotification(
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.background}; padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(255, 107, 0, 0.15);">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.15);">
           
           <!-- Header com Logo -->
           <tr>
-            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(255, 107, 0, 0.08) 0%, transparent 100%);">
+            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, transparent 100%);">
               <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
               <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                <span style="color: ${COLORS.primary};">Legacy</span><span style="color: ${COLORS.text};">Pay</span>
+                <span style="color: ${COLORS.primary};">Hyperion</span><span style="color: ${COLORS.text};"> Pay</span>
               </h1>
               <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 15px;">Sua plataforma de pagamentos</p>
             </td>
@@ -414,7 +413,7 @@ export async function sendWithdrawalNotification(
               
               <!-- CTA Button -->
               <div style="text-align: center; margin-bottom: 24px;">
-                <a href="https://hyperionpay.shop/dashboard/wallet" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3);">
+                <a href="https://hyperionpay.com.br/dashboard/wallet" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);">
                   Ver detalhes →
                 </a>
               </div>
@@ -492,14 +491,14 @@ export async function sendDepositNotification(
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.background}; padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(255, 107, 0, 0.15);">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.15);">
           
           <!-- Header com Logo -->
           <tr>
-            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(255, 107, 0, 0.08) 0%, transparent 100%);">
+            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, transparent 100%);">
               <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
               <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                <span style="color: ${COLORS.primary};">Legacy</span><span style="color: ${COLORS.text};">Pay</span>
+                <span style="color: ${COLORS.primary};">Hyperion</span><span style="color: ${COLORS.text};"> Pay</span>
               </h1>
               <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 15px;">Sua plataforma de pagamentos</p>
             </td>
@@ -539,7 +538,7 @@ export async function sendDepositNotification(
               
               <!-- CTA Button -->
               <div style="text-align: center; margin-bottom: 24px;">
-                <a href="https://hyperionpay.shop/dashboard/wallet" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3);">
+                <a href="https://hyperionpay.com.br/dashboard/wallet" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);">
                   Ver meu saldo →
                 </a>
               </div>
@@ -614,14 +613,14 @@ export async function sendNotificationEmail(
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.background}; padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(255, 107, 0, 0.15);">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.15);">
           
           <!-- Header com Logo -->
           <tr>
-            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(255, 107, 0, 0.08) 0%, transparent 100%);">
+            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, transparent 100%);">
               <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
               <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                <span style="color: ${COLORS.primary};">Legacy</span><span style="color: ${COLORS.text};">Pay</span>
+                <span style="color: ${COLORS.primary};">Hyperion</span><span style="color: ${COLORS.text};"> Pay</span>
               </h1>
               <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 15px;">Sua plataforma de pagamentos</p>
             </td>
@@ -649,7 +648,7 @@ export async function sendNotificationEmail(
               
               <!-- CTA Button -->
               <div style="text-align: center;">
-                <a href="https://hyperionpay.shop/dashboard" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(255, 107, 0, 0.3);">
+                <a href="https://hyperionpay.com.br/dashboard" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);">
                   Acessar minha conta →
                 </a>
               </div>
@@ -724,14 +723,14 @@ export async function sendPasswordResetEmail(
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.background}; padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(255, 107, 0, 0.15);">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.15);">
           
           <!-- Header com Logo -->
           <tr>
-            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(255, 107, 0, 0.08) 0%, transparent 100%);">
+            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, transparent 100%);">
               <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
               <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                <span style="color: ${COLORS.primary};">Legacy</span><span style="color: ${COLORS.text};">Pay</span>
+                <span style="color: ${COLORS.primary};">Hyperion</span><span style="color: ${COLORS.text};"> Pay</span>
               </h1>
               <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 14px;">Alteração de Senha</p>
             </td>
@@ -751,11 +750,11 @@ export async function sendPasswordResetEmail(
               <!-- Código de verificação -->
               <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
                 <tr>
-                  <td style="background: linear-gradient(135deg, rgba(255, 107, 0, 0.15) 0%, rgba(255, 140, 0, 0.1) 100%); border: 2px solid ${COLORS.primary}; border-radius: 16px; padding: 32px; text-align: center;">
+                  <td style="background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(255, 140, 0, 0.1) 100%); border: 2px solid ${COLORS.primary}; border-radius: 16px; padding: 32px; text-align: center;">
                     <p style="margin: 0 0 12px 0; color: ${COLORS.textMuted}; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">
                       Código de Segurança
                     </p>
-                    <p style="margin: 0; font-size: 42px; font-weight: 700; letter-spacing: 12px; color: ${COLORS.primary}; font-family: 'Courier New', monospace; text-shadow: 0 0 30px rgba(255, 107, 0, 0.3);">
+                    <p style="margin: 0; font-size: 42px; font-weight: 700; letter-spacing: 12px; color: ${COLORS.primary}; font-family: 'Courier New', monospace; text-shadow: 0 0 30px rgba(79, 70, 229, 0.3);">
                       ${code}
                     </p>
                   </td>
@@ -843,14 +842,14 @@ export async function sendNewLoginAlert(
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.background}; padding: 40px 20px;">
     <tr>
       <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(255, 107, 0, 0.15);">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.15);">
           
           <!-- Header com Logo -->
           <tr>
-            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(255, 107, 0, 0.08) 0%, transparent 100%);">
+            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, transparent 100%);">
               <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
               <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                <span style="color: ${COLORS.primary};">Legacy</span><span style="color: ${COLORS.text};">Pay</span>
+                <span style="color: ${COLORS.primary};">Hyperion</span><span style="color: ${COLORS.text};"> Pay</span>
               </h1>
             </td>
           </tr>
