@@ -394,7 +394,7 @@ export default function TelegramPage() {
                   </a>
                   
                   <a
-                    href="https://discord.gg/hyperionpay"
+                    href="https://discord.gg/sGmMSYjdnA"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-2 p-3 bg-indigo-500/10 rounded-xl hover:bg-indigo-500/20 transition-colors"

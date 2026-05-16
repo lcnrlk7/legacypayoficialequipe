@@ -2,7 +2,7 @@ import { sql } from "@/lib/db";
 
 // Constantes de links
 const SITE_URL = "https://www.hyperionpay.com.br";
-const DISCORD_LINK = "https://discord.gg/hyperionpay";
+const DISCORD_LINK = "https://discord.gg/sGmMSYjdnA";
 const WHATSAPP_LINK = "https://wa.me/5534999353187";
 
 // Enviar mensagem para um chat/canal

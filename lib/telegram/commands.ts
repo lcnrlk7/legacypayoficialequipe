@@ -16,7 +16,7 @@ const REQUIRED_CHANNELS = [
 
 const BOT_NAME = "Hyperion Pay";
 const SITE_URL = "https://www.hyperionpay.com.br";
-const DISCORD_LINK = "https://discord.gg/hyperionpay";
+const DISCORD_LINK = "https://discord.gg/sGmMSYjdnA";
 const WHATSAPP = "(34) 99935-3187";
 const WHATSAPP_LINK = "https://wa.me/5534999353187";
 const SALES_CHANNEL = "https://t.me/hyperionpaybot";
