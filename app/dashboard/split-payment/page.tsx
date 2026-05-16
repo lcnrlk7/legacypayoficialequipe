@@ -15,6 +15,7 @@ export default function DividirPagamentoPage() {
   const [parcelasPagas, setParcelasPagas] = useState<number[]>([])
   const [processando, setProcessando] = useState(false)
   const [textoCopied, setTextoCopied] = useState(false)
+  const [erroUltimo, setErroUltimo] = useState<string | null>(null)
 
   // Criar lista de valores divididos
   const criarParcelas = () => {
@@ -53,6 +54,7 @@ export default function DividirPagamentoPage() {
     if (!valorParcela) return
 
     setProcessando(true)
+    setErroUltimo(null)
 
     try {
       const resp = await fetch("/api/pix/create", {
@@ -60,7 +62,7 @@ export default function DividirPagamentoPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           amount: valorParcela,
-          description: `Parcela ${indiceParcela + 1}/${listaValores.length}`,
+          description: `Deposito via PIX - Hyperion Pay`,
         }),
       })
 
@@ -92,7 +94,9 @@ export default function DividirPagamentoPage() {
 
       toast.success("PIX gerado!")
     } catch (e: any) {
-      toast.error(e.message || "Erro ao gerar PIX")
+      const msg = e.message || "Erro ao gerar PIX"
+      setErroUltimo(msg)
+      toast.error(msg)
     } finally {
       setProcessando(false)
     }
@@ -209,17 +213,33 @@ export default function DividirPagamentoPage() {
                     {atual && (
                       <div className="mt-4 pt-4 border-t">
                         {!pixAtual ? (
-                          <Button 
-                            onClick={chamarApiPix} 
-                            disabled={processando}
-                            className="w-full bg-indigo-600 hover:bg-indigo-700"
-                          >
-                            {processando ? (
-                              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando...</>
-                            ) : (
-                              <><QrCode className="w-4 h-4 mr-2" /> Gerar QR Code</>
+                          <div className="space-y-3">
+                            <Button 
+                              onClick={chamarApiPix} 
+                              disabled={processando}
+                              className="w-full bg-indigo-600 hover:bg-indigo-700"
+                            >
+                              {processando ? (
+                                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando...</>
+                              ) : (
+                                <><QrCode className="w-4 h-4 mr-2" /> Gerar QR Code</>
+                              )}
+                            </Button>
+                            {erroUltimo && (
+                              <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                                <p className="text-sm text-destructive">{erroUltimo}</p>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={chamarApiPix}
+                                  disabled={processando}
+                                  className="mt-2"
+                                >
+                                  <RotateCcw className="w-3 h-3 mr-1" /> Tentar novamente
+                                </Button>
+                              </div>
                             )}
-                          </Button>
+                          </div>
                         ) : (
                           <div className="space-y-4">
                             {/* QR Code */}

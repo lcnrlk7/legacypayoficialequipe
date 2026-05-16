@@ -376,9 +376,9 @@ export async function POST(request: NextRequest) {
       copyPaste: pixResult.data.copyPaste,
     });
   } catch (error) {
-    console.error("Error creating PIX charge:", error);
+    console.error("Error creating PIX charge:", error instanceof Error ? error.message : error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Erro ao criar cobrança PIX" },
+      { error: error instanceof Error ? error.message : "Erro ao criar cobranca PIX" },
       { status: 500 }
     );
   }
