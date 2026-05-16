@@ -26,8 +26,8 @@ export default function DividirPagamentoPage() {
     }
 
     // Dividir em parcelas iguais baseado no valor total
-    // Maximo de R$ 500 por parcela para garantir aprovacao
-    const maxParcela = 500
+    // Maximo de R$ 1000 por parcela (limite do gateway)
+    const maxParcela = 1000
     const numParcelas = Math.ceil(total / maxParcela)
     const valorBase = Math.floor((total / numParcelas) * 100) / 100
     
