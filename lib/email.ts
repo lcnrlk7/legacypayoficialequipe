@@ -1,29 +1,94 @@
 import { Resend } from "resend";
 
-// Função para obter a instância do Resend
+// Funcao para obter a instancia do Resend
 function getResend(): Resend {
   const apiKey = process.env.RESEND_API_KEY || "";
   return new Resend(apiKey);
 }
 
-// Email oficial com domínio verificado
-const FROM_EMAIL = "Hyperion Pay <noreply@hyperionpay.com.br>";
+// Email oficial com dominio verificado
+const FROM_EMAIL = "Hyperion Pay <noreply@hyperionpayments.online>";
 
-// Logo da Hyperion Pay (mascote)
+// Logo da Hyperion Pay (mascote) - hospedado publicamente
 const LOGO_URL = "https://hyperionpay.com.br/mascote.png";
 
-// Cores da marca
+// Cores da marca - Indigo escuro premium
 const COLORS = {
-  primary: "#4f46e5",
-  primaryLight: "#6366f1",
-  primaryDark: "#4338ca",
-  background: "#0a0a0a",
-  cardBg: "#111111",
-  cardBorder: "#1f1f1f",
+  primary: "#6366f1",
+  primaryDark: "#4f46e5",
+  primaryDeep: "#3730a3",
+  accent: "#818cf8",
+  background: "#050510",
+  cardBg: "#0c0c1d",
+  cardBorder: "#1e1b4b",
+  innerBg: "#12122b",
   text: "#ffffff",
-  textMuted: "#a1a1aa",
-  textSubtle: "#71717a",
+  textMuted: "#c7d2fe",
+  textSubtle: "#6366f1",
+  footerText: "#4338ca",
 };
+
+// Template base do email
+function emailWrapper(content: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin: 0; padding: 0; background-color: ${COLORS.background}; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.background}; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 540px;">
+          
+          <!-- Header flutuante -->
+          <tr>
+            <td style="padding: 0 0 24px 0; text-align: center;">
+              <img src="${LOGO_URL}" alt="Hyperion Pay" width="72" height="72" style="display: block; margin: 0 auto 16px auto; border-radius: 18px; border: 2px solid ${COLORS.cardBorder};">
+              <h1 style="margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px;">
+                <span style="color: ${COLORS.primary};">HYPERION</span><span style="color: ${COLORS.text};"> PAY</span>
+              </h1>
+            </td>
+          </tr>
+          
+          <!-- Card principal -->
+          <tr>
+            <td>
+              <table width="100%" cellpadding="0" cellspacing="0" style="background: ${COLORS.cardBg}; border-radius: 20px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden;">
+                
+                <!-- Barra superior indigo -->
+                <tr>
+                  <td style="height: 3px; background: linear-gradient(90deg, ${COLORS.primaryDeep}, ${COLORS.primary}, ${COLORS.accent}, ${COLORS.primary}, ${COLORS.primaryDeep});"></td>
+                </tr>
+                
+                <!-- Conteudo -->
+                ${content}
+                
+              </table>
+            </td>
+          </tr>
+          
+          <!-- Footer -->
+          <tr>
+            <td style="padding: 24px 0 0 0; text-align: center;">
+              <p style="margin: 0 0 4px 0; color: ${COLORS.footerText}; font-size: 11px;">
+                Hyperion Pay - Construindo legado. Gerando liberdade.
+              </p>
+              <p style="margin: 0; color: ${COLORS.primaryDeep}; font-size: 10px;">
+                Este e um email automatico. Por favor, nao responda.
+              </p>
+            </td>
+          </tr>
+          
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
 
 export function generateVerificationCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -34,116 +99,56 @@ export async function sendVerificationEmail(
   code: string,
   name?: string
 ): Promise<boolean> {
-  const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; background-color: ${COLORS.background}; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.background}; padding: 40px 20px;">
+  const content = `
     <tr>
-      <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.15);">
-          
-          <!-- Header com Logo -->
+      <td style="padding: 40px 36px 16px 36px; text-align: center;">
+        <div style="display: inline-block; width: 56px; height: 56px; line-height: 56px; background: ${COLORS.innerBg}; border: 1px solid ${COLORS.cardBorder}; border-radius: 14px; font-size: 24px; margin-bottom: 20px;">&#128272;</div>
+        <h2 style="margin: 0 0 8px 0; color: ${COLORS.text}; font-size: 20px; font-weight: 700;">
+          Verificacao de Email
+        </h2>
+        <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 14px; line-height: 1.6;">
+          ${name ? `Ola <strong style="color: ${COLORS.text};">${name}</strong>, ` : ""}use o codigo abaixo para verificar sua conta.
+        </p>
+      </td>
+    </tr>
+    
+    <!-- Codigo OTP -->
+    <tr>
+      <td style="padding: 16px 36px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
-            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, transparent 100%);">
-              <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
-              <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                <span style="color: ${COLORS.primary};">Hyperion</span><span style="color: ${COLORS.text};"> Pay</span>
-              </h1>
-              <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 15px;">Sua plataforma de pagamentos</p>
-            </td>
-          </tr>
-
-          <!-- Divisor gradiente -->
-          <tr>
-            <td style="padding: 0 40px;">
-              <div style="height: 2px; background: linear-gradient(90deg, transparent, ${COLORS.primary}, transparent); border-radius: 2px;"></div>
-            </td>
-          </tr>
-          
-          <!-- Conteudo -->
-          <tr>
-            <td style="padding: 40px;">
-              <h2 style="margin: 0 0 16px 0; color: ${COLORS.text}; font-size: 22px; font-weight: 600; text-align: center;">
-                Verificação de Email
-              </h2>
-              <p style="margin: 0 0 32px 0; color: ${COLORS.textMuted}; font-size: 15px; line-height: 1.7; text-align: center;">
-                ${name ? `Olá <strong style="color: ${COLORS.text};">${name}</strong>, ` : ""}para continuar com seu cadastro, utilize o código abaixo:
-              </p>
-              
-              <!-- Codigo OTP - Alta visibilidade -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 32px;">
+            <td style="background: ${COLORS.innerBg}; border: 2px solid ${COLORS.primary}; border-radius: 16px; padding: 28px 20px; text-align: center;">
+              <p style="margin: 0 0 12px 0; color: ${COLORS.accent}; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 3px;">Seu codigo</p>
+              <table cellpadding="0" cellspacing="0" align="center">
                 <tr>
-                  <td align="center">
-                    <table cellpadding="0" cellspacing="0" style="background-color: #1a1a1a; border: 3px solid ${COLORS.primary}; border-radius: 16px; box-shadow: 0 0 30px rgba(79, 70, 229, 0.25);">
-                      <tr>
-                        <td style="padding: 28px 40px; text-align: center;">
-                          <p style="margin: 0 0 16px 0; color: #a1a1aa; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; opacity: 1 !important;">Seu código de verificação</p>
-                          <table cellpadding="0" cellspacing="0" align="center">
-                            <tr>
-                              <td style="font-family: 'Courier New', Courier, monospace; font-size: 48px; font-weight: 700; color: #4f46e5 !important; letter-spacing: 16px; padding: 8px 16px; background-color: #0d0d0d; border-radius: 12px; border: 1px solid #333333; mso-line-height-rule: exactly; line-height: 56px;">${code}</td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-              
-              <!-- Info expiracao -->
-              <div style="background: rgba(79, 70, 229, 0.08); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
-                <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 14px; text-align: center;">
-                  ⏱️ Este código expira em <strong style="color: ${COLORS.primary};">10 minutos</strong>
-                </p>
-              </div>
-              
-              <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 13px; line-height: 1.6; text-align: center;">
-                Se você não solicitou este código, pode ignorar este email com segurança.
-              </p>
-            </td>
-          </tr>
-          
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 32px 40px; background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%); border-top: 1px solid ${COLORS.cardBorder};">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="text-align: center;">
-                    <p style="margin: 0 0 8px 0; color: ${COLORS.textSubtle}; font-size: 12px;">
-                      © ${new Date().getFullYear()} Hyperion Pay. Todos os direitos reservados.
-                    </p>
-                    <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 11px;">
-                      Este é um email automático. Por favor, não responda.
-                    </p>
-                  </td>
+                  <td style="font-family: 'Courier New', Courier, monospace; font-size: 44px; font-weight: 700; color: ${COLORS.text}; letter-spacing: 14px; padding: 8px 16px; background: ${COLORS.background}; border-radius: 12px; border: 1px solid ${COLORS.cardBorder};">${code}</td>
                 </tr>
               </table>
             </td>
           </tr>
         </table>
-        
-        <!-- Texto fora do card -->
-        <p style="margin: 24px 0 0 0; color: ${COLORS.textSubtle}; font-size: 11px; text-align: center;">
-          Enviado com 🧡 pela equipe Hyperion Pay
+      </td>
+    </tr>
+    
+    <!-- Info -->
+    <tr>
+      <td style="padding: 16px 36px 36px 36px; text-align: center;">
+        <p style="margin: 0 0 8px 0; color: ${COLORS.textMuted}; font-size: 13px;">
+          Este codigo expira em <strong style="color: ${COLORS.text};">10 minutos</strong>
+        </p>
+        <p style="margin: 0; color: ${COLORS.primaryDeep}; font-size: 12px;">
+          Se voce nao solicitou este codigo, pode ignorar este email.
         </p>
       </td>
     </tr>
-  </table>
-</body>
-</html>
   `;
 
   try {
     const { error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
-      subject: `${code} - Código de Verificação Hyperion Pay`,
-      html: htmlContent,
+      subject: `${code} - Codigo de Verificacao | Hyperion Pay`,
+      html: emailWrapper(content),
     });
 
     if (error) {
@@ -151,7 +156,7 @@ export async function sendVerificationEmail(
       return false;
     }
 
-    console.log("[Email] Código enviado com sucesso para:", to);
+    console.log("[Email] Codigo enviado com sucesso para:", to);
     return true;
   } catch (error) {
     console.error("[Email] Erro ao enviar email:", error);
@@ -163,151 +168,78 @@ export async function sendWelcomeEmail(
   to: string,
   name: string
 ): Promise<boolean> {
-  const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; background-color: ${COLORS.background}; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.background}; padding: 40px 20px;">
+  const content = `
     <tr>
-      <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.15);">
-          
-          <!-- Header com Logo -->
-          <tr>
-            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, transparent 100%);">
-              <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
-              <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                <span style="color: ${COLORS.primary};">Hyperion</span><span style="color: ${COLORS.text};"> Pay</span>
-              </h1>
-              <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 15px;">Sua plataforma de pagamentos</p>
-            </td>
-          </tr>
-
-          <!-- Divisor gradiente -->
-          <tr>
-            <td style="padding: 0 40px;">
-              <div style="height: 2px; background: linear-gradient(90deg, transparent, ${COLORS.primary}, transparent); border-radius: 2px;"></div>
-            </td>
-          </tr>
-          
-          <!-- Conteudo -->
-          <tr>
-            <td style="padding: 40px;">
-              <div style="text-align: center; margin-bottom: 32px;">
-                <div style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryLight} 100%); border-radius: 50%; width: 64px; height: 64px; line-height: 64px; font-size: 28px; margin-bottom: 16px;">
-                  🎉
-                </div>
-                <h2 style="margin: 0 0 8px 0; color: ${COLORS.text}; font-size: 24px; font-weight: 600;">
-                  Bem-vindo, ${name}!
-                </h2>
-                <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 15px;">
-                  Sua conta foi criada com sucesso
-                </p>
-              </div>
-              
-              <p style="margin: 0 0 28px 0; color: ${COLORS.textMuted}; font-size: 15px; line-height: 1.7; text-align: center;">
-                Agora você faz parte da Hyperion Pay! Estamos felizes em ter você conosco. Confira o que você pode fazer:
-              </p>
-              
-              <!-- Features -->
-              <div style="background: linear-gradient(135deg, #1a1a1a 0%, #141414 100%); border-radius: 16px; padding: 24px; margin-bottom: 28px;">
-                <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td style="padding: 12px 0; border-bottom: 1px solid ${COLORS.cardBorder};">
-                      <table width="100%" cellpadding="0" cellspacing="0">
-                        <tr>
-                          <td width="40" style="color: ${COLORS.primary}; font-size: 20px;">💳</td>
-                          <td style="color: ${COLORS.text}; font-size: 14px;">Receber pagamentos via PIX instantâneo</td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 12px 0; border-bottom: 1px solid ${COLORS.cardBorder};">
-                      <table width="100%" cellpadding="0" cellspacing="0">
-                        <tr>
-                          <td width="40" style="color: ${COLORS.primary}; font-size: 20px;">📊</td>
-                          <td style="color: ${COLORS.text}; font-size: 14px;">Acompanhar todas as suas transações</td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 12px 0; border-bottom: 1px solid ${COLORS.cardBorder};">
-                      <table width="100%" cellpadding="0" cellspacing="0">
-                        <tr>
-                          <td width="40" style="color: ${COLORS.primary}; font-size: 20px;">💰</td>
-                          <td style="color: ${COLORS.text}; font-size: 14px;">Sacar para sua conta bancária</td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 12px 0;">
-                      <table width="100%" cellpadding="0" cellspacing="0">
-                        <tr>
-                          <td width="40" style="color: ${COLORS.primary}; font-size: 20px;">🔒</td>
-                          <td style="color: ${COLORS.text}; font-size: 14px;">Segurança e proteção em todas as operações</td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                </table>
-              </div>
-              
-              <!-- CTA Button -->
-              <div style="text-align: center; margin-bottom: 24px;">
-                <a href="https://hyperionpay.com.br/dashboard" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);">
-                  Acessar minha conta →
-                </a>
-              </div>
-              
-              <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 13px; line-height: 1.6; text-align: center;">
-                Precisa de ajuda? Entre em contato com nosso suporte.
-              </p>
-            </td>
-          </tr>
-          
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 32px 40px; background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%); border-top: 1px solid ${COLORS.cardBorder};">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="text-align: center;">
-                    <p style="margin: 0 0 8px 0; color: ${COLORS.textSubtle}; font-size: 12px;">
-                      © ${new Date().getFullYear()} Hyperion Pay. Todos os direitos reservados.
-                    </p>
-                    <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 11px;">
-                      Este é um email automático. Por favor, não responda.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-        
-        <!-- Texto fora do card -->
-        <p style="margin: 24px 0 0 0; color: ${COLORS.textSubtle}; font-size: 11px; text-align: center;">
-          Enviado com 🧡 pela equipe Hyperion Pay
+      <td style="padding: 40px 36px 16px 36px; text-align: center;">
+        <div style="display: inline-block; width: 56px; height: 56px; line-height: 56px; background: linear-gradient(135deg, ${COLORS.primaryDark}, ${COLORS.primary}); border-radius: 50%; font-size: 24px; margin-bottom: 20px; color: white;">&#10003;</div>
+        <h2 style="margin: 0 0 8px 0; color: ${COLORS.text}; font-size: 22px; font-weight: 700;">
+          Bem-vindo, ${name}!
+        </h2>
+        <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 14px;">
+          Sua conta foi criada com sucesso
         </p>
       </td>
     </tr>
-  </table>
-</body>
-</html>
+    
+    <tr>
+      <td style="padding: 16px 36px;">
+        <p style="margin: 0 0 20px 0; color: ${COLORS.textMuted}; font-size: 14px; line-height: 1.7; text-align: center;">
+          Agora voce faz parte da Hyperion Pay! Confira o que voce pode fazer:
+        </p>
+        
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: ${COLORS.innerBg}; border-radius: 14px; border: 1px solid ${COLORS.cardBorder};">
+          <tr>
+            <td style="padding: 16px 20px; border-bottom: 1px solid ${COLORS.cardBorder};">
+              <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                <td width="32" style="color: ${COLORS.accent}; font-size: 16px;">&#9889;</td>
+                <td style="color: ${COLORS.text}; font-size: 13px;">Receber pagamentos via PIX instantaneo</td>
+              </tr></table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 16px 20px; border-bottom: 1px solid ${COLORS.cardBorder};">
+              <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                <td width="32" style="color: ${COLORS.accent}; font-size: 16px;">&#128202;</td>
+                <td style="color: ${COLORS.text}; font-size: 13px;">Acompanhar todas as suas transacoes</td>
+              </tr></table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 16px 20px; border-bottom: 1px solid ${COLORS.cardBorder};">
+              <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                <td width="32" style="color: ${COLORS.accent}; font-size: 16px;">&#128176;</td>
+                <td style="color: ${COLORS.text}; font-size: 13px;">Sacar para sua conta bancaria</td>
+              </tr></table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 16px 20px;">
+              <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                <td width="32" style="color: ${COLORS.accent}; font-size: 16px;">&#128274;</td>
+                <td style="color: ${COLORS.text}; font-size: 13px;">Seguranca e protecao em todas as operacoes</td>
+              </tr></table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    
+    <!-- CTA -->
+    <tr>
+      <td style="padding: 24px 36px 36px 36px; text-align: center;">
+        <a href="https://app.hyperionpay.com.br/dashboard" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primaryDark} 0%, ${COLORS.primary} 100%); color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 14px 36px; border-radius: 10px; letter-spacing: 0.3px;">
+          Acessar minha conta &#8594;
+        </a>
+      </td>
+    </tr>
   `;
 
   try {
     const { error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
-      subject: "🎉 Bem-vindo à Hyperion Pay!",
-      html: htmlContent,
+      subject: "Bem-vindo a Hyperion Pay!",
+      html: emailWrapper(content),
     });
 
     if (error) {
@@ -331,146 +263,100 @@ export async function sendWithdrawalNotification(
 ): Promise<boolean> {
   const statusConfig = {
     pending: {
-      icon: "⏳",
+      icon: "&#9203;",
       title: "Saque Solicitado",
-      message: `Seu saque de <strong style="color: ${COLORS.primary};">R$ ${amount.toFixed(2)}</strong> foi recebido e está em análise.`,
-      color: "#FFA500",
+      message: `Seu saque de <strong style="color: ${COLORS.text};">R$ ${amount.toFixed(2)}</strong> foi recebido e esta em analise.`,
+      color: "#eab308",
+      bg: "rgba(234, 179, 8, 0.08)",
+      border: "rgba(234, 179, 8, 0.3)",
     },
     approved: {
-      icon: "✅",
+      icon: "&#9989;",
       title: "Saque Aprovado",
-      message: `Seu saque de <strong style="color: ${COLORS.primary};">R$ ${amount.toFixed(2)}</strong> foi aprovado e será processado em breve.`,
+      message: `Seu saque de <strong style="color: ${COLORS.text};">R$ ${amount.toFixed(2)}</strong> foi aprovado e sera processado em breve.`,
       color: "#22c55e",
+      bg: "rgba(34, 197, 94, 0.08)",
+      border: "rgba(34, 197, 94, 0.3)",
     },
     rejected: {
-      icon: "❌",
+      icon: "&#10060;",
       title: "Saque Recusado",
-      message: `Infelizmente seu saque de <strong style="color: ${COLORS.primary};">R$ ${amount.toFixed(2)}</strong> não pôde ser processado. Entre em contato com o suporte.`,
+      message: `Seu saque de <strong style="color: ${COLORS.text};">R$ ${amount.toFixed(2)}</strong> nao pode ser processado. Entre em contato com o suporte.`,
       color: "#ef4444",
+      bg: "rgba(239, 68, 68, 0.08)",
+      border: "rgba(239, 68, 68, 0.3)",
     },
     completed: {
-      icon: "💸",
-      title: "Saque Concluído",
-      message: `Seu saque de <strong style="color: ${COLORS.primary};">R$ ${amount.toFixed(2)}</strong> foi enviado para sua conta PIX com sucesso!`,
+      icon: "&#128184;",
+      title: "Saque Concluido",
+      message: `Seu saque de <strong style="color: ${COLORS.text};">R$ ${amount.toFixed(2)}</strong> foi enviado para sua conta PIX com sucesso!`,
       color: "#22c55e",
+      bg: "rgba(34, 197, 94, 0.08)",
+      border: "rgba(34, 197, 94, 0.3)",
     },
   };
 
   const config = statusConfig[status];
 
-  const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; background-color: ${COLORS.background}; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.background}; padding: 40px 20px;">
+  const content = `
     <tr>
-      <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.15);">
-          
-          <!-- Header com Logo -->
-          <tr>
-            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, transparent 100%);">
-              <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
-              <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                <span style="color: ${COLORS.primary};">Hyperion</span><span style="color: ${COLORS.text};"> Pay</span>
-              </h1>
-              <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 15px;">Sua plataforma de pagamentos</p>
-            </td>
-          </tr>
-
-          <!-- Divisor gradiente -->
-          <tr>
-            <td style="padding: 0 40px;">
-              <div style="height: 2px; background: linear-gradient(90deg, transparent, ${COLORS.primary}, transparent); border-radius: 2px;"></div>
-            </td>
-          </tr>
-          
-          <!-- Conteudo -->
-          <tr>
-            <td style="padding: 40px;">
-              <div style="text-align: center; margin-bottom: 28px;">
-                <div style="display: inline-block; font-size: 48px; margin-bottom: 16px;">
-                  ${config.icon}
-                </div>
-                <h2 style="margin: 0 0 8px 0; color: ${COLORS.text}; font-size: 22px; font-weight: 600;">
-                  ${config.title}
-                </h2>
-              </div>
-              
-              <p style="margin: 0 0 24px 0; color: ${COLORS.textMuted}; font-size: 15px; line-height: 1.7; text-align: center;">
-                Olá <strong style="color: ${COLORS.text};">${name}</strong>,
-              </p>
-              
-              <div style="background: linear-gradient(135deg, #1a1a1a 0%, #141414 100%); border-left: 4px solid ${config.color}; border-radius: 12px; padding: 20px; margin-bottom: 28px;">
-                <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 15px; line-height: 1.7;">
-                  ${config.message}
-                </p>
-              </div>
-              
-              <!-- CTA Button -->
-              <div style="text-align: center; margin-bottom: 24px;">
-                <a href="https://hyperionpay.com.br/dashboard/wallet" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);">
-                  Ver detalhes →
-                </a>
-              </div>
-              
-              <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 13px; line-height: 1.6; text-align: center;">
-                Dúvidas? Entre em contato com nosso suporte.
-              </p>
-            </td>
-          </tr>
-          
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 32px 40px; background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%); border-top: 1px solid ${COLORS.cardBorder};">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="text-align: center;">
-                    <p style="margin: 0 0 8px 0; color: ${COLORS.textSubtle}; font-size: 12px;">
-                      © ${new Date().getFullYear()} Hyperion Pay. Todos os direitos reservados.
-                    </p>
-                    <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 11px;">
-                      Este é um email automático. Por favor, não responda.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-        
-        <!-- Texto fora do card -->
-        <p style="margin: 24px 0 0 0; color: ${COLORS.textSubtle}; font-size: 11px; text-align: center;">
-          Enviado com 🧡 pela equipe Hyperion Pay
+      <td style="padding: 40px 36px 16px 36px; text-align: center;">
+        <div style="display: inline-block; font-size: 40px; margin-bottom: 16px;">${config.icon}</div>
+        <h2 style="margin: 0 0 8px 0; color: ${COLORS.text}; font-size: 20px; font-weight: 700;">
+          ${config.title}
+        </h2>
+      </td>
+    </tr>
+    
+    <tr>
+      <td style="padding: 8px 36px 16px 36px; text-align: center;">
+        <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 14px;">
+          Ola <strong style="color: ${COLORS.text};">${name}</strong>,
         </p>
       </td>
     </tr>
-  </table>
-</body>
-</html>
+    
+    <tr>
+      <td style="padding: 8px 36px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="background: ${config.bg}; border-left: 4px solid ${config.color}; border-radius: 12px; padding: 20px;">
+              <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 14px; line-height: 1.7;">
+                ${config.message}
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    
+    <!-- CTA -->
+    <tr>
+      <td style="padding: 24px 36px 36px 36px; text-align: center;">
+        <a href="https://app.hyperionpay.com.br/dashboard/wallet" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primaryDark} 0%, ${COLORS.primary} 100%); color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 14px 36px; border-radius: 10px;">
+          Ver detalhes &#8594;
+        </a>
+      </td>
+    </tr>
   `;
 
   try {
     const { error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
-      subject: `${config.icon} ${config.title} - Hyperion Pay`,
-      html: htmlContent,
+      subject: `${config.title} - Hyperion Pay`,
+      html: emailWrapper(content),
     });
 
     if (error) {
-      console.error("[Email] Erro ao enviar notificação de saque:", error);
+      console.error("[Email] Erro ao enviar notificacao de saque:", error);
       return false;
     }
 
-    console.log("[Email] Notificação de saque enviada para:", to);
+    console.log("[Email] Notificacao de saque enviada para:", to);
     return true;
   } catch (error) {
-    console.error("[Email] Erro ao enviar notificação de saque:", error);
+    console.error("[Email] Erro ao enviar notificacao de saque:", error);
     return false;
   }
 }
@@ -480,118 +366,68 @@ export async function sendDepositNotification(
   name: string,
   amount: number
 ): Promise<boolean> {
-  const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; background-color: ${COLORS.background}; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.background}; padding: 40px 20px;">
+  const content = `
     <tr>
-      <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.15);">
-          
-          <!-- Header com Logo -->
-          <tr>
-            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, transparent 100%);">
-              <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
-              <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                <span style="color: ${COLORS.primary};">Hyperion</span><span style="color: ${COLORS.text};"> Pay</span>
-              </h1>
-              <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 15px;">Sua plataforma de pagamentos</p>
-            </td>
-          </tr>
-
-          <!-- Divisor gradiente -->
-          <tr>
-            <td style="padding: 0 40px;">
-              <div style="height: 2px; background: linear-gradient(90deg, transparent, ${COLORS.primary}, transparent); border-radius: 2px;"></div>
-            </td>
-          </tr>
-          
-          <!-- Conteudo -->
-          <tr>
-            <td style="padding: 40px;">
-              <div style="text-align: center; margin-bottom: 28px;">
-                <div style="display: inline-block; font-size: 48px; margin-bottom: 16px;">
-                  💰
-                </div>
-                <h2 style="margin: 0 0 8px 0; color: ${COLORS.text}; font-size: 22px; font-weight: 600;">
-                  Depósito Recebido!
-                </h2>
-              </div>
-              
-              <p style="margin: 0 0 24px 0; color: ${COLORS.textMuted}; font-size: 15px; line-height: 1.7; text-align: center;">
-                Olá <strong style="color: ${COLORS.text};">${name}</strong>,
-              </p>
-              
-              <div style="background: linear-gradient(135deg, #1a1a1a 0%, #141414 100%); border: 2px solid #22c55e; border-radius: 20px; padding: 28px; text-align: center; margin-bottom: 28px;">
-                <p style="margin: 0 0 8px 0; color: ${COLORS.textSubtle}; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">Valor creditado</p>
-                <span style="font-size: 36px; font-weight: 700; color: #22c55e;">R$ ${amount.toFixed(2)}</span>
-              </div>
-              
-              <p style="margin: 0 0 28px 0; color: ${COLORS.textMuted}; font-size: 15px; line-height: 1.7; text-align: center;">
-                O valor já está disponível na sua conta para utilização.
-              </p>
-              
-              <!-- CTA Button -->
-              <div style="text-align: center; margin-bottom: 24px;">
-                <a href="https://hyperionpay.com.br/dashboard/wallet" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);">
-                  Ver meu saldo →
-                </a>
-              </div>
-            </td>
-          </tr>
-          
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 32px 40px; background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%); border-top: 1px solid ${COLORS.cardBorder};">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="text-align: center;">
-                    <p style="margin: 0 0 8px 0; color: ${COLORS.textSubtle}; font-size: 12px;">
-                      © ${new Date().getFullYear()} Hyperion Pay. Todos os direitos reservados.
-                    </p>
-                    <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 11px;">
-                      Este é um email automático. Por favor, não responda.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-        
-        <!-- Texto fora do card -->
-        <p style="margin: 24px 0 0 0; color: ${COLORS.textSubtle}; font-size: 11px; text-align: center;">
-          Enviado com 🧡 pela equipe Hyperion Pay
+      <td style="padding: 40px 36px 16px 36px; text-align: center;">
+        <div style="display: inline-block; font-size: 40px; margin-bottom: 16px;">&#128176;</div>
+        <h2 style="margin: 0 0 8px 0; color: ${COLORS.text}; font-size: 20px; font-weight: 700;">
+          Deposito Recebido!
+        </h2>
+        <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 14px;">
+          Ola <strong style="color: ${COLORS.text};">${name}</strong>,
         </p>
       </td>
     </tr>
-  </table>
-</body>
-</html>
+    
+    <!-- Valor -->
+    <tr>
+      <td style="padding: 16px 36px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="background: ${COLORS.innerBg}; border: 2px solid #22c55e; border-radius: 16px; padding: 28px; text-align: center;">
+              <p style="margin: 0 0 8px 0; color: ${COLORS.textMuted}; font-size: 11px; text-transform: uppercase; letter-spacing: 2px;">Valor creditado</p>
+              <span style="font-size: 36px; font-weight: 700; color: #22c55e;">R$ ${amount.toFixed(2)}</span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    
+    <tr>
+      <td style="padding: 8px 36px; text-align: center;">
+        <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 14px;">
+          O valor ja esta disponivel na sua conta.
+        </p>
+      </td>
+    </tr>
+    
+    <!-- CTA -->
+    <tr>
+      <td style="padding: 24px 36px 36px 36px; text-align: center;">
+        <a href="https://app.hyperionpay.com.br/dashboard/wallet" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primaryDark} 0%, ${COLORS.primary} 100%); color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 14px 36px; border-radius: 10px;">
+          Ver meu saldo &#8594;
+        </a>
+      </td>
+    </tr>
   `;
 
   try {
     const { error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
-      subject: `💰 Depósito de R$ ${amount.toFixed(2)} recebido - Hyperion Pay`,
-      html: htmlContent,
+      subject: `Deposito de R$ ${amount.toFixed(2)} recebido - Hyperion Pay`,
+      html: emailWrapper(content),
     });
 
     if (error) {
-      console.error("[Email] Erro ao enviar notificação de depósito:", error);
+      console.error("[Email] Erro ao enviar notificacao de deposito:", error);
       return false;
     }
 
-    console.log("[Email] Notificação de depósito enviada para:", to);
+    console.log("[Email] Notificacao de deposito enviada para:", to);
     return true;
   } catch (error) {
-    console.error("[Email] Erro ao enviar notificação de depósito:", error);
+    console.error("[Email] Erro ao enviar notificacao de deposito:", error);
     return false;
   }
 }
@@ -602,87 +438,37 @@ export async function sendNotificationEmail(
   title: string,
   message: string
 ): Promise<boolean> {
-  const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; background-color: ${COLORS.background}; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.background}; padding: 40px 20px;">
+  const content = `
     <tr>
-      <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.15);">
-          
-          <!-- Header com Logo -->
+      <td style="padding: 40px 36px 16px 36px; text-align: center;">
+        <h2 style="margin: 0 0 16px 0; color: ${COLORS.text}; font-size: 20px; font-weight: 700;">
+          ${title}
+        </h2>
+      </td>
+    </tr>
+    
+    <tr>
+      <td style="padding: 0 36px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
-            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, transparent 100%);">
-              <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
-              <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                <span style="color: ${COLORS.primary};">Hyperion</span><span style="color: ${COLORS.text};"> Pay</span>
-              </h1>
-              <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 15px;">Sua plataforma de pagamentos</p>
-            </td>
-          </tr>
-
-          <!-- Divisor gradiente -->
-          <tr>
-            <td style="padding: 0 40px;">
-              <div style="height: 2px; background: linear-gradient(90deg, transparent, ${COLORS.primary}, transparent); border-radius: 2px;"></div>
-            </td>
-          </tr>
-          
-          <!-- Conteudo -->
-          <tr>
-            <td style="padding: 40px;">
-              <h2 style="margin: 0 0 24px 0; color: ${COLORS.text}; font-size: 22px; font-weight: 600; text-align: center;">
-                ${title}
-              </h2>
-              
-              <div style="background: linear-gradient(135deg, #1a1a1a 0%, #141414 100%); border-radius: 16px; padding: 24px; margin-bottom: 28px;">
-                <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 15px; line-height: 1.7;">
-                  ${message}
-                </p>
-              </div>
-              
-              <!-- CTA Button -->
-              <div style="text-align: center;">
-                <a href="https://hyperionpay.com.br/dashboard" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primary} 0%, ${COLORS.primaryDark} 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 600; padding: 16px 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);">
-                  Acessar minha conta →
-                </a>
-              </div>
-            </td>
-          </tr>
-          
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 32px 40px; background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%); border-top: 1px solid ${COLORS.cardBorder};">
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="text-align: center;">
-                    <p style="margin: 0 0 8px 0; color: ${COLORS.textSubtle}; font-size: 12px;">
-                      © ${new Date().getFullYear()} Hyperion Pay. Todos os direitos reservados.
-                    </p>
-                    <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 11px;">
-                      Este é um email automático. Por favor, não responda.
-                    </p>
-                  </td>
-                </tr>
-              </table>
+            <td style="background: ${COLORS.innerBg}; border-radius: 14px; border: 1px solid ${COLORS.cardBorder}; padding: 24px;">
+              <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 14px; line-height: 1.7;">
+                ${message}
+              </p>
             </td>
           </tr>
         </table>
-        
-        <!-- Texto fora do card -->
-        <p style="margin: 24px 0 0 0; color: ${COLORS.textSubtle}; font-size: 11px; text-align: center;">
-          Enviado com 🧡 pela equipe Hyperion Pay
-        </p>
       </td>
     </tr>
-  </table>
-</body>
-</html>
+    
+    <!-- CTA -->
+    <tr>
+      <td style="padding: 28px 36px 36px 36px; text-align: center;">
+        <a href="https://app.hyperionpay.com.br/dashboard" style="display: inline-block; background: linear-gradient(135deg, ${COLORS.primaryDark} 0%, ${COLORS.primary} 100%); color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; padding: 14px 36px; border-radius: 10px;">
+          Acessar minha conta &#8594;
+        </a>
+      </td>
+    </tr>
   `;
 
   try {
@@ -690,124 +476,89 @@ export async function sendNotificationEmail(
       from: FROM_EMAIL,
       to,
       subject,
-      html: htmlContent,
+      html: emailWrapper(content),
     });
 
     if (error) {
-      console.error("[Email] Erro ao enviar notificação:", error);
+      console.error("[Email] Erro ao enviar notificacao:", error);
       return false;
     }
 
-    console.log("[Email] Notificação enviada para:", to);
+    console.log("[Email] Notificacao enviada para:", to);
     return true;
   } catch (error) {
-    console.error("[Email] Erro ao enviar notificação:", error);
+    console.error("[Email] Erro ao enviar notificacao:", error);
     return false;
   }
 }
 
-// Função para enviar email de reset de senha
+// Funcao para enviar email de reset de senha
 export async function sendPasswordResetEmail(
   to: string,
   code: string,
   name?: string
 ): Promise<boolean> {
-  const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; background-color: ${COLORS.background}; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.background}; padding: 40px 20px;">
+  const content = `
     <tr>
-      <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.15);">
-          
-          <!-- Header com Logo -->
+      <td style="padding: 40px 36px 16px 36px; text-align: center;">
+        <div style="display: inline-block; width: 56px; height: 56px; line-height: 56px; background: ${COLORS.innerBg}; border: 1px solid ${COLORS.cardBorder}; border-radius: 14px; font-size: 24px; margin-bottom: 20px;">&#128274;</div>
+        <h2 style="margin: 0 0 8px 0; color: ${COLORS.text}; font-size: 20px; font-weight: 700;">
+          Alteracao de Senha
+        </h2>
+        <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 14px; line-height: 1.6;">
+          ${name ? `Ola <strong style="color: ${COLORS.text};">${name}</strong>, ` : ""}voce solicitou a alteracao da sua senha.
+        </p>
+      </td>
+    </tr>
+    
+    <!-- Codigo -->
+    <tr>
+      <td style="padding: 16px 36px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
-            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, transparent 100%);">
-              <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
-              <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                <span style="color: ${COLORS.primary};">Hyperion</span><span style="color: ${COLORS.text};"> Pay</span>
-              </h1>
-              <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 14px;">Alteração de Senha</p>
-            </td>
-          </tr>
-          
-          <!-- Conteúdo -->
-          <tr>
-            <td style="padding: 0 40px 40px 40px;">
-              <p style="margin: 0 0 24px 0; color: ${COLORS.text}; font-size: 16px; line-height: 1.6;">
-                Olá${name ? `, <strong>${name}</strong>` : ""}! 👋
-              </p>
-              
-              <p style="margin: 0 0 24px 0; color: ${COLORS.textMuted}; font-size: 14px; line-height: 1.6;">
-                Você solicitou a alteração da sua senha. Use o código abaixo para continuar:
-              </p>
-              
-              <!-- Código de verificação -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
+            <td style="background: ${COLORS.innerBg}; border: 2px solid ${COLORS.primary}; border-radius: 16px; padding: 28px 20px; text-align: center;">
+              <p style="margin: 0 0 12px 0; color: ${COLORS.accent}; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 3px;">Codigo de seguranca</p>
+              <table cellpadding="0" cellspacing="0" align="center">
                 <tr>
-                  <td style="background: linear-gradient(135deg, rgba(79, 70, 229, 0.15) 0%, rgba(255, 140, 0, 0.1) 100%); border: 2px solid ${COLORS.primary}; border-radius: 16px; padding: 32px; text-align: center;">
-                    <p style="margin: 0 0 12px 0; color: ${COLORS.textMuted}; font-size: 12px; text-transform: uppercase; letter-spacing: 2px;">
-                      Código de Segurança
-                    </p>
-                    <p style="margin: 0; font-size: 42px; font-weight: 700; letter-spacing: 12px; color: ${COLORS.primary}; font-family: 'Courier New', monospace; text-shadow: 0 0 30px rgba(79, 70, 229, 0.3);">
-                      ${code}
-                    </p>
-                  </td>
+                  <td style="font-family: 'Courier New', Courier, monospace; font-size: 44px; font-weight: 700; color: ${COLORS.text}; letter-spacing: 14px; padding: 8px 16px; background: ${COLORS.background}; border-radius: 12px; border: 1px solid ${COLORS.cardBorder};">${code}</td>
                 </tr>
               </table>
-              
-              <!-- Aviso -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom: 24px;">
-                <tr>
-                  <td style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 12px; padding: 16px;">
-                    <p style="margin: 0; color: #fca5a5; font-size: 13px; line-height: 1.5;">
-                      ⚠️ <strong>Importante:</strong> Se você não solicitou esta alteração, ignore este email e sua conta permanecerá segura.
-                    </p>
-                  </td>
-                </tr>
-              </table>
-              
-              <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 12px;">
-                Este código expira em <strong style="color: ${COLORS.text};">10 minutos</strong>.
-              </p>
             </td>
           </tr>
-          
-          <!-- Footer -->
+        </table>
+      </td>
+    </tr>
+    
+    <!-- Aviso -->
+    <tr>
+      <td style="padding: 16px 36px;">
+        <table width="100%" cellpadding="0" cellspacing="0">
           <tr>
-            <td style="padding: 24px 40px; border-top: 1px solid ${COLORS.cardBorder}; text-align: center;">
-              <p style="margin: 0 0 8px 0; color: ${COLORS.textMuted}; font-size: 12px;">
-                © ${new Date().getFullYear()} Hyperion Pay. Todos os direitos reservados.
-              </p>
-              <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 11px;">
-                Este é um email automático. Por favor, não responda.
+            <td style="background: rgba(239, 68, 68, 0.06); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 12px; padding: 14px 16px;">
+              <p style="margin: 0; color: #fca5a5; font-size: 12px; line-height: 1.5;">
+                <strong>Importante:</strong> Se voce nao solicitou esta alteracao, ignore este email e sua conta permanecera segura.
               </p>
             </td>
           </tr>
         </table>
-        
-        <!-- Texto fora do card -->
-        <p style="margin: 24px 0 0 0; color: ${COLORS.textSubtle}; font-size: 11px; text-align: center;">
-          Enviado com 🧡 pela equipe Hyperion Pay
+      </td>
+    </tr>
+    
+    <tr>
+      <td style="padding: 12px 36px 36px 36px; text-align: center;">
+        <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 13px;">
+          Este codigo expira em <strong style="color: ${COLORS.text};">10 minutos</strong>.
         </p>
       </td>
     </tr>
-  </table>
-</body>
-</html>
   `;
 
   try {
     const { error } = await getResend().emails.send({
       from: FROM_EMAIL,
       to,
-      subject: "🔐 Alteração de Senha - Hyperion Pay",
-      html: htmlContent,
+      subject: "Alteracao de Senha - Hyperion Pay",
+      html: emailWrapper(content),
     });
 
     if (error) {
@@ -831,91 +582,66 @@ export async function sendNewLoginAlert(
   ip: string,
   date: string
 ): Promise<boolean> {
-  const htmlContent = `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body style="margin: 0; padding: 0; background-color: ${COLORS.background}; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: ${COLORS.background}; padding: 40px 20px;">
+  const content = `
     <tr>
-      <td align="center">
-        <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 520px; background: linear-gradient(180deg, ${COLORS.cardBg} 0%, #0d0d0d 100%); border-radius: 24px; border: 1px solid ${COLORS.cardBorder}; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(79, 70, 229, 0.15);">
-          
-          <!-- Header com Logo -->
+      <td style="padding: 40px 36px 16px 36px; text-align: center;">
+        <div style="display: inline-block; width: 56px; height: 56px; line-height: 56px; background: rgba(234, 179, 8, 0.1); border: 1px solid rgba(234, 179, 8, 0.2); border-radius: 14px; font-size: 24px; margin-bottom: 20px;">&#128275;</div>
+        <h2 style="margin: 0 0 8px 0; color: ${COLORS.text}; font-size: 20px; font-weight: 700;">
+          Novo acesso detectado
+        </h2>
+        <p style="margin: 0; color: ${COLORS.textMuted}; font-size: 14px;">
+          Ola <strong style="color: ${COLORS.text};">${name}</strong>, detectamos um login na sua conta.
+        </p>
+      </td>
+    </tr>
+    
+    <!-- Detalhes -->
+    <tr>
+      <td style="padding: 16px 36px;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background: ${COLORS.innerBg}; border-radius: 14px; border: 1px solid ${COLORS.cardBorder};">
           <tr>
-            <td style="padding: 50px 40px 40px 40px; text-align: center; background: linear-gradient(180deg, rgba(79, 70, 229, 0.08) 0%, transparent 100%);">
-              <img src="${LOGO_URL}" alt="Hyperion Pay" width="80" height="80" style="display: block; margin: 0 auto 24px auto; border-radius: 16px;">
-              <h1 style="margin: 0 0 8px 0; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
-                <span style="color: ${COLORS.primary};">Hyperion</span><span style="color: ${COLORS.text};"> Pay</span>
-              </h1>
+            <td style="padding: 14px 20px; border-bottom: 1px solid ${COLORS.cardBorder};">
+              <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                <td style="color: ${COLORS.textMuted}; font-size: 13px;">Dispositivo</td>
+                <td style="color: ${COLORS.text}; font-size: 13px; text-align: right; font-weight: 600;">${device}</td>
+              </tr></table>
             </td>
           </tr>
-
-          <!-- Divisor -->
           <tr>
-            <td style="padding: 0 40px;">
-              <div style="height: 2px; background: linear-gradient(90deg, transparent, ${COLORS.primary}, transparent); border-radius: 2px;"></div>
+            <td style="padding: 14px 20px; border-bottom: 1px solid ${COLORS.cardBorder};">
+              <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                <td style="color: ${COLORS.textMuted}; font-size: 13px;">Navegador</td>
+                <td style="color: ${COLORS.text}; font-size: 13px; text-align: right; font-weight: 600;">${browser}</td>
+              </tr></table>
             </td>
           </tr>
-          
-          <!-- Conteudo -->
           <tr>
-            <td style="padding: 40px;">
-              <div style="text-align: center; margin-bottom: 28px;">
-                <div style="font-size: 48px; margin-bottom: 16px;">🔐</div>
-                <h2 style="margin: 0 0 8px 0; color: ${COLORS.text}; font-size: 22px; font-weight: 600;">
-                  Novo acesso detectado
-                </h2>
-              </div>
-              
-              <p style="margin: 0 0 24px 0; color: ${COLORS.textMuted}; font-size: 15px; line-height: 1.7; text-align: center;">
-                Ola <strong style="color: ${COLORS.text};">${name}</strong>, detectamos um login na sua conta de um novo dispositivo.
-              </p>
-              
-              <div style="background: #1a1a1a; border-radius: 12px; padding: 20px; margin-bottom: 28px;">
-                <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr>
-                    <td style="padding: 8px 0; color: ${COLORS.textMuted}; font-size: 14px;">Dispositivo:</td>
-                    <td style="padding: 8px 0; color: ${COLORS.text}; font-size: 14px; text-align: right;">${device}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: ${COLORS.textMuted}; font-size: 14px;">Navegador:</td>
-                    <td style="padding: 8px 0; color: ${COLORS.text}; font-size: 14px; text-align: right;">${browser}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: ${COLORS.textMuted}; font-size: 14px;">IP:</td>
-                    <td style="padding: 8px 0; color: ${COLORS.text}; font-size: 14px; text-align: right;">${ip}</td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 8px 0; color: ${COLORS.textMuted}; font-size: 14px;">Data:</td>
-                    <td style="padding: 8px 0; color: ${COLORS.text}; font-size: 14px; text-align: right;">${date}</td>
-                  </tr>
-                </table>
-              </div>
-              
-              <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 13px; line-height: 1.6; text-align: center;">
-                Se nao foi voce, altere sua senha imediatamente e entre em contato com o suporte.
-              </p>
+            <td style="padding: 14px 20px; border-bottom: 1px solid ${COLORS.cardBorder};">
+              <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                <td style="color: ${COLORS.textMuted}; font-size: 13px;">IP</td>
+                <td style="color: ${COLORS.text}; font-size: 13px; text-align: right; font-family: 'Courier New', monospace;">${ip}</td>
+              </tr></table>
             </td>
           </tr>
-          
-          <!-- Footer -->
           <tr>
-            <td style="padding: 32px 40px; background: linear-gradient(180deg, transparent 0%, rgba(0,0,0,0.3) 100%); border-top: 1px solid ${COLORS.cardBorder};">
-              <p style="margin: 0; color: ${COLORS.textSubtle}; font-size: 12px; text-align: center;">
-                © ${new Date().getFullYear()} Hyperion Pay. Todos os direitos reservados.
-              </p>
+            <td style="padding: 14px 20px;">
+              <table width="100%" cellpadding="0" cellspacing="0"><tr>
+                <td style="color: ${COLORS.textMuted}; font-size: 13px;">Data</td>
+                <td style="color: ${COLORS.text}; font-size: 13px; text-align: right; font-weight: 600;">${date}</td>
+              </tr></table>
             </td>
           </tr>
         </table>
       </td>
     </tr>
-  </table>
-</body>
-</html>
+    
+    <tr>
+      <td style="padding: 16px 36px 36px 36px; text-align: center;">
+        <p style="margin: 0; color: ${COLORS.primaryDeep}; font-size: 12px; line-height: 1.6;">
+          Se nao foi voce, altere sua senha imediatamente e entre em contato com o suporte.
+        </p>
+      </td>
+    </tr>
   `;
 
   try {
@@ -923,7 +649,7 @@ export async function sendNewLoginAlert(
       from: FROM_EMAIL,
       to,
       subject: "Novo acesso na sua conta - Hyperion Pay",
-      html: htmlContent,
+      html: emailWrapper(content),
     });
 
     if (error) {
