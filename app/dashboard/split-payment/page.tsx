@@ -20,7 +20,7 @@ export default function DividirPagamentoPage() {
   const criarParcelas = () => {
     const total = parseFloat(inputValor.replace(",", "."))
     if (!total || total < 100) {
-      toast.error("Valor minimo R$ 100")
+      toast.error("Valor minimo R$ 100,00")
       return
     }
 
@@ -55,6 +55,8 @@ export default function DividirPagamentoPage() {
     setProcessando(true)
 
     try {
+      console.log("[v0] Gerando PIX para parcela", indiceParcela + 1, "valor:", valorParcela)
+      
       const resp = await fetch("/api/pix/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -65,20 +67,32 @@ export default function DividirPagamentoPage() {
       })
 
       const json = await resp.json()
+      console.log("[v0] Resposta PIX:", JSON.stringify(json).substring(0, 300))
 
       if (!resp.ok) {
         throw new Error(json.error || "Falha ao gerar")
       }
 
+      // Pegar o copyPaste - pode vir como copyPaste, copy_paste, qrCode ou qrCodeBase64
+      const copiaCola = json.copyPaste || json.copy_paste || json.qrCode || json.qrCodeBase64 || ""
+      const qrCode = json.qrCodeBase64 || json.qrCode || copiaCola || ""
+
+      console.log("[v0] copiaCola length:", copiaCola.length, "qrCode length:", qrCode.length)
+
+      if (!copiaCola && !qrCode) {
+        throw new Error("PIX gerado mas sem codigo. Tente novamente.")
+      }
+
       setPixAtual({
-        qrCode: json.qrCodeBase64 || json.qrCode || "",
-        copiaCola: json.copyPaste || "",
+        qrCode: qrCode,
+        copiaCola: copiaCola,
         valor: valorParcela
       })
 
       toast.success("PIX gerado!")
     } catch (e: any) {
-      toast.error(e.message || "Erro")
+      console.error("[v0] Erro ao gerar PIX:", e)
+      toast.error(e.message || "Erro ao gerar PIX")
     } finally {
       setProcessando(false)
     }
@@ -121,7 +135,7 @@ export default function DividirPagamentoPage() {
     <div className="max-w-3xl mx-auto p-4 space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Pagamento Dividido</h1>
-        <p className="text-gray-500">Divida valores grandes em parcelas menores</p>
+        <p className="text-muted-foreground">Divida valores grandes em parcelas menores</p>
       </div>
 
       {listaValores.length === 0 ? (
@@ -138,7 +152,7 @@ export default function DividirPagamentoPage() {
               onChange={(e) => setInputValor(e.target.value)}
               className="text-xl"
             />
-            <Button onClick={criarParcelas} className="w-full bg-orange-500 hover:bg-orange-600">
+            <Button onClick={criarParcelas} className="w-full bg-indigo-600 hover:bg-indigo-700">
               Dividir em Parcelas
             </Button>
           </CardContent>
@@ -150,17 +164,17 @@ export default function DividirPagamentoPage() {
             <CardContent className="py-4">
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="text-sm text-gray-500">Progresso</p>
+                  <p className="text-sm text-muted-foreground">Progresso</p>
                   <p className="text-xl font-bold">{parcelasPagas.length}/{listaValores.length}</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-500">Recebido</p>
+                  <p className="text-sm text-muted-foreground">Recebido</p>
                   <p className="text-xl font-bold text-green-500">R$ {totalPago.toFixed(2)}</p>
                 </div>
               </div>
-              <div className="mt-3 h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="mt-3 h-2 bg-muted rounded-full overflow-hidden">
                 <div 
-                  className="h-full bg-orange-500 transition-all"
+                  className="h-full bg-indigo-600 transition-all"
                   style={{ width: `${(parcelasPagas.length / listaValores.length) * 100}%` }}
                 />
               </div>
@@ -174,19 +188,19 @@ export default function DividirPagamentoPage() {
               const atual = idx === indiceParcela && !pago
 
               return (
-                <Card key={idx} className={atual ? "ring-2 ring-orange-500" : pago ? "opacity-60" : ""}>
+                <Card key={idx} className={atual ? "ring-2 ring-indigo-500" : pago ? "opacity-60" : ""}>
                   <CardContent className="py-4">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${pago ? "bg-green-500 text-white" : atual ? "bg-orange-500 text-white" : "bg-gray-200"}`}>
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${pago ? "bg-green-500 text-white" : atual ? "bg-indigo-600 text-white" : "bg-muted"}`}>
                           {pago ? <CheckCircle2 className="w-5 h-5" /> : idx + 1}
                         </div>
                         <div>
                           <p className="font-medium">Parcela {idx + 1}</p>
-                          <p className="text-sm text-gray-500">R$ {valor.toFixed(2)}</p>
+                          <p className="text-sm text-muted-foreground">R$ {valor.toFixed(2)}</p>
                         </div>
                       </div>
-                      <span className={`text-xs px-2 py-1 rounded ${pago ? "bg-green-100 text-green-700" : "bg-orange-100 text-orange-700"}`}>
+                      <span className={`text-xs px-2 py-1 rounded ${pago ? "bg-green-100 text-green-700" : "bg-indigo-100 text-indigo-700"}`}>
                         {pago ? "Pago" : "Pendente"}
                       </span>
                     </div>
@@ -198,7 +212,7 @@ export default function DividirPagamentoPage() {
                           <Button 
                             onClick={chamarApiPix} 
                             disabled={processando}
-                            className="w-full bg-orange-500 hover:bg-orange-600"
+                            className="w-full bg-indigo-600 hover:bg-indigo-700"
                           >
                             {processando ? (
                               <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gerando...</>
@@ -211,12 +225,22 @@ export default function DividirPagamentoPage() {
                             {/* QR Code */}
                             <div className="flex justify-center">
                               <div className="bg-white p-3 rounded-lg border">
-                                <img
-                                  src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(pixAtual.copiaCola)}`}
-                                  alt="QR Code"
-                                  width={180}
-                                  height={180}
-                                />
+                                {pixAtual.qrCode.startsWith("data:") ? (
+                                  <img
+                                    src={pixAtual.qrCode}
+                                    alt="QR Code"
+                                    width={180}
+                                    height={180}
+                                  />
+                                ) : (
+                                  <img
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(pixAtual.copiaCola || pixAtual.qrCode)}`}
+                                    alt="QR Code"
+                                    width={180}
+                                    height={180}
+                                    crossOrigin="anonymous"
+                                  />
+                                )}
                               </div>
                             </div>
 
@@ -225,7 +249,7 @@ export default function DividirPagamentoPage() {
 
                             {/* Copia e Cola */}
                             <div>
-                              <p className="text-xs text-gray-500 mb-1">Codigo Copia e Cola:</p>
+                              <p className="text-xs text-muted-foreground mb-1">Codigo Copia e Cola:</p>
                               <div className="flex gap-2">
                                 <Input 
                                   value={pixAtual.copiaCola} 
