@@ -104,7 +104,7 @@ const achievementNames: Record<string, string> = {
 };
 
 const achievementLevels = [
-  { name: "Conquista Bronze", minValue: 0, maxValue: 20000, color: "from-orange-700 to-orange-900" },
+  { name: "Conquista Bronze", minValue: 0, maxValue: 20000, color: "from-indigo-600 to-indigo-800" },
   { name: "Conquista Prata", minValue: 20000, maxValue: 100000, color: "from-gray-400 to-gray-600" },
   { name: "Conquista Ouro", minValue: 100000, maxValue: 500000, color: "from-yellow-500 to-yellow-700" },
   { name: "Conquista Diamante", minValue: 500000, maxValue: 1000000, color: "from-cyan-400 to-blue-600" },
