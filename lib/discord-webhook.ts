@@ -73,7 +73,7 @@ function sendDiscordWebhook(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           username: "Hyperion Pay Logs",
-          avatar_url: "https://hyperionpay.site/logo.png",
+          avatar_url: "https://hyperionpay.com.br/logo.png",
           ...payload,
         }),
       });

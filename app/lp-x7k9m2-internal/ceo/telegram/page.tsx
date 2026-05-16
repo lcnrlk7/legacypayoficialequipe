@@ -619,7 +619,7 @@ export default function TelegramPage() {
                   Manutencao
                 </button>
                 <button
-                  onClick={() => setMessage("🎉 <b>NOVIDADE!</b>\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n[Sua mensagem aqui]\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n🌐 https://www.hyperionpay.site")}
+                  onClick={() => setMessage("🎉 <b>NOVIDADE!</b>\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n[Sua mensagem aqui]\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n🌐 https://www.hyperionpay.com.br")}
                   className="px-3 py-1.5 bg-green-500/10 text-green-500 rounded-lg text-sm hover:bg-green-500/20 transition-colors"
                 >
                   Novidade

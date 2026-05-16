@@ -57,10 +57,10 @@ const MAIN_DOMAINS = [
 const CHECKOUT_DOMAIN = 'pay-checkout-pagamentoseguros.online'
 
 // Dominio do app (dashboard de usuario)
-const APP_DOMAIN = 'app.hyperionpay.site'
+const APP_DOMAIN = 'app.hyperionpay.com.br'
 
 // Dominio do painel CEO/Admin
-const CEO_DOMAIN = 'ceo.hyperionpay.site'
+const CEO_DOMAIN = 'ceo.hyperionpay.com.br'
 
 function isMainDomain(hostname: string): boolean {
   const cleanHostname = hostname.replace(/^www\./, '').split(':')[0]
@@ -122,7 +122,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.rewrite(url)
   }
   
-  // Se for dominio principal (www.hyperionpay.site) - APENAS landing page
+  // Se for dominio principal (www.hyperionpay.com.br) - APENAS landing page
   if (isMainDomain(hostname)) {
     // Ignora arquivos estaticos e API
     if (
@@ -133,21 +133,21 @@ export async function middleware(request: NextRequest) {
       return await handleAuth(request)
     }
     
-    // Redireciona rotas de auth para app.hyperionpay.site
+    // Redireciona rotas de auth para app.hyperionpay.com.br
     if (pathname.startsWith('/auth/')) {
-      const url = new URL(`https://app.hyperionpay.site${pathname}${request.nextUrl.search}`)
+      const url = new URL(`https://app.hyperionpay.com.br${pathname}${request.nextUrl.search}`)
       return NextResponse.redirect(url)
     }
     
-    // Redireciona dashboard para app.hyperionpay.site
+    // Redireciona dashboard para app.hyperionpay.com.br
     if (pathname.startsWith('/dashboard')) {
-      const url = new URL(`https://app.hyperionpay.site${pathname}${request.nextUrl.search}`)
+      const url = new URL(`https://app.hyperionpay.com.br${pathname}${request.nextUrl.search}`)
       return NextResponse.redirect(url)
     }
     
-    // Redireciona painel admin para ceo.hyperionpay.site
+    // Redireciona painel admin para ceo.hyperionpay.com.br
     if (pathname.startsWith('/lp-x7k9m2-internal')) {
-      const url = new URL(`https://ceo.hyperionpay.site${pathname}${request.nextUrl.search}`)
+      const url = new URL(`https://ceo.hyperionpay.com.br${pathname}${request.nextUrl.search}`)
       return NextResponse.redirect(url)
     }
     
@@ -155,7 +155,7 @@ export async function middleware(request: NextRequest) {
     return await handleAuth(request)
   }
   
-  // Se for dominio do CEO (ceo.hyperionpay.site) - painel admin exclusivo
+  // Se for dominio do CEO (ceo.hyperionpay.com.br) - painel admin exclusivo
   if (isCeoDomain(hostname)) {
     // Ignora arquivos estaticos
     if (
@@ -187,7 +187,7 @@ export async function middleware(request: NextRequest) {
     return await handleAuth(request)
   }
   
-  // Se for dominio do app (app.hyperionpay.site) - dashboard de usuario
+  // Se for dominio do app (app.hyperionpay.com.br) - dashboard de usuario
   if (isAppDomain(hostname)) {
     // Ignora arquivos estaticos
     if (
