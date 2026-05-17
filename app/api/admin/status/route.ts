@@ -341,13 +341,16 @@ export async function GET(request: Request) {
       getActiveIncidents(),
     ]);
 
-    // Salvar status no historico
+    // Salvar status no historico (inserir um por vez para compatibilidade com neon)
     try {
-      await sql`
-        INSERT INTO status_history (service_id, status, latency, checked_at)
-        VALUES ${sql(services.map((s) => [s.id, s.status, s.latency, new Date()]))}
-        ON CONFLICT DO NOTHING
-      `;
+      const now = new Date()
+      for (const s of services) {
+        await sql`
+          INSERT INTO status_history (service_id, status, latency, checked_at)
+          VALUES (${s.id}, ${s.status}, ${s.latency}, ${now})
+          ON CONFLICT DO NOTHING
+        `
+      }
     } catch {
       // Tabela pode nao existir
     }
