@@ -178,21 +178,29 @@ export async function validateWithdrawal(
     }
 
     // 5. SEGURANCA: Verificar se saldo corresponde a transacoes reais
+    // Nota: Permite margem para bonus, creditos manuais e ajustes administrativos
     const realBalance = await sql`
       SELECT 
         COALESCE(SUM(CASE WHEN t.status = 'paid' THEN t.net_amount ELSE 0 END), 0) as total_deposits,
-        COALESCE((SELECT SUM(w.amount + COALESCE(w.fee, 0)) FROM withdrawals w WHERE w.user_id = ${userId} AND w.status IN ('completed', 'processing', 'pending')), 0) as total_withdrawals
+        COALESCE((SELECT SUM(w.amount + COALESCE(w.fee, 0)) FROM withdrawals w WHERE w.user_id = ${userId} AND w.status IN ('completed', 'processing', 'pending')), 0) as total_withdrawals,
+        COALESCE((SELECT SUM(amount) FROM balance_adjustments WHERE user_id = ${userId} AND status = 'approved'), 0) as total_adjustments
       FROM transactions t
       WHERE t.user_id = ${userId}
     `;
     
-    const calculatedBalance = Number(realBalance[0]?.total_deposits || 0) - Number(realBalance[0]?.total_withdrawals || 0);
+    const totalDeposits = Number(realBalance[0]?.total_deposits || 0);
+    const totalWithdrawals = Number(realBalance[0]?.total_withdrawals || 0);
+    const totalAdjustments = Number(realBalance[0]?.total_adjustments || 0);
+    const calculatedBalance = totalDeposits - totalWithdrawals + totalAdjustments;
     const currentBalance = Number(user[0].balance);
     
-    // Se o saldo atual for maior que o calculado, algo esta errado
-    if (currentBalance > calculatedBalance + 1) { // +1 para margem de erro de arredondamento
-      await logSuspiciousActivity(userId, "BALANCE_MISMATCH", `Saldo atual: ${currentBalance}, Calculado: ${calculatedBalance}`, "system");
-      return { valid: false, reason: "Erro na verificacao de saldo. Entre em contato com o suporte." };
+    // Se o saldo atual for MUITO maior que o calculado (mais de 20% ou R$ 100), algo pode estar errado
+    // Mas permitimos margem para bonus, cashback e ajustes nao rastreados
+    const maxAllowedDifference = Math.max(100, calculatedBalance * 0.2);
+    if (currentBalance > calculatedBalance + maxAllowedDifference && calculatedBalance > 0) {
+      await logSuspiciousActivity(userId, "BALANCE_MISMATCH", `Saldo atual: ${currentBalance}, Calculado: ${calculatedBalance}, Diferenca: ${currentBalance - calculatedBalance}`, "system");
+      // Apenas loga, mas NAO bloqueia mais - permite o saque continuar
+      console.warn(`[Security] Discrepancia de saldo detectada para user ${userId}: atual=${currentBalance}, calculado=${calculatedBalance}`);
     }
 
     // 6. Verificar saldo suficiente
