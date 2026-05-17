@@ -20,6 +20,8 @@ import {
   ChevronDown,
   Download,
   Upload,
+  UserX,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,6 +82,18 @@ const REASON_OPTIONS = [
   "Outro",
 ];
 
+interface SearchUser {
+  id: string;
+  name: string | null;
+  email: string;
+  cpf: string | null;
+  phone: string | null;
+  last_ip: string | null;
+  device_id: string | null;
+  is_blocked: boolean;
+  created_at: string;
+}
+
 export default function BlacklistPage() {
   const [entries, setEntries] = useState<BlacklistEntry[]>([]);
   const [stats, setStats] = useState<BlacklistStats | null>(null);
@@ -96,6 +110,23 @@ export default function BlacklistPage() {
     expires_days: 30,
   });
   const [addingEntry, setAddingEntry] = useState(false);
+  
+  // Estados para bloquear usuario completo
+  const [showBlockUserModal, setShowBlockUserModal] = useState(false);
+  const [userSearchTerm, setUserSearchTerm] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
+  const [searchingUsers, setSearchingUsers] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<SearchUser | null>(null);
+  const [blockUserReason, setBlockUserReason] = useState("");
+  const [blockUserNotes, setBlockUserNotes] = useState("");
+  const [blockTypes, setBlockTypes] = useState({
+    email: true,
+    cpf: true,
+    ip: true,
+    device: true,
+    phone: true,
+  });
+  const [blockingUser, setBlockingUser] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -245,6 +276,76 @@ export default function BlacklistPage() {
     }
   }
 
+  // Busca usuarios para bloquear
+  async function searchUsers(term: string) {
+    if (term.length < 3) {
+      setSearchResults([]);
+      return;
+    }
+    
+    setSearchingUsers(true);
+    try {
+      const response = await fetch(`/api/admin/blacklist/block-user?search=${encodeURIComponent(term)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setSearchResults(data.users || []);
+      }
+    } catch (error) {
+      console.error("Erro ao buscar usuarios:", error);
+    } finally {
+      setSearchingUsers(false);
+    }
+  }
+
+  // Bloqueia usuario completo
+  async function handleBlockUser() {
+    if (!selectedUser || !blockUserReason) return;
+    
+    setBlockingUser(true);
+    try {
+      const typesToBlock = Object.entries(blockTypes)
+        .filter(([_, enabled]) => enabled)
+        .map(([type]) => type);
+
+      const response = await fetch("/api/admin/blacklist/block-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          user_id: selectedUser.id,
+          reason: blockUserReason,
+          notes: blockUserNotes || null,
+          block_types: typesToBlock,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || "Erro ao bloquear usuario");
+        return;
+      }
+
+      alert(`Usuario bloqueado com sucesso!\n\nBloqueios criados:\n${data.blocks_created.join('\n')}`);
+      
+      // Reset modal
+      setShowBlockUserModal(false);
+      setSelectedUser(null);
+      setUserSearchTerm("");
+      setSearchResults([]);
+      setBlockUserReason("");
+      setBlockUserNotes("");
+      setBlockTypes({ email: true, cpf: true, ip: true, device: true, phone: true });
+      
+      // Recarrega lista
+      await loadData();
+    } catch (error) {
+      console.error("Erro ao bloquear usuario:", error);
+      alert("Erro ao bloquear usuario. Tente novamente.");
+    } finally {
+      setBlockingUser(false);
+    }
+  }
+
   const filteredEntries = entries.filter(entry => {
     const matchesSearch = entry.value.toLowerCase().includes(searchTerm.toLowerCase()) ||
       entry.reason.toLowerCase().includes(searchTerm.toLowerCase());
@@ -305,6 +406,15 @@ export default function BlacklistPage() {
           >
             <Download className="w-4 h-4 mr-2" />
             Exportar
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="border-orange-500/50 text-orange-400 hover:bg-orange-500/10"
+            onClick={() => setShowBlockUserModal(true)}
+          >
+            <UserX className="w-4 h-4 mr-2" />
+            Bloquear Usuario
           </Button>
           <Button
             size="sm"
@@ -637,6 +747,244 @@ export default function BlacklistPage() {
                   <Ban className="w-4 h-4 mr-2" />
                 )}
                 Adicionar Bloqueio
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Block User Modal */}
+      {showBlockUserModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-2xl bg-card border rounded-2xl shadow-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                <UserX className="w-5 h-5 text-orange-400" />
+                Bloquear Usuario Completo
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Selecione um usuario para bloquear todos os dados dele de uma vez
+              </p>
+            </div>
+            
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              {/* Search User */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Buscar Usuario</label>
+                <div className="relative">
+                  <Input
+                    placeholder="Digite nome, email, CPF ou telefone..."
+                    value={userSearchTerm}
+                    onChange={(e) => {
+                      setUserSearchTerm(e.target.value);
+                      searchUsers(e.target.value);
+                    }}
+                    className="pr-10"
+                  />
+                  {searchingUsers && (
+                    <Loader2 className="w-4 h-4 animate-spin absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                  )}
+                </div>
+                {userSearchTerm.length > 0 && userSearchTerm.length < 3 && (
+                  <p className="text-xs text-muted-foreground mt-1">Digite pelo menos 3 caracteres</p>
+                )}
+              </div>
+
+              {/* Search Results */}
+              {searchResults.length > 0 && !selectedUser && (
+                <div className="border rounded-lg divide-y max-h-48 overflow-y-auto">
+                  {searchResults.map((user) => (
+                    <div
+                      key={user.id}
+                      className="p-3 hover:bg-accent cursor-pointer transition-colors"
+                      onClick={() => setSelectedUser(user)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{user.name || "Sem nome"}</p>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                        </div>
+                        <div className="text-right text-xs text-muted-foreground">
+                          {user.cpf && <p>CPF: {user.cpf}</p>}
+                          {user.is_blocked && (
+                            <span className="text-red-400 font-medium">Ja bloqueado</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Selected User Info */}
+              {selectedUser && (
+                <div className="border rounded-xl p-4 bg-accent/50">
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <p className="font-bold text-lg">{selectedUser.name || "Sem nome"}</p>
+                      <p className="text-sm text-muted-foreground">{selectedUser.email}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedUser(null);
+                        setUserSearchTerm("");
+                      }}
+                    >
+                      Trocar
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-blue-400" />
+                      <span className="text-muted-foreground">CPF:</span>
+                      <span>{selectedUser.cpf || "N/A"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-pink-400" />
+                      <span className="text-muted-foreground">Telefone:</span>
+                      <span>{selectedUser.phone || "N/A"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-green-400" />
+                      <span className="text-muted-foreground">IP:</span>
+                      <span>{selectedUser.last_ip || "N/A"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Smartphone className="w-4 h-4 text-yellow-400" />
+                      <span className="text-muted-foreground">Device:</span>
+                      <span>{selectedUser.device_id ? selectedUser.device_id.substring(0, 12) + "..." : "N/A"}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Block Types */}
+              {selectedUser && (
+                <div>
+                  <label className="text-sm font-medium mb-3 block">O que bloquear?</label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <label className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${blockTypes.email ? 'bg-purple-500/10 border-purple-500/50' : 'hover:bg-accent'} ${!selectedUser.email ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={blockTypes.email}
+                        onChange={(e) => setBlockTypes({ ...blockTypes, email: e.target.checked })}
+                        disabled={!selectedUser.email}
+                        className="w-4 h-4 accent-purple-500"
+                      />
+                      <Mail className="w-4 h-4 text-purple-400" />
+                      <span className="text-sm">Email</span>
+                    </label>
+                    <label className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${blockTypes.cpf ? 'bg-blue-500/10 border-blue-500/50' : 'hover:bg-accent'} ${!selectedUser.cpf ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={blockTypes.cpf}
+                        onChange={(e) => setBlockTypes({ ...blockTypes, cpf: e.target.checked })}
+                        disabled={!selectedUser.cpf}
+                        className="w-4 h-4 accent-blue-500"
+                      />
+                      <FileText className="w-4 h-4 text-blue-400" />
+                      <span className="text-sm">CPF</span>
+                    </label>
+                    <label className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${blockTypes.ip ? 'bg-green-500/10 border-green-500/50' : 'hover:bg-accent'} ${!selectedUser.last_ip ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={blockTypes.ip}
+                        onChange={(e) => setBlockTypes({ ...blockTypes, ip: e.target.checked })}
+                        disabled={!selectedUser.last_ip}
+                        className="w-4 h-4 accent-green-500"
+                      />
+                      <Globe className="w-4 h-4 text-green-400" />
+                      <span className="text-sm">IP</span>
+                    </label>
+                    <label className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${blockTypes.device ? 'bg-yellow-500/10 border-yellow-500/50' : 'hover:bg-accent'} ${!selectedUser.device_id ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={blockTypes.device}
+                        onChange={(e) => setBlockTypes({ ...blockTypes, device: e.target.checked })}
+                        disabled={!selectedUser.device_id}
+                        className="w-4 h-4 accent-yellow-500"
+                      />
+                      <Smartphone className="w-4 h-4 text-yellow-400" />
+                      <span className="text-sm">Device</span>
+                    </label>
+                    <label className={`flex items-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${blockTypes.phone ? 'bg-pink-500/10 border-pink-500/50' : 'hover:bg-accent'} ${!selectedUser.phone ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                      <input
+                        type="checkbox"
+                        checked={blockTypes.phone}
+                        onChange={(e) => setBlockTypes({ ...blockTypes, phone: e.target.checked })}
+                        disabled={!selectedUser.phone}
+                        className="w-4 h-4 accent-pink-500"
+                      />
+                      <User className="w-4 h-4 text-pink-400" />
+                      <span className="text-sm">Telefone</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {/* Reason */}
+              {selectedUser && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Motivo do Bloqueio</label>
+                  <Select 
+                    value={blockUserReason} 
+                    onValueChange={setBlockUserReason}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o motivo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {REASON_OPTIONS.map((reason) => (
+                        <SelectItem key={reason} value={reason}>
+                          {reason}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Notes */}
+              {selectedUser && (
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Observacoes (opcional)</label>
+                  <Input
+                    placeholder="Detalhes adicionais sobre o bloqueio..."
+                    value={blockUserNotes}
+                    onChange={(e) => setBlockUserNotes(e.target.value)}
+                  />
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowBlockUserModal(false);
+                  setSelectedUser(null);
+                  setUserSearchTerm("");
+                  setSearchResults([]);
+                  setBlockUserReason("");
+                  setBlockUserNotes("");
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="bg-orange-500 hover:bg-orange-600 text-white"
+                onClick={handleBlockUser}
+                disabled={!selectedUser || !blockUserReason || blockingUser}
+              >
+                {blockingUser ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <UserX className="w-4 h-4 mr-2" />
+                )}
+                Bloquear Usuario
               </Button>
             </div>
           </div>
