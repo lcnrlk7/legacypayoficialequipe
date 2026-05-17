@@ -13,59 +13,152 @@ export async function POST(request: NextRequest) {
 
     const sql = neon(process.env.DATABASE_URL!)
 
-    // Monta a query dinamicamente
-    const conditions: string[] = []
-    const values: string[] = []
+    // Verifica cada tipo separadamente para usar tagged template literals
+    let blocked = false
+    let blockInfo: { reason: string; type: string; blocked_at: string; id: string } | null = null
 
-    if (ip) {
-      conditions.push(`(type = 'ip' AND value = '${ip}')`)
+    // Verifica IP
+    if (ip && !blocked) {
+      const result = await sql`
+        SELECT id, type, value, reason, created_at
+        FROM blacklist
+        WHERE type = 'ip' AND value = ${ip}
+        AND is_active = true
+        AND (expires_at IS NULL OR expires_at > NOW())
+        LIMIT 1
+      `
+      if (result.length > 0) {
+        blocked = true
+        blockInfo = { 
+          reason: result[0].reason, 
+          type: result[0].type, 
+          blocked_at: result[0].created_at,
+          id: result[0].id 
+        }
+      }
     }
-    if (email) {
-      conditions.push(`(type = 'email' AND value = '${email.toLowerCase()}')`)
+
+    // Verifica Email
+    if (email && !blocked) {
+      const cleanEmail = email.toLowerCase()
+      const result = await sql`
+        SELECT id, type, value, reason, created_at
+        FROM blacklist
+        WHERE type = 'email' AND value = ${cleanEmail}
+        AND is_active = true
+        AND (expires_at IS NULL OR expires_at > NOW())
+        LIMIT 1
+      `
+      if (result.length > 0) {
+        blocked = true
+        blockInfo = { 
+          reason: result[0].reason, 
+          type: result[0].type, 
+          blocked_at: result[0].created_at,
+          id: result[0].id 
+        }
+      }
     }
-    if (cpf) {
+
+    // Verifica CPF
+    if (cpf && !blocked) {
       const cleanCpf = cpf.replace(/\D/g, "")
-      conditions.push(`(type = 'cpf' AND value = '${cleanCpf}')`)
+      const result = await sql`
+        SELECT id, type, value, reason, created_at
+        FROM blacklist
+        WHERE type = 'cpf' AND value = ${cleanCpf}
+        AND is_active = true
+        AND (expires_at IS NULL OR expires_at > NOW())
+        LIMIT 1
+      `
+      if (result.length > 0) {
+        blocked = true
+        blockInfo = { 
+          reason: result[0].reason, 
+          type: result[0].type, 
+          blocked_at: result[0].created_at,
+          id: result[0].id 
+        }
+      }
     }
-    if (device_id) {
-      conditions.push(`(type = 'device' AND value = '${device_id}')`)
+
+    // Verifica Device ID
+    if (device_id && !blocked) {
+      const result = await sql`
+        SELECT id, type, value, reason, created_at
+        FROM blacklist
+        WHERE type = 'device' AND value = ${device_id}
+        AND is_active = true
+        AND (expires_at IS NULL OR expires_at > NOW())
+        LIMIT 1
+      `
+      if (result.length > 0) {
+        blocked = true
+        blockInfo = { 
+          reason: result[0].reason, 
+          type: result[0].type, 
+          blocked_at: result[0].created_at,
+          id: result[0].id 
+        }
+      }
     }
-    if (phone) {
+
+    // Verifica Phone
+    if (phone && !blocked) {
       const cleanPhone = phone.replace(/\D/g, "")
-      conditions.push(`(type = 'phone' AND value = '${cleanPhone}')`)
+      const result = await sql`
+        SELECT id, type, value, reason, created_at
+        FROM blacklist
+        WHERE type = 'phone' AND value = ${cleanPhone}
+        AND is_active = true
+        AND (expires_at IS NULL OR expires_at > NOW())
+        LIMIT 1
+      `
+      if (result.length > 0) {
+        blocked = true
+        blockInfo = { 
+          reason: result[0].reason, 
+          type: result[0].type, 
+          blocked_at: result[0].created_at,
+          id: result[0].id 
+        }
+      }
     }
-    if (user_id) {
-      conditions.push(`user_id = '${user_id}'`)
+
+    // Verifica User ID
+    if (user_id && !blocked) {
+      const result = await sql`
+        SELECT id, type, value, reason, created_at
+        FROM blacklist
+        WHERE user_id = ${user_id}
+        AND is_active = true
+        AND (expires_at IS NULL OR expires_at > NOW())
+        LIMIT 1
+      `
+      if (result.length > 0) {
+        blocked = true
+        blockInfo = { 
+          reason: result[0].reason, 
+          type: result[0].type, 
+          blocked_at: result[0].created_at,
+          id: result[0].id 
+        }
+      }
     }
 
-    if (conditions.length === 0) {
-      return NextResponse.json({ blocked: false })
-    }
-
-    const query = `
-      SELECT id, type, value, reason, created_at
-      FROM blacklist
-      WHERE (${conditions.join(" OR ")})
-      AND is_active = true
-      AND (expires_at IS NULL OR expires_at > NOW())
-      LIMIT 1
-    `
-
-    const result = await sql(query)
-
-    if (result.length > 0) {
+    if (blocked && blockInfo) {
       // Registra o hit
-      const block = result[0]
+      const userAgent = request.headers.get("user-agent") || null
       await sql`
         INSERT INTO blacklist_hits (blacklist_id, ip, user_agent, created_at)
-        VALUES (${block.id}, ${ip || null}, ${request.headers.get("user-agent") || null}, NOW())
+        VALUES (${blockInfo.id}, ${ip || null}, ${userAgent}, NOW())
       `
 
       return NextResponse.json({
         blocked: true,
-        reason: block.reason,
-        type: block.type,
-        blocked_at: block.created_at,
+        reason: blockInfo.reason,
+        type: blockInfo.type,
+        blocked_at: blockInfo.blocked_at,
       })
     }
 
