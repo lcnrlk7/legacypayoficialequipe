@@ -38,6 +38,7 @@ import {
   Send,
   Bot,
   Split,
+  Activity,
   type LucideIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -105,6 +106,7 @@ const menuCategories = [
     color: "cyan", // Ciano
     items: [
       { href: "/dashboard/support", icon: MessageCircle, label: "Tickets" },
+      { href: "/dashboard/status", icon: Activity, label: "Status" },
     ],
   },
   {
