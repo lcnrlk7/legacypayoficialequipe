@@ -75,7 +75,7 @@ export function WhyChoose() {
                 transition={{ duration: 0.5, delay: index * 0.1 }}
                 className={`relative p-6 rounded-2xl border transition-all duration-300 hover:scale-[1.02] ${
                   benefit.highlight 
-                    ? "bg-gradient-to-r from-primary/20 to-orange-600/10 border-primary/30" 
+                    ? "bg-gradient-to-r from-primary/20 to-indigo-600/10 border-primary/30" 
                     : "bg-zinc-900/50 border-zinc-800 hover:border-zinc-700"
                 }`}
               >

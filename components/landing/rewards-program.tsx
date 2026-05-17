@@ -33,7 +33,7 @@ const rewardLevels = [
   {
     amount: "1MILHAO",
     label: "1 Milhao em Saques",
-    color: "from-primary to-orange-400",
+    color: "from-primary to-indigo-400",
     textColor: "text-primary",
     borderColor: "border-primary/30",
     bgColor: "bg-primary/10",

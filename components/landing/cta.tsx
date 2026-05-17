@@ -34,7 +34,7 @@ export function CTA() {
             <Link href="/auth/register">
               <Button
                 size="lg"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 py-6 glow-orange shimmer group"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground text-lg px-8 py-6 glow-primary shimmer group"
               >
                 Criar Conta Grátis
                 <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />

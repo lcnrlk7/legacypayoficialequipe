@@ -362,7 +362,7 @@ const handleDeposit = async () => {
       >
         <div className="flex flex-col md:flex-row md:items-center gap-4 mb-4">
           <div className="flex items-center gap-4 flex-1">
-            <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center glow-orange-sm">
+            <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center glow-primary-sm">
               <Wallet className="w-7 h-7 text-primary-foreground" />
             </div>
             <div>
@@ -399,7 +399,7 @@ const handleDeposit = async () => {
             if (!open) resetDeposit();
           }}>
             <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground glow-orange-sm">
+              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground glow-primary-sm">
                 <ArrowDownLeft className="w-4 h-4 mr-2" />
                 Depositar
               </Button>

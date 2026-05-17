@@ -21,19 +21,19 @@ export function DashboardPreview() {
         </div>
 
         {/* Dashboard Container */}
-        <div className="bg-black border border-orange-600/30 rounded-2xl overflow-hidden shadow-2xl shadow-orange-500/10">
+        <div className="bg-black border border-indigo-600/30 rounded-2xl overflow-hidden shadow-2xl shadow-indigo-500/10">
           <div className="grid grid-cols-12 h-screen max-h-[600px]">
             {/* Sidebar */}
-            <div className="col-span-2 bg-black border-r border-orange-600/20 p-4 flex flex-col">
-              <div className="flex items-center gap-2 mb-8 pb-6 border-b border-orange-600/20">
-                <Zap className="w-6 h-6 text-orange-500" />
+            <div className="col-span-2 bg-black border-r border-indigo-600/20 p-4 flex flex-col">
+              <div className="flex items-center gap-2 mb-8 pb-6 border-b border-indigo-600/20">
+                <Zap className="w-6 h-6 text-indigo-500" />
                 <span className="font-bold text-white">Hyperion Pay</span>
               </div>
 
               <nav className="space-y-3 flex-1">
-                <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-orange-500/20 border border-orange-500/40">
-                  <Home className="w-5 h-5 text-orange-400" />
-                  <span className="text-sm text-orange-300 font-medium">Dashboard</span>
+                <div className="flex items-center gap-3 px-3 py-2 rounded-lg bg-indigo-500/20 border border-indigo-500/40">
+                  <Home className="w-5 h-5 text-indigo-400" />
+                  <span className="text-sm text-indigo-300 font-medium">Dashboard</span>
                 </div>
                 <div className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-900/50 transition-colors">
                   <Wallet className="w-5 h-5 text-gray-600" />
@@ -65,18 +65,18 @@ export function DashboardPreview() {
                 </div>
                 <div className="text-right">
                   <p className="text-gray-600 text-sm">Saldo Líquido</p>
-                  <p className="text-3xl font-bold text-orange-500">R$ 437.855,00</p>
+                  <p className="text-3xl font-bold text-indigo-500">R$ 437.855,00</p>
                 </div>
               </div>
 
               {/* Stats Grid - Beautiful Cards */}
               <div className="grid grid-cols-4 gap-4 mb-8">
                 {/* Saldo Card */}
-                <div className="group bg-gradient-to-br from-gray-900 to-black border border-orange-600/40 rounded-xl p-6 hover:border-orange-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10">
+                <div className="group bg-gradient-to-br from-gray-900 to-black border border-indigo-600/40 rounded-xl p-6 hover:border-indigo-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/10">
                   <div className="flex items-center justify-between mb-4">
                     <p className="text-gray-400 text-sm font-medium">Saldo</p>
-                    <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center group-hover:bg-orange-500/30 transition-colors">
-                      <Wallet className="w-5 h-5 text-orange-500" />
+                    <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center group-hover:bg-indigo-500/30 transition-colors">
+                      <Wallet className="w-5 h-5 text-indigo-500" />
                     </div>
                   </div>
                   <p className="text-2xl font-bold text-white mb-2">R$ 437.855,00</p>
@@ -84,7 +84,7 @@ export function DashboardPreview() {
                 </div>
 
                 {/* Bruto Card */}
-                <div className="group bg-gradient-to-br from-gray-900 to-black border border-orange-600/40 rounded-xl p-6 hover:border-orange-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10">
+                <div className="group bg-gradient-to-br from-gray-900 to-black border border-indigo-600/40 rounded-xl p-6 hover:border-indigo-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/10">
                   <div className="flex items-center justify-between mb-4">
                     <p className="text-gray-400 text-sm font-medium">Bruto</p>
                     <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/30 transition-colors">
@@ -96,7 +96,7 @@ export function DashboardPreview() {
                 </div>
 
                 {/* Líquido Card */}
-                <div className="group bg-gradient-to-br from-gray-900 to-black border border-orange-600/40 rounded-xl p-6 hover:border-orange-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10">
+                <div className="group bg-gradient-to-br from-gray-900 to-black border border-indigo-600/40 rounded-xl p-6 hover:border-indigo-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/10">
                   <div className="flex items-center justify-between mb-4">
                     <p className="text-gray-400 text-sm font-medium">Líquido</p>
                     <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center group-hover:bg-green-500/30 transition-colors">
@@ -108,28 +108,28 @@ export function DashboardPreview() {
                 </div>
 
                 {/* Chaves PIX Card */}
-                <div className="group bg-gradient-to-br from-gray-900 to-black border border-orange-600/40 rounded-xl p-6 hover:border-orange-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-orange-500/10">
+                <div className="group bg-gradient-to-br from-gray-900 to-black border border-indigo-600/40 rounded-xl p-6 hover:border-indigo-500/60 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/10">
                   <div className="flex items-center justify-between mb-4">
                     <p className="text-gray-400 text-sm font-medium">Chaves PIX</p>
-                    <div className="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center group-hover:bg-orange-500/30 transition-colors">
-                      <Lock className="w-5 h-5 text-orange-500" />
+                    <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center group-hover:bg-indigo-500/30 transition-colors">
+                      <Lock className="w-5 h-5 text-indigo-500" />
                     </div>
                   </div>
                   <p className="text-2xl font-bold text-white mb-2">3</p>
-                  <p className="text-orange-500 text-xs">Cadastradas</p>
+                  <p className="text-indigo-500 text-xs">Cadastradas</p>
                 </div>
               </div>
 
               {/* API Key Section */}
-              <div className="bg-gradient-to-br from-gray-900 to-black border border-orange-600/30 rounded-xl p-6 hover:border-orange-500/50 transition-all duration-300">
+              <div className="bg-gradient-to-br from-gray-900 to-black border border-indigo-600/30 rounded-xl p-6 hover:border-indigo-500/50 transition-all duration-300">
                 <div className="flex justify-between items-center mb-4">
                   <div>
                     <h3 className="text-white font-semibold mb-1">Sua Chave API</h3>
                     <p className="text-gray-500 text-sm">Use para integrar com sua aplicação</p>
                   </div>
-                  <Copy className="w-5 h-5 text-gray-500 cursor-pointer hover:text-orange-400 transition-colors" />
+                  <Copy className="w-5 h-5 text-gray-500 cursor-pointer hover:text-indigo-400 transition-colors" />
                 </div>
-                <div className="flex items-center gap-2 bg-black/50 border border-gray-800 rounded-lg px-4 py-3 hover:border-orange-600/20 transition-colors">
+                <div className="flex items-center gap-2 bg-black/50 border border-gray-800 rounded-lg px-4 py-3 hover:border-indigo-600/20 transition-colors">
                   <input
                     type={showApiKey ? 'text' : 'password'}
                     value="ip_7a7bc021cd38483b896b15209f537865"
@@ -138,7 +138,7 @@ export function DashboardPreview() {
                   />
                   <button
                     onClick={() => setShowApiKey(!showApiKey)}
-                    className="text-gray-500 hover:text-orange-400 transition-colors"
+                    className="text-gray-500 hover:text-indigo-400 transition-colors"
                   >
                     {showApiKey ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
@@ -147,11 +147,11 @@ export function DashboardPreview() {
 
               {/* Quick Actions */}
               <div className="grid grid-cols-2 gap-4 mt-8">
-                <button className="bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-orange-500/20 hover:shadow-orange-500/40">
+                <button className="bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-700 hover:to-indigo-600 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40">
                   <Zap className="w-5 h-5" />
                   Depositar
                 </button>
-                <button className="bg-black border border-orange-600/40 hover:border-orange-500/60 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 hover:bg-orange-500/10">
+                <button className="bg-black border border-indigo-600/40 hover:border-indigo-500/60 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 hover:bg-indigo-500/10">
                   <TrendingUp className="w-5 h-5" />
                   Sacar
                 </button>
@@ -163,7 +163,7 @@ export function DashboardPreview() {
         {/* Note below dashboard */}
         <div className="mt-8 text-center text-gray-400 text-sm">
           <p>
-            Os dados acima são <span className="text-orange-400">demonstrativos</span> • APIs bloqueadas para segurança
+            Os dados acima são <span className="text-indigo-400">demonstrativos</span> • APIs bloqueadas para segurança
           </p>
         </div>
       </div>

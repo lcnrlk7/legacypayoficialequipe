@@ -207,7 +207,7 @@ export default function StatusPage() {
                 className="group-hover:scale-105 transition-transform"
               />
               <div className="flex items-baseline">
-                <span className="text-lg font-bold text-foreground">Legacy</span>
+                <span className="text-lg font-bold text-foreground">Hyperion</span>
                 <span className="text-lg font-bold text-primary">Pay</span>
               </div>
             </Link>

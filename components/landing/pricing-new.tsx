@@ -19,14 +19,14 @@ export function PricingNew() {
           <div className="relative">
             {/* Badge Melhor Condicao */}
             <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-              <span className="px-4 py-1 bg-orange-500 text-black text-xs font-bold rounded-full uppercase tracking-wide">
+              <span className="px-4 py-1 bg-indigo-500 text-black text-xs font-bold rounded-full uppercase tracking-wide">
                 Melhor Condição
               </span>
             </div>
             
-            <div className="relative bg-gradient-to-br from-orange-500/20 to-orange-600/10 border border-orange-500/30 rounded-2xl p-6 pt-8 h-full">
+            <div className="relative bg-gradient-to-br from-indigo-500/20 to-indigo-600/10 border border-indigo-500/30 rounded-2xl p-6 pt-8 h-full">
               {/* Icon */}
-              <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-4">
+              <div className="w-12 h-12 bg-indigo-500 rounded-xl flex items-center justify-center mb-4">
                 <DollarSign className="w-6 h-6 text-black" />
               </div>
               
@@ -35,7 +35,7 @@ export function PricingNew() {
               
               {/* Price */}
               <div className="mb-4">
-                <span className="text-4xl font-bold text-orange-500">R$0,50</span>
+                <span className="text-4xl font-bold text-indigo-500">R$0,50</span>
                 <span className="text-lg text-gray-400 ml-2">fixo</span>
               </div>
               
@@ -50,7 +50,7 @@ export function PricingNew() {
           {/* API PIX Card */}
           <div className="relative bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 h-full">
             {/* Icon */}
-            <div className="w-12 h-12 bg-orange-500 rounded-xl flex items-center justify-center mb-4">
+            <div className="w-12 h-12 bg-indigo-500 rounded-xl flex items-center justify-center mb-4">
               <Code className="w-6 h-6 text-black" />
             </div>
             
@@ -59,7 +59,7 @@ export function PricingNew() {
             
             {/* Price */}
             <div className="mb-4">
-              <span className="text-4xl font-bold text-orange-500">R$0,50</span>
+              <span className="text-4xl font-bold text-indigo-500">R$0,50</span>
               <span className="text-lg text-gray-400 ml-2">fixo</span>
             </div>
             

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const benefits = [
-  { icon: Rocket, text: "Ativação instantânea", color: "from-orange-500 to-amber-500" },
+  { icon: Rocket, text: "Ativação instantânea", color: "from-indigo-500 to-violet-500" },
   { icon: Lock, text: "Checkout 100% seguro", color: "from-emerald-500 to-green-500" },
   { icon: Headphones, text: "Suporte 24 horas", color: "from-blue-500 to-cyan-500" },
   { icon: Code2, text: "Integração simplificada", color: "from-purple-500 to-pink-500" },
@@ -28,7 +28,7 @@ export function Taxas() {
           {/* Main Card */}
           <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-card via-card to-card/80 border border-border shadow-2xl">
             {/* Gradient accent */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-orange-500 to-primary" />
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-indigo-500 to-primary" />
             
             <div className="p-8 md:p-12 lg:p-16">
               {/* Header */}

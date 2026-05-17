@@ -1150,10 +1150,10 @@ export default function IntegrationPage() {
                     <div className="bg-background/50 rounded-lg p-3 border border-border">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                          <span className="w-2 h-2 rounded-full bg-red-500"></span>
                           <span className="font-semibold text-foreground">Client Secret</span>
                         </div>
-                        <span className="text-[10px] bg-orange-500/20 text-orange-400 px-2 py-0.5 rounded">SECRETO</span>
+                        <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded">SECRETO</span>
                       </div>
                       <p className="text-muted-foreground mb-2">
                         Senha secreta da integracao. Comeca com <code className="text-primary">sec_</code>
@@ -1713,8 +1713,8 @@ console.log("Status:", status.data.status);`}
                 </div>
 
                 {/* SAQUES / WITHDRAWALS */}
-                <div className="bg-orange-500/5 border border-orange-500/20 rounded-xl p-4">
-                  <h4 className="text-base font-semibold text-orange-400 mb-3">API de Saques (PIX Out)</h4>
+                <div className="bg-indigo-500/5 border border-indigo-500/20 rounded-xl p-4">
+                  <h4 className="text-base font-semibold text-indigo-400 mb-3">API de Saques (PIX Out)</h4>
                   <p className="text-xs text-muted-foreground mb-4">
                     Realize saques programaticos para qualquer chave PIX diretamente via API.
                   </p>

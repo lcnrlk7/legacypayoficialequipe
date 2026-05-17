@@ -80,7 +80,7 @@ export function Hero() {
           >
             <span className="text-white">Gateway de pagamento</span>
             <br />
-            <span className="gradient-text-orange glow-text">com a menor taxa do mercado</span>
+            <span className="gradient-text glow-text">com a menor taxa do mercado</span>
           </motion.h1>
 
           {/* Subtitle */}
@@ -108,7 +108,7 @@ export function Hero() {
                 whileTap={{ scale: 0.98 }}
                 className="group relative flex items-center gap-3 px-10 py-5 bg-primary text-black font-bold rounded-full text-lg overflow-hidden shadow-lg shadow-primary/30 hover:shadow-primary/50 transition-all duration-300"
               >
-                <span className="absolute inset-0 bg-gradient-to-r from-primary via-orange-400 to-primary bg-[length:200%_100%] animate-shimmer" />
+                <span className="absolute inset-0 bg-gradient-to-r from-primary via-indigo-400 to-primary bg-[length:200%_100%] animate-shimmer" />
                 <span className="relative z-10">Começar Agora</span>
                 <ArrowRight className="relative z-10 w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </motion.button>

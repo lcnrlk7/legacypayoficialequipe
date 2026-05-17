@@ -20,7 +20,7 @@ const features = [
     icon: Smartphone,
     title: 'Mobile First',
     description: 'Transferências QR Code diretamente do seu celular',
-    color: 'from-orange-500 to-red-500',
+    color: 'from-indigo-500 to-violet-500',
   },
   {
     icon: TrendingUp,
