@@ -1,5 +1,3 @@
-"use server"
-
 import { NextRequest, NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
 import { cookies } from "next/headers"
