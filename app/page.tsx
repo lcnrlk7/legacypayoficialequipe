@@ -511,6 +511,145 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Awards / Premiações Section */}
+      <section className="relative py-12 md:py-24 px-4 md:px-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="text-center mb-10 md:mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-xs md:text-sm text-indigo-400 mb-4 md:mb-6">
+              <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
+              Programa de Recompensas
+            </div>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 md:mb-4 text-balance">
+              Quem vende com a Hyperion Pay,{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-indigo-600">
+                colhe resultados reais
+              </span>
+            </h2>
+            <p className="text-sm md:text-base text-gray-400 max-w-2xl mx-auto text-pretty">
+              Reconhecemos a dedicacao dos nossos parceiros. A cada meta de faturamento alcancada, 
+              voce desbloqueia premiacoes exclusivas da Hyperion Pay.
+            </p>
+          </div>
+
+          {/* Awards Stack - Overlapping cards */}
+          <div className="relative max-w-5xl mx-auto">
+            {/* Row 1: Three main plaques */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
+              {/* 50K Plaque */}
+              <div className="group relative overflow-hidden rounded-2xl border border-white/5 bg-[#0a0d1a] transition-all duration-500 hover:border-indigo-500/30 hover:-translate-y-1">
+                <div className="relative aspect-[3/4] overflow-hidden">
+                  <Image
+                    src="/images/awards/placa-50k.png"
+                    alt="Placa 50K de Faturamento"
+                    fill
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0d1a] via-transparent to-transparent" />
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
+                  <div className="text-xs text-indigo-400 font-medium mb-1">Meta Bronze</div>
+                  <h3 className="text-base md:text-lg font-bold">R$ 50.000</h3>
+                  <p className="text-xs text-gray-500 mt-1">Placa exclusiva de reconhecimento</p>
+                </div>
+              </div>
+
+              {/* 100K Plaque */}
+              <div className="group relative overflow-hidden rounded-2xl border border-white/5 bg-[#0a0d1a] transition-all duration-500 hover:border-indigo-500/30 hover:-translate-y-1">
+                <div className="relative aspect-[3/4] overflow-hidden">
+                  <Image
+                    src="/images/awards/placa-100k.png"
+                    alt="Placa 100K de Faturamento"
+                    fill
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0d1a] via-transparent to-transparent" />
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
+                  <div className="text-xs text-indigo-400 font-medium mb-1">Meta Prata</div>
+                  <h3 className="text-base md:text-lg font-bold">R$ 100.000</h3>
+                  <p className="text-xs text-gray-500 mt-1">Placa premium com acabamento especial</p>
+                </div>
+              </div>
+
+              {/* 1M Plaque */}
+              <div className="group relative overflow-hidden rounded-2xl border border-indigo-500/20 bg-[#0a0d1a] transition-all duration-500 hover:border-indigo-500/40 hover:-translate-y-1">
+                <div className="absolute top-3 right-3 z-10 px-2 py-0.5 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-[10px] font-medium text-indigo-300">
+                  Elite
+                </div>
+                <div className="relative aspect-[3/4] overflow-hidden">
+                  <Image
+                    src="/images/awards/placa-1m.png"
+                    alt="Placa 1 Milhao de Faturamento"
+                    fill
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0d1a] via-transparent to-transparent" />
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
+                  <div className="text-xs text-indigo-400 font-medium mb-1">Meta Diamante</div>
+                  <h3 className="text-base md:text-lg font-bold">R$ 1.000.000</h3>
+                  <p className="text-xs text-gray-500 mt-1">Placa de cristal com mascote exclusivo</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 2: Merch items side by side */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              {/* Bracelet */}
+              <div className="group relative overflow-hidden rounded-2xl border border-white/5 bg-[#0a0d1a] transition-all duration-500 hover:border-indigo-500/30 hover:-translate-y-1">
+                <div className="relative aspect-[16/9] overflow-hidden">
+                  <Image
+                    src="/images/awards/pulseira.png"
+                    alt="Pulseira Hyperion Pay"
+                    fill
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0d1a] via-transparent to-transparent" />
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
+                  <div className="text-xs text-indigo-400 font-medium mb-1">Acessorio Exclusivo</div>
+                  <h3 className="text-base md:text-lg font-bold">Pulseira Hyperion Pay</h3>
+                  <p className="text-xs text-gray-500 mt-1">Design premium com LED integrado</p>
+                </div>
+              </div>
+
+              {/* Merch Kit */}
+              <div className="group relative overflow-hidden rounded-2xl border border-white/5 bg-[#0a0d1a] transition-all duration-500 hover:border-indigo-500/30 hover:-translate-y-1">
+                <div className="relative aspect-[16/9] overflow-hidden">
+                  <Image
+                    src="/images/awards/merch.png"
+                    alt="Kit Merchandise Hyperion Pay"
+                    fill
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0a0d1a] via-transparent to-transparent" />
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
+                  <div className="text-xs text-indigo-400 font-medium mb-1">Kit Parceiro</div>
+                  <h3 className="text-base md:text-lg font-bold">Merch Oficial</h3>
+                  <p className="text-xs text-gray-500 mt-1">Garrafa e caneca com a marca Hyperion Pay</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom text */}
+            <div className="text-center mt-8 md:mt-12">
+              <p className="text-xs md:text-sm text-gray-500 mb-4">
+                Todas as premiacoes sao enviadas gratuitamente para os parceiros que atingem as metas.
+              </p>
+              <a 
+                href="https://app.hyperionpay.com.br/auth/register" 
+                className="inline-flex items-center gap-2 px-5 py-2.5 md:px-6 md:py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full text-sm md:text-base font-medium text-white hover:shadow-xl hover:shadow-indigo-500/30 transition-all"
+              >
+                Comecar a faturar agora
+                <ArrowRight className="w-4 h-4" />
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="relative py-10 md:py-16 px-4 md:px-6 border-t border-white/5">
         <div className="max-w-7xl mx-auto">
