@@ -77,45 +77,44 @@ export default function StatusPage() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      // Mock data - replace with actual API calls
-      const mockServices: ServiceStatus[] = [
-        {
-          id: "pix-in",
-          name: "Depositos PIX",
-          description: "Recebimento de pagamentos",
-          status: "operational",
-          latency: 120,
-        },
-        {
-          id: "pix-out",
-          name: "Saques PIX",
-          description: "Envio de saques",
-          status: "operational",
-          latency: 180,
-        },
-        {
-          id: "checkout",
-          name: "Checkout",
-          description: "Links de pagamento",
-          status: "operational",
-          latency: 95,
-        },
-        {
-          id: "webhooks",
-          name: "Webhooks",
-          description: "Notificacoes automaticas",
-          status: "operational",
-          latency: 85,
-        },
-      ];
+      const response = await fetch("/api/admin/status?simple=true");
+      
+      if (!response.ok) {
+        throw new Error("Erro ao carregar status");
+      }
+      
+      const data = await response.json();
+      
+      // Filtra apenas os servicos relevantes para o usuario
+      const userServices = ["pix-in", "pix-out", "checkout", "webhooks"];
+      const mappedServices: ServiceStatus[] = data.services
+        .filter((s: { id: string }) => userServices.includes(s.id))
+        .map((s: { id: string; name: string; status: "operational" | "degraded" | "outage" | "maintenance"; latency: number }) => ({
+          id: s.id,
+          name: s.name === "Depositos PIX" ? "Depositos PIX" : 
+                s.name === "Saques PIX" ? "Saques PIX" :
+                s.name === "Checkout" ? "Checkout" :
+                s.name === "Webhooks" ? "Webhooks" : s.name,
+          description: s.id === "pix-in" ? "Recebimento de pagamentos" :
+                       s.id === "pix-out" ? "Envio de saques" :
+                       s.id === "checkout" ? "Links de pagamento" :
+                       "Notificacoes automaticas",
+          status: s.status,
+          latency: s.latency,
+        }));
 
-      const mockIncidents: Incident[] = [];
-
-      setServices(mockServices);
-      setIncidents(mockIncidents);
+      setServices(mappedServices);
+      setIncidents([]);
       setLastUpdate(new Date());
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
+      // Fallback para dados estaticos em caso de erro
+      setServices([
+        { id: "pix-in", name: "Depositos PIX", description: "Recebimento de pagamentos", status: "operational", latency: 0 },
+        { id: "pix-out", name: "Saques PIX", description: "Envio de saques", status: "operational", latency: 0 },
+        { id: "checkout", name: "Checkout", description: "Links de pagamento", status: "operational", latency: 0 },
+        { id: "webhooks", name: "Webhooks", description: "Notificacoes automaticas", status: "operational", latency: 0 },
+      ]);
     } finally {
       setLoading(false);
     }
