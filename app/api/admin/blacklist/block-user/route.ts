@@ -1,33 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
-import { cookies } from "next/headers"
-import { jwtVerify } from "jose"
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "fallback-secret-change-in-production"
-)
-
-// Verifica se e admin/CEO
-async function verifyAdminAuth(): Promise<boolean> {
-  try {
-    const cookieStore = await cookies()
-    const token = cookieStore.get("ceo-auth-token")?.value
-    
-    if (!token) return false
-    
-    const { payload } = await jwtVerify(token, JWT_SECRET)
-    return payload.role === "ceo" || payload.role === "admin"
-  } catch {
-    return false
-  }
-}
+import { verifyAdmin, accessDeniedResponse } from "@/lib/admin-auth"
 
 // GET - Busca usuarios para selecionar
 export async function GET(request: NextRequest) {
-  const isAdmin = await verifyAdminAuth()
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
-  }
+  const admin = await verifyAdmin()
+  if (!admin) return accessDeniedResponse()
 
   const { searchParams } = new URL(request.url)
   const search = searchParams.get("search") || ""
@@ -72,10 +50,8 @@ export async function GET(request: NextRequest) {
 
 // POST - Bloqueia usuario completo (todos os dados dele)
 export async function POST(request: NextRequest) {
-  const isAdmin = await verifyAdminAuth()
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
-  }
+  const admin = await verifyAdmin()
+  if (!admin) return accessDeniedResponse()
 
   try {
     const body = await request.json()
