@@ -594,10 +594,13 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Row 2: Merch items side by side */}
+            {/* Row 2: 20K Meta - Merch items */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               {/* Bracelet */}
               <div className="group relative overflow-hidden rounded-2xl border border-white/5 bg-[#0a0d1a] transition-all duration-500 hover:border-indigo-500/30 hover:-translate-y-1">
+                <div className="absolute top-3 left-3 z-10 px-2.5 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-[10px] font-semibold text-indigo-300">
+                  R$ 20K
+                </div>
                 <div className="relative aspect-[16/9] overflow-hidden">
                   <Image
                     src="/images/awards/pulseira.png"
@@ -608,14 +611,17 @@ export default function Home() {
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0a0d1a] via-transparent to-transparent" />
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
-                  <div className="text-xs text-indigo-400 font-medium mb-1">Acessorio Exclusivo</div>
+                  <div className="text-xs text-indigo-400 font-medium mb-1">Meta Inicial</div>
                   <h3 className="text-base md:text-lg font-bold">Pulseira Hyperion Pay</h3>
-                  <p className="text-xs text-gray-500 mt-1">Design premium com LED integrado</p>
+                  <p className="text-xs text-gray-500 mt-1">Ao atingir R$ 20K, escolha: pulseira, caneca ou garrafa</p>
                 </div>
               </div>
 
               {/* Merch Kit */}
               <div className="group relative overflow-hidden rounded-2xl border border-white/5 bg-[#0a0d1a] transition-all duration-500 hover:border-indigo-500/30 hover:-translate-y-1">
+                <div className="absolute top-3 left-3 z-10 px-2.5 py-1 bg-indigo-500/20 border border-indigo-500/30 rounded-full text-[10px] font-semibold text-indigo-300">
+                  R$ 20K
+                </div>
                 <div className="relative aspect-[16/9] overflow-hidden">
                   <Image
                     src="/images/awards/merch.png"
@@ -626,9 +632,9 @@ export default function Home() {
                   <div className="absolute inset-0 bg-gradient-to-t from-[#0a0d1a] via-transparent to-transparent" />
                 </div>
                 <div className="absolute bottom-0 left-0 right-0 p-4 md:p-5">
-                  <div className="text-xs text-indigo-400 font-medium mb-1">Kit Parceiro</div>
-                  <h3 className="text-base md:text-lg font-bold">Merch Oficial</h3>
-                  <p className="text-xs text-gray-500 mt-1">Garrafa e caneca com a marca Hyperion Pay</p>
+                  <div className="text-xs text-indigo-400 font-medium mb-1">Meta Inicial</div>
+                  <h3 className="text-base md:text-lg font-bold">Garrafa ou Caneca</h3>
+                  <p className="text-xs text-gray-500 mt-1">Merch oficial exclusivo para parceiros Hyperion Pay</p>
                 </div>
               </div>
             </div>
