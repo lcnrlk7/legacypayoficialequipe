@@ -516,10 +516,6 @@ export default function Home() {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="text-center mb-10 md:mb-16">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-xs md:text-sm text-indigo-400 mb-4 md:mb-6">
-              <span className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-pulse" />
-              Programa de Recompensas
-            </div>
             <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-3 md:mb-4 text-balance">
               Quem vende com a Hyperion Pay,{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-indigo-600">
