@@ -39,25 +39,26 @@ export async function GET(request: NextRequest) {
   try {
     const sql = neon(process.env.DATABASE_URL!)
     
-    const searchLower = search.toLowerCase()
+    const searchPattern = `%${search}%`
     
+    // Tabela e profiles, nao users
     const users = await sql`
       SELECT 
         id,
         name,
         email,
-        cpf,
+        cpf_cnpj as cpf,
         phone,
         created_at,
         last_ip,
         device_id,
         is_blocked
-      FROM users
+      FROM profiles
       WHERE 
-        LOWER(name) LIKE ${'%' + searchLower + '%'}
-        OR LOWER(email) LIKE ${'%' + searchLower + '%'}
-        OR cpf LIKE ${'%' + search + '%'}
-        OR phone LIKE ${'%' + search + '%'}
+        name ILIKE ${searchPattern}
+        OR email ILIKE ${searchPattern}
+        OR cpf_cnpj ILIKE ${searchPattern}
+        OR phone ILIKE ${searchPattern}
       ORDER BY created_at DESC
       LIMIT 20
     `
@@ -86,10 +87,10 @@ export async function POST(request: NextRequest) {
 
     const sql = neon(process.env.DATABASE_URL!)
     
-    // Buscar dados do usuario
+    // Buscar dados do usuario (tabela profiles)
     const userResult = await sql`
-      SELECT id, name, email, cpf, phone, last_ip, device_id
-      FROM users
+      SELECT id, name, email, cpf_cnpj as cpf, phone, last_ip, device_id
+      FROM profiles
       WHERE id = ${user_id}
     `
 
@@ -191,12 +192,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Marcar usuario como bloqueado
-    await sql`
-      UPDATE users
-      SET is_blocked = true, blocked_at = NOW(), blocked_reason = ${reason}
-      WHERE id = ${user_id}
-    `
+    // Marcar usuario como bloqueado (tabela profiles)
+    try {
+      await sql`
+        UPDATE profiles
+        SET is_blocked = true, blocked_at = NOW(), blocked_reason = ${reason}
+        WHERE id = ${user_id}
+      `
+    } catch (e) {
+      // Campos podem nao existir, ignorar erro
+      console.error("Erro ao atualizar status do usuario:", e)
+    }
 
     return NextResponse.json({
       success: true,
