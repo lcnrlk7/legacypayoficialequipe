@@ -101,89 +101,73 @@ export default function BlacklistPage() {
     loadData();
   }, []);
 
+  // Recarrega quando mudar o filtro
+  useEffect(() => {
+    const debounce = setTimeout(() => {
+      loadData();
+    }, 500);
+    return () => clearTimeout(debounce);
+  }, [filterType, searchTerm]);
+
   async function loadData() {
     setLoading(true);
     try {
-      // Simulated data - replace with actual API calls
-      const mockStats: BlacklistStats = {
-        total: 156,
-        by_type: { cpf: 45, email: 38, ip: 52, device: 12, phone: 9 },
-        blocked_today: 8,
-        hits_today: 23,
-        permanent: 124,
-        temporary: 32,
+      const params = new URLSearchParams();
+      if (filterType !== "all") params.set("type", filterType);
+      if (searchTerm) params.set("search", searchTerm);
+      params.set("status", "active");
+
+      const response = await fetch(`/api/admin/blacklist?${params.toString()}`);
+      
+      if (!response.ok) {
+        throw new Error("Erro ao carregar blacklist");
+      }
+
+      const data = await response.json();
+
+      // Mapeia os dados da API para o formato do componente
+      const mappedEntries: BlacklistEntry[] = data.blocks.map((block: {
+        id: string;
+        type: "cpf" | "email" | "ip" | "device" | "phone";
+        value: string;
+        reason: string;
+        blocked_by_name?: string;
+        blocked_by?: string;
+        created_at: string;
+        expires_at: string | null;
+        is_active: boolean;
+        notes: string | null;
+      }) => ({
+        id: block.id,
+        type: block.type,
+        value: block.value,
+        reason: block.reason,
+        blocked_by: block.blocked_by_name || "Sistema",
+        created_at: block.created_at,
+        expires_at: block.expires_at,
+        is_permanent: !block.expires_at,
+        hits: 0,
+        last_hit_at: null,
+        notes: block.notes,
+      }));
+
+      const mappedStats: BlacklistStats = {
+        total: data.stats?.total_blocks || 0,
+        by_type: {
+          cpf: data.stats?.cpf_blocks || 0,
+          email: data.stats?.email_blocks || 0,
+          ip: data.stats?.ip_blocks || 0,
+          device: data.stats?.device_blocks || 0,
+          phone: data.stats?.phone_blocks || 0,
+        },
+        blocked_today: 0,
+        hits_today: 0,
+        permanent: data.stats?.active_blocks || 0,
+        temporary: (data.stats?.total_blocks || 0) - (data.stats?.active_blocks || 0),
       };
 
-      const mockEntries: BlacklistEntry[] = [
-        {
-          id: "1",
-          type: "cpf",
-          value: "123.456.789-00",
-          reason: "Fraude confirmada",
-          blocked_by: "admin@hyperionpay.com",
-          created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-          expires_at: null,
-          is_permanent: true,
-          hits: 15,
-          last_hit_at: new Date(Date.now() - 3600000).toISOString(),
-          notes: "Usuario tentou criar multiplas contas",
-        },
-        {
-          id: "2",
-          type: "ip",
-          value: "192.168.1.100",
-          reason: "Atividade suspeita",
-          blocked_by: "sistema",
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-          expires_at: new Date(Date.now() + 86400000 * 7).toISOString(),
-          is_permanent: false,
-          hits: 8,
-          last_hit_at: new Date(Date.now() - 7200000).toISOString(),
-          notes: "Rate limit excedido multiplas vezes",
-        },
-        {
-          id: "3",
-          type: "email",
-          value: "fraudador@teste.com",
-          reason: "Documentos falsos",
-          blocked_by: "admin@hyperionpay.com",
-          created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-          expires_at: null,
-          is_permanent: true,
-          hits: 3,
-          last_hit_at: new Date(Date.now() - 86400000).toISOString(),
-          notes: null,
-        },
-        {
-          id: "4",
-          type: "device",
-          value: "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-          reason: "Multiplas contas",
-          blocked_by: "sistema",
-          created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
-          expires_at: null,
-          is_permanent: true,
-          hits: 42,
-          last_hit_at: new Date(Date.now() - 1800000).toISOString(),
-          notes: "Device ID associado a 12 contas diferentes",
-        },
-        {
-          id: "5",
-          type: "phone",
-          value: "(11) 99999-8888",
-          reason: "Spam",
-          blocked_by: "admin@hyperionpay.com",
-          created_at: new Date(Date.now() - 86400000 * 10).toISOString(),
-          expires_at: new Date(Date.now() + 86400000 * 20).toISOString(),
-          is_permanent: false,
-          hits: 0,
-          last_hit_at: null,
-          notes: "Bloqueio temporario por spam",
-        },
-      ];
-
-      setStats(mockStats);
-      setEntries(mockEntries);
+      setStats(mappedStats);
+      setEntries(mappedEntries);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
@@ -196,22 +180,32 @@ export default function BlacklistPage() {
     
     setAddingEntry(true);
     try {
-      // API call would go here
-      const entry: BlacklistEntry = {
-        id: Date.now().toString(),
-        type: newEntry.type,
-        value: newEntry.value,
-        reason: newEntry.reason,
-        blocked_by: "admin@hyperionpay.com",
-        created_at: new Date().toISOString(),
-        expires_at: newEntry.is_permanent ? null : new Date(Date.now() + newEntry.expires_days * 86400000).toISOString(),
-        is_permanent: newEntry.is_permanent,
-        hits: 0,
-        last_hit_at: null,
-        notes: newEntry.notes || null,
-      };
+      const expiresAt = newEntry.is_permanent 
+        ? null 
+        : new Date(Date.now() + newEntry.expires_days * 86400000).toISOString();
+
+      const response = await fetch("/api/admin/blacklist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: newEntry.type,
+          value: newEntry.value,
+          reason: newEntry.reason,
+          notes: newEntry.notes || null,
+          expires_at: expiresAt,
+          blocked_by: "admin", // Sera substituido pelo ID real do admin no backend
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error.error || "Erro ao adicionar bloqueio");
+        return;
+      }
+
+      // Recarrega a lista
+      await loadData();
       
-      setEntries([entry, ...entries]);
       setShowAddModal(false);
       setNewEntry({
         type: "cpf",
@@ -223,6 +217,7 @@ export default function BlacklistPage() {
       });
     } catch (error) {
       console.error("Erro ao adicionar entrada:", error);
+      alert("Erro ao adicionar bloqueio. Tente novamente.");
     } finally {
       setAddingEntry(false);
     }
@@ -232,10 +227,21 @@ export default function BlacklistPage() {
     if (!confirm("Tem certeza que deseja remover esta entrada da blacklist?")) return;
     
     try {
-      // API call would go here
-      setEntries(entries.filter(e => e.id !== id));
+      const response = await fetch(`/api/admin/blacklist?id=${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        alert(error.error || "Erro ao remover bloqueio");
+        return;
+      }
+
+      // Recarrega a lista
+      await loadData();
     } catch (error) {
       console.error("Erro ao remover entrada:", error);
+      alert("Erro ao remover bloqueio. Tente novamente.");
     }
   }
 

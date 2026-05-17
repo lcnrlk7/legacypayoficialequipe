@@ -1,42 +1,134 @@
 import { handleAuth } from '@/lib/middleware-auth'
 import { type NextRequest, NextResponse } from 'next/server'
 import { neon } from '@neondatabase/serverless'
+import { jwtVerify } from 'jose'
 
-// Cache de IPs bloqueados (atualiza a cada 60 segundos)
-let blockedIpsCache: Set<string> = new Set()
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || 'fallback-secret-change-in-production'
+)
+
+// Cache de bloqueios (atualiza a cada 60 segundos)
+interface BlockCache {
+  ips: Set<string>
+  emails: Set<string>
+  cpfs: Set<string>
+  devices: Set<string>
+  phones: Set<string>
+  userIds: Set<string>
+}
+
+let blockedCache: BlockCache = {
+  ips: new Set(),
+  emails: new Set(),
+  cpfs: new Set(),
+  devices: new Set(),
+  phones: new Set(),
+  userIds: new Set(),
+}
 let lastCacheUpdate = 0
 const CACHE_TTL = 60000 // 60 segundos
 
-async function isIpBlocked(ip: string): Promise<boolean> {
-  if (!ip || ip === 'unknown') return false
-  
-  // Verifica cache primeiro
-  const now = Date.now()
-  if (now - lastCacheUpdate < CACHE_TTL && blockedIpsCache.size > 0) {
-    return blockedIpsCache.has(ip)
-  }
-  
-  // Atualiza cache - só tenta se DATABASE_URL estiver disponível
+async function updateBlockedCache(): Promise<void> {
   const databaseUrl = process.env.DATABASE_URL
-  if (!databaseUrl) {
-    // Em Edge Runtime, a variável pode não estar disponível
-    // Retorna cache existente ou false
-    return blockedIpsCache.has(ip)
-  }
-  
+  if (!databaseUrl) return
+
   try {
     const sql = neon(databaseUrl)
-    const blockedIps = await sql`SELECT ip_address FROM blocked_ips`
-    blockedIpsCache = new Set(blockedIps.map((row: { ip_address: string }) => row.ip_address))
-    lastCacheUpdate = now
-    return blockedIpsCache.has(ip)
-  } catch (error) {
-    // Silencia erro em produção, apenas loga se for erro diferente de conexão
-    if (error instanceof Error && !error.message.includes('database connection')) {
-      console.error('[Middleware] Erro ao verificar IP bloqueado:', error)
+    const blocks = await sql`
+      SELECT type, value, user_id 
+      FROM blacklist 
+      WHERE is_active = true 
+      AND (expires_at IS NULL OR expires_at > NOW())
+    `
+
+    const newCache: BlockCache = {
+      ips: new Set(),
+      emails: new Set(),
+      cpfs: new Set(),
+      devices: new Set(),
+      phones: new Set(),
+      userIds: new Set(),
     }
-    return blockedIpsCache.has(ip)
+
+    for (const block of blocks) {
+      switch (block.type) {
+        case 'ip':
+          newCache.ips.add(block.value)
+          break
+        case 'email':
+          newCache.emails.add(block.value.toLowerCase())
+          break
+        case 'cpf':
+          newCache.cpfs.add(block.value.replace(/\D/g, ''))
+          break
+        case 'device':
+          newCache.devices.add(block.value)
+          break
+        case 'phone':
+          newCache.phones.add(block.value.replace(/\D/g, ''))
+          break
+      }
+      if (block.user_id) {
+        newCache.userIds.add(block.user_id)
+      }
+    }
+
+    blockedCache = newCache
+    lastCacheUpdate = Date.now()
+  } catch (error) {
+    // Silencia erros de conexao
   }
+}
+
+async function isBlocked(request: NextRequest): Promise<{ blocked: boolean; reason?: string }> {
+  const now = Date.now()
+  
+  // Atualiza cache se necessario
+  if (now - lastCacheUpdate > CACHE_TTL) {
+    await updateBlockedCache()
+  }
+
+  // Verifica IP
+  const ip = getClientIp(request)
+  if (ip && ip !== 'unknown' && blockedCache.ips.has(ip)) {
+    return { blocked: true, reason: 'IP bloqueado' }
+  }
+
+  // Verifica device_id do cookie
+  const deviceId = request.cookies.get('device_id')?.value
+  if (deviceId && blockedCache.devices.has(deviceId)) {
+    return { blocked: true, reason: 'Dispositivo bloqueado' }
+  }
+
+  // Verifica usuario logado
+  const authToken = request.cookies.get('auth-token')?.value
+  if (authToken) {
+    try {
+      const { payload } = await jwtVerify(authToken, JWT_SECRET)
+      
+      // Verifica user_id
+      if (payload.id && blockedCache.userIds.has(payload.id as string)) {
+        return { blocked: true, reason: 'Usuario bloqueado' }
+      }
+      
+      // Verifica email
+      if (payload.email && blockedCache.emails.has((payload.email as string).toLowerCase())) {
+        return { blocked: true, reason: 'Email bloqueado' }
+      }
+      
+      // Verifica CPF (se estiver no token)
+      if (payload.cpf) {
+        const cleanCpf = (payload.cpf as string).replace(/\D/g, '')
+        if (blockedCache.cpfs.has(cleanCpf)) {
+          return { blocked: true, reason: 'CPF bloqueado' }
+        }
+      }
+    } catch {
+      // Token invalido, continua sem verificar usuario
+    }
+  }
+
+  return { blocked: false }
 }
 
 function getClientIp(request: NextRequest): string {
@@ -112,11 +204,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
   
-  // Verificar se IP esta bloqueado
-  const clientIp = getClientIp(request)
-  const blocked = await isIpBlocked(clientIp)
+  // Verificar se esta bloqueado (IP, email, CPF, device, usuario)
+  const blockCheck = await isBlocked(request)
   
-  if (blocked) {
+  if (blockCheck.blocked) {
     const url = request.nextUrl.clone()
     url.pathname = '/blocked'
     return NextResponse.rewrite(url)
