@@ -39,61 +39,203 @@ export async function GET(request: NextRequest) {
   try {
     const sql = neon(process.env.DATABASE_URL!)
 
-    let query = `
-      SELECT 
-        b.*,
-        u.name as blocked_user_name,
-        u.email as blocked_user_email,
-        admin.name as blocked_by_name
-      FROM blacklist b
-      LEFT JOIN users u ON b.user_id = u.id
-      LEFT JOIN team_members admin ON b.blocked_by = admin.id
-      WHERE 1=1
-    `
-    const params: (string | number)[] = []
-    let paramIndex = 1
-
-    if (type && type !== "all") {
-      query += ` AND b.type = $${paramIndex}`
-      params.push(type)
-      paramIndex++
+    // Query baseada nos filtros usando template literals
+    let blocks
+    
+    if (type && type !== "all" && search) {
+      // Filtro por tipo E busca
+      const searchPattern = `%${search}%`
+      if (status === "active") {
+        blocks = await sql`
+          SELECT 
+            b.*,
+            u.name as blocked_user_name,
+            u.email as blocked_user_email,
+            admin.name as blocked_by_name
+          FROM blacklist b
+          LEFT JOIN users u ON b.user_id = u.id
+          LEFT JOIN team_members admin ON b.blocked_by = admin.id
+          WHERE b.type = ${type}
+          AND b.is_active = true AND (b.expires_at IS NULL OR b.expires_at > NOW())
+          AND (b.value ILIKE ${searchPattern} OR b.reason ILIKE ${searchPattern})
+          ORDER BY b.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `
+      } else if (status === "expired") {
+        blocks = await sql`
+          SELECT 
+            b.*,
+            u.name as blocked_user_name,
+            u.email as blocked_user_email,
+            admin.name as blocked_by_name
+          FROM blacklist b
+          LEFT JOIN users u ON b.user_id = u.id
+          LEFT JOIN team_members admin ON b.blocked_by = admin.id
+          WHERE b.type = ${type}
+          AND (b.is_active = false OR (b.expires_at IS NOT NULL AND b.expires_at <= NOW()))
+          AND (b.value ILIKE ${searchPattern} OR b.reason ILIKE ${searchPattern})
+          ORDER BY b.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `
+      } else {
+        blocks = await sql`
+          SELECT 
+            b.*,
+            u.name as blocked_user_name,
+            u.email as blocked_user_email,
+            admin.name as blocked_by_name
+          FROM blacklist b
+          LEFT JOIN users u ON b.user_id = u.id
+          LEFT JOIN team_members admin ON b.blocked_by = admin.id
+          WHERE b.type = ${type}
+          AND (b.value ILIKE ${searchPattern} OR b.reason ILIKE ${searchPattern})
+          ORDER BY b.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `
+      }
+    } else if (type && type !== "all") {
+      // Apenas filtro por tipo
+      if (status === "active") {
+        blocks = await sql`
+          SELECT 
+            b.*,
+            u.name as blocked_user_name,
+            u.email as blocked_user_email,
+            admin.name as blocked_by_name
+          FROM blacklist b
+          LEFT JOIN users u ON b.user_id = u.id
+          LEFT JOIN team_members admin ON b.blocked_by = admin.id
+          WHERE b.type = ${type}
+          AND b.is_active = true AND (b.expires_at IS NULL OR b.expires_at > NOW())
+          ORDER BY b.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `
+      } else if (status === "expired") {
+        blocks = await sql`
+          SELECT 
+            b.*,
+            u.name as blocked_user_name,
+            u.email as blocked_user_email,
+            admin.name as blocked_by_name
+          FROM blacklist b
+          LEFT JOIN users u ON b.user_id = u.id
+          LEFT JOIN team_members admin ON b.blocked_by = admin.id
+          WHERE b.type = ${type}
+          AND (b.is_active = false OR (b.expires_at IS NOT NULL AND b.expires_at <= NOW()))
+          ORDER BY b.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `
+      } else {
+        blocks = await sql`
+          SELECT 
+            b.*,
+            u.name as blocked_user_name,
+            u.email as blocked_user_email,
+            admin.name as blocked_by_name
+          FROM blacklist b
+          LEFT JOIN users u ON b.user_id = u.id
+          LEFT JOIN team_members admin ON b.blocked_by = admin.id
+          WHERE b.type = ${type}
+          ORDER BY b.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `
+      }
+    } else if (search) {
+      // Apenas busca
+      const searchPattern = `%${search}%`
+      if (status === "active") {
+        blocks = await sql`
+          SELECT 
+            b.*,
+            u.name as blocked_user_name,
+            u.email as blocked_user_email,
+            admin.name as blocked_by_name
+          FROM blacklist b
+          LEFT JOIN users u ON b.user_id = u.id
+          LEFT JOIN team_members admin ON b.blocked_by = admin.id
+          WHERE b.is_active = true AND (b.expires_at IS NULL OR b.expires_at > NOW())
+          AND (b.value ILIKE ${searchPattern} OR b.reason ILIKE ${searchPattern})
+          ORDER BY b.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `
+      } else if (status === "expired") {
+        blocks = await sql`
+          SELECT 
+            b.*,
+            u.name as blocked_user_name,
+            u.email as blocked_user_email,
+            admin.name as blocked_by_name
+          FROM blacklist b
+          LEFT JOIN users u ON b.user_id = u.id
+          LEFT JOIN team_members admin ON b.blocked_by = admin.id
+          WHERE (b.is_active = false OR (b.expires_at IS NOT NULL AND b.expires_at <= NOW()))
+          AND (b.value ILIKE ${searchPattern} OR b.reason ILIKE ${searchPattern})
+          ORDER BY b.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `
+      } else {
+        blocks = await sql`
+          SELECT 
+            b.*,
+            u.name as blocked_user_name,
+            u.email as blocked_user_email,
+            admin.name as blocked_by_name
+          FROM blacklist b
+          LEFT JOIN users u ON b.user_id = u.id
+          LEFT JOIN team_members admin ON b.blocked_by = admin.id
+          WHERE (b.value ILIKE ${searchPattern} OR b.reason ILIKE ${searchPattern})
+          ORDER BY b.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `
+      }
+    } else {
+      // Sem filtros especificos
+      if (status === "active") {
+        blocks = await sql`
+          SELECT 
+            b.*,
+            u.name as blocked_user_name,
+            u.email as blocked_user_email,
+            admin.name as blocked_by_name
+          FROM blacklist b
+          LEFT JOIN users u ON b.user_id = u.id
+          LEFT JOIN team_members admin ON b.blocked_by = admin.id
+          WHERE b.is_active = true AND (b.expires_at IS NULL OR b.expires_at > NOW())
+          ORDER BY b.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `
+      } else if (status === "expired") {
+        blocks = await sql`
+          SELECT 
+            b.*,
+            u.name as blocked_user_name,
+            u.email as blocked_user_email,
+            admin.name as blocked_by_name
+          FROM blacklist b
+          LEFT JOIN users u ON b.user_id = u.id
+          LEFT JOIN team_members admin ON b.blocked_by = admin.id
+          WHERE (b.is_active = false OR (b.expires_at IS NOT NULL AND b.expires_at <= NOW()))
+          ORDER BY b.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `
+      } else {
+        blocks = await sql`
+          SELECT 
+            b.*,
+            u.name as blocked_user_name,
+            u.email as blocked_user_email,
+            admin.name as blocked_by_name
+          FROM blacklist b
+          LEFT JOIN users u ON b.user_id = u.id
+          LEFT JOIN team_members admin ON b.blocked_by = admin.id
+          ORDER BY b.created_at DESC
+          LIMIT ${limit} OFFSET ${offset}
+        `
+      }
     }
-
-    if (status === "active") {
-      query += ` AND b.is_active = true AND (b.expires_at IS NULL OR b.expires_at > NOW())`
-    } else if (status === "expired") {
-      query += ` AND (b.is_active = false OR (b.expires_at IS NOT NULL AND b.expires_at <= NOW()))`
-    }
-
-    if (search) {
-      query += ` AND (b.value ILIKE $${paramIndex} OR b.reason ILIKE $${paramIndex} OR u.name ILIKE $${paramIndex} OR u.email ILIKE $${paramIndex})`
-      params.push(`%${search}%`)
-      paramIndex++
-    }
-
-    query += ` ORDER BY b.created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`
-    params.push(limit, offset)
-
-    const blocks = await sql(query, params)
 
     // Conta total
-    let countQuery = `SELECT COUNT(*) as total FROM blacklist b WHERE 1=1`
-    const countParams: string[] = []
-    let countParamIndex = 1
-
-    if (type && type !== "all") {
-      countQuery += ` AND b.type = $${countParamIndex}`
-      countParams.push(type)
-      countParamIndex++
-    }
-
-    if (status === "active") {
-      countQuery += ` AND b.is_active = true AND (b.expires_at IS NULL OR b.expires_at > NOW())`
-    } else if (status === "expired") {
-      countQuery += ` AND (b.is_active = false OR (b.expires_at IS NOT NULL AND b.expires_at <= NOW()))`
-    }
-
-    const countResult = await sql(countQuery, countParams)
+    const countResult = await sql`SELECT COUNT(*) as total FROM blacklist`
     const total = parseInt(countResult[0]?.total || "0")
 
     // Estatisticas
@@ -110,15 +252,20 @@ export async function GET(request: NextRequest) {
     `
 
     // Historico de hits (ultimos 7 dias)
-    const hits = await sql`
-      SELECT 
-        DATE(created_at) as date,
-        COUNT(*) as hits
-      FROM blacklist_hits
-      WHERE created_at > NOW() - INTERVAL '7 days'
-      GROUP BY DATE(created_at)
-      ORDER BY date ASC
-    `
+    let hits: { date: string; hits: number }[] = []
+    try {
+      hits = await sql`
+        SELECT 
+          DATE(created_at) as date,
+          COUNT(*) as hits
+        FROM blacklist_hits
+        WHERE created_at > NOW() - INTERVAL '7 days'
+        GROUP BY DATE(created_at)
+        ORDER BY date ASC
+      `
+    } catch {
+      // Tabela pode nao existir ainda
+    }
 
     return NextResponse.json({
       blocks,
@@ -193,11 +340,15 @@ export async function POST(request: NextRequest) {
 
     // Se for IP, atualiza a tabela legada blocked_ips tambem
     if (type === "ip") {
-      await sql`
-        INSERT INTO blocked_ips (ip_address, reason, blocked_at)
-        VALUES (${value}, ${reason}, NOW())
-        ON CONFLICT (ip_address) DO UPDATE SET reason = ${reason}, blocked_at = NOW()
-      `
+      try {
+        await sql`
+          INSERT INTO blocked_ips (ip_address, reason, blocked_at)
+          VALUES (${value}, ${reason}, NOW())
+          ON CONFLICT (ip_address) DO UPDATE SET reason = ${reason}, blocked_at = NOW()
+        `
+      } catch {
+        // Tabela pode nao existir
+      }
     }
 
     return NextResponse.json({ success: true, block: result[0] })
@@ -261,7 +412,11 @@ export async function DELETE(request: NextRequest) {
 
     // Se for IP, remove da tabela legada tambem
     if (block[0].type === "ip") {
-      await sql`DELETE FROM blocked_ips WHERE ip_address = ${block[0].value}`
+      try {
+        await sql`DELETE FROM blocked_ips WHERE ip_address = ${block[0].value}`
+      } catch {
+        // Tabela pode nao existir
+      }
     }
 
     return NextResponse.json({ success: true })
