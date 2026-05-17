@@ -254,7 +254,7 @@ export async function GET(request: NextRequest) {
     // Historico de hits (ultimos 7 dias)
     let hits: { date: string; hits: number }[] = []
     try {
-      hits = await sql`
+      const hitsResult = await sql`
         SELECT 
           DATE(created_at) as date,
           COUNT(*) as hits
@@ -263,6 +263,10 @@ export async function GET(request: NextRequest) {
         GROUP BY DATE(created_at)
         ORDER BY date ASC
       `
+      hits = hitsResult.map((row) => ({
+        date: String(row.date),
+        hits: Number(row.hits),
+      }))
     } catch {
       // Tabela pode nao existir ainda
     }
