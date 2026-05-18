@@ -97,10 +97,12 @@ export async function POST(request: NextRequest) {
 
 // GET - Verificar status do pagamento
 export async function GET(request: NextRequest) {
-  const userId = await verifyAuth()
-  if (!userId) {
+  const session = await getSession()
+  if (!session) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
+  
+  const userId = session.userId
 
   try {
     const payments = await sql`
