@@ -34,10 +34,14 @@ export async function GET() {
   }
   
   try {
-    const tenant = await getTenantByUserId(userId)
+    const result = await sql`
+      SELECT * FROM white_label_tenants WHERE user_id = ${userId} LIMIT 1
+    `
+    
+    const tenant = result[0] || null
     
     if (!tenant) {
-      return NextResponse.json({ tenant: null })
+      return NextResponse.json({ success: true, tenant: null })
     }
     
     // Verificar status dos dominios
@@ -52,6 +56,7 @@ export async function GET() {
     }
     
     return NextResponse.json({ 
+      success: true,
       tenant,
       domainStatus: {
         app: domainAppStatus,
@@ -63,8 +68,53 @@ export async function GET() {
   }
 }
 
-// POST - Criar ou atualizar tenant
+// POST - Criar tenant
 export async function POST(request: NextRequest) {
+  const userId = await verifyAuth()
+  if (!userId) {
+    return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
+  }
+  
+  try {
+    const body = await request.json()
+    const { name, slug } = body
+    
+    if (!name || !slug) {
+      return NextResponse.json({ error: "Nome e slug sao obrigatorios" }, { status: 400 })
+    }
+    
+    // Verificar se usuario ja tem tenant
+    const existing = await sql`
+      SELECT id FROM white_label_tenants WHERE user_id = ${userId} LIMIT 1
+    `
+    
+    if (existing.length > 0) {
+      return NextResponse.json({ error: "Voce ja possui um tenant" }, { status: 400 })
+    }
+    
+    // Verificar se slug ja existe
+    const slugExists = await sql`
+      SELECT id FROM white_label_tenants WHERE slug = ${slug}
+    `
+    
+    if (slugExists.length > 0) {
+      return NextResponse.json({ error: "Slug ja existe" }, { status: 400 })
+    }
+    
+    await sql`
+      INSERT INTO white_label_tenants (user_id, name, slug)
+      VALUES (${userId}, ${name}, ${slug})
+    `
+    
+    return NextResponse.json({ success: true, message: "Tenant criado" })
+  } catch (error: any) {
+    console.error("[White Label] Erro:", error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+}
+
+// PUT - Atualizar tenant
+export async function PUT(request: NextRequest) {
   const userId = await verifyAuth()
   if (!userId) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
@@ -81,6 +131,9 @@ export async function POST(request: NextRequest) {
       logo_url,
       mascot_url,
       favicon_url,
+      badge_url,
+      banner_url,
+      login_bg_url,
       primary_color,
       secondary_color,
       text_color,
@@ -91,71 +144,66 @@ export async function POST(request: NextRequest) {
       transaction_fee,
       withdraw_fee,
       min_withdraw,
+      modules_config,
+      ceo_modules_config,
+      custom_texts,
     } = body
     
-    // Verificar se usuario ja tem tenant
-    const existingTenant = await getTenantByUserId(userId)
+    // Verificar se usuario tem tenant
+    const existing = await sql`
+      SELECT id FROM white_label_tenants WHERE user_id = ${userId} LIMIT 1
+    `
     
-    if (existingTenant) {
-      // Atualizar tenant existente
-      await sql`
-        UPDATE white_label_tenants
-        SET
-          name = COALESCE(${name}, name),
-          slug = COALESCE(${slug}, slug),
-          domain_app = COALESCE(${domain_app}, domain_app),
-          domain_admin = COALESCE(${domain_admin}, domain_admin),
-          database_url = COALESCE(${database_url}, database_url),
-          logo_url = COALESCE(${logo_url}, logo_url),
-          mascot_url = COALESCE(${mascot_url}, mascot_url),
-          favicon_url = COALESCE(${favicon_url}, favicon_url),
-          primary_color = COALESCE(${primary_color}, primary_color),
-          secondary_color = COALESCE(${secondary_color}, secondary_color),
-          text_color = COALESCE(${text_color}, text_color),
-          use_hyperion_gateway = COALESCE(${use_hyperion_gateway}, use_hyperion_gateway),
-          gateway_provider = COALESCE(${gateway_provider}, gateway_provider),
-          gateway_client_id = COALESCE(${gateway_client_id}, gateway_client_id),
-          gateway_client_secret = COALESCE(${gateway_client_secret}, gateway_client_secret),
-          transaction_fee = COALESCE(${transaction_fee}, transaction_fee),
-          withdraw_fee = COALESCE(${withdraw_fee}, withdraw_fee),
-          min_withdraw = COALESCE(${min_withdraw}, min_withdraw),
-          updated_at = NOW()
-        WHERE id = ${existingTenant.id}
+    if (existing.length === 0) {
+      return NextResponse.json({ error: "Tenant nao encontrado" }, { status: 404 })
+    }
+    
+    const tenantId = existing[0].id
+    
+    // Verificar se slug ja existe (se estiver mudando)
+    if (slug) {
+      const slugExists = await sql`
+        SELECT id FROM white_label_tenants WHERE slug = ${slug} AND id != ${tenantId}
       `
       
-      return NextResponse.json({ success: true, message: "Tenant atualizado" })
+      if (slugExists.length > 0) {
+        return NextResponse.json({ error: "Slug ja existe" }, { status: 400 })
+      }
     }
     
-    // Criar novo tenant
-    if (!name || !slug) {
-      return NextResponse.json({ error: "Nome e slug sao obrigatorios" }, { status: 400 })
-    }
-    
-    // Verificar se slug ja existe
-    const slugExists = await sql`
-      SELECT id FROM white_label_tenants WHERE slug = ${slug}
-    `
-    
-    if (slugExists.length > 0) {
-      return NextResponse.json({ error: "Slug ja existe" }, { status: 400 })
-    }
-    
+    // Atualizar tenant
     await sql`
-      INSERT INTO white_label_tenants (
-        user_id, name, slug, domain_app, domain_admin, database_url,
-        logo_url, mascot_url, favicon_url, primary_color, secondary_color, text_color,
-        use_hyperion_gateway, gateway_provider, gateway_client_id, gateway_client_secret,
-        transaction_fee, withdraw_fee, min_withdraw
-      ) VALUES (
-        ${userId}, ${name}, ${slug}, ${domain_app || null}, ${domain_admin || null}, ${database_url || null},
-        ${logo_url || null}, ${mascot_url || null}, ${favicon_url || null}, 
-        ${primary_color || '#FF5500'}, ${secondary_color || '#1A1A1A'}, ${text_color || '#FFFFFF'},
-        ${use_hyperion_gateway !== false}, ${gateway_provider || null}, ${gateway_client_id || null}, ${gateway_client_secret || null},
-        ${transaction_fee || 2.5}, ${withdraw_fee || 3.0}, ${min_withdraw || 10.0}
-      )
+      UPDATE white_label_tenants
+      SET
+        name = COALESCE(${name}, name),
+        slug = COALESCE(${slug}, slug),
+        domain_app = ${domain_app},
+        domain_admin = ${domain_admin},
+        database_url = ${database_url},
+        logo_url = ${logo_url},
+        mascot_url = ${mascot_url},
+        favicon_url = ${favicon_url},
+        badge_url = ${badge_url},
+        banner_url = ${banner_url},
+        login_bg_url = ${login_bg_url},
+        primary_color = COALESCE(${primary_color}, primary_color),
+        secondary_color = COALESCE(${secondary_color}, secondary_color),
+        text_color = COALESCE(${text_color}, text_color),
+        use_hyperion_gateway = COALESCE(${use_hyperion_gateway}, use_hyperion_gateway),
+        gateway_provider = ${gateway_provider},
+        gateway_client_id = ${gateway_client_id},
+        gateway_client_secret = ${gateway_client_secret},
+        transaction_fee = COALESCE(${transaction_fee}, transaction_fee),
+        withdraw_fee = COALESCE(${withdraw_fee}, withdraw_fee),
+        min_withdraw = COALESCE(${min_withdraw}, min_withdraw),
+        modules_config = COALESCE(${JSON.stringify(modules_config)}, modules_config),
+        ceo_modules_config = COALESCE(${JSON.stringify(ceo_modules_config)}, ceo_modules_config),
+        custom_texts = COALESCE(${JSON.stringify(custom_texts)}, custom_texts),
+        updated_at = NOW()
+      WHERE id = ${tenantId}
     `
     
-    return NextResponse.json({ success: true, message: "Tenant criado" })
+    return NextResponse.json({ success: true, message: "Tenant atualizado" })
   } catch (error: any) {
     console.error("[White Label] Erro:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -170,7 +218,11 @@ export async function DELETE() {
   }
   
   try {
-    const tenant = await getTenantByUserId(userId)
+    const result = await sql`
+      SELECT * FROM white_label_tenants WHERE user_id = ${userId} LIMIT 1
+    `
+    
+    const tenant = result[0]
     
     if (!tenant) {
       return NextResponse.json({ error: "Tenant nao encontrado" }, { status: 404 })
@@ -183,6 +235,12 @@ export async function DELETE() {
     if (tenant.domain_admin) {
       await removeDomainFromVercel(tenant.domain_admin)
     }
+    
+    // Remover pagamentos
+    await sql`DELETE FROM white_label_payments WHERE tenant_id = ${tenant.id}`
+    
+    // Remover logs
+    await sql`DELETE FROM white_label_logs WHERE tenant_id = ${tenant.id}`
     
     // Remover tenant
     await sql`DELETE FROM white_label_tenants WHERE id = ${tenant.id}`

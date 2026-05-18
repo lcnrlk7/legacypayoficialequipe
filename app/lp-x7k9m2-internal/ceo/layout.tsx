@@ -33,6 +33,7 @@ import {
   Bot,
   Ban,
   Gauge,
+  Globe,
 } from "lucide-react";
 
 // Menu organizado em categorias com cores
@@ -79,6 +80,7 @@ const menuCategories = [
     title: "Sistema",
     color: "purple", // Roxo
     items: [
+      { label: "White Label", href: "/lp-x7k9m2-internal/ceo/white-label", icon: Globe },
       { label: "Telegram", href: "/lp-x7k9m2-internal/ceo/telegram", icon: Bot },
       { label: "Webhooks", href: "/lp-x7k9m2-internal/ceo/webhooks", icon: Webhook },
       { label: "Logs", href: "/lp-x7k9m2-internal/ceo/logs", icon: Activity },
