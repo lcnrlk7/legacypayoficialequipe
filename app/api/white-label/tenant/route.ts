@@ -20,8 +20,12 @@ async function verifyAuth(): Promise<string | null> {
     const token = cookieStore.get("auth-token")?.value
     if (!token) return null
     const { payload } = await jwtVerify(token, JWT_SECRET)
-    return (payload.id || payload.sub) as string
-  } catch {
+    const userId = payload.id as string
+    console.log("[v0] verifyAuth - payload:", JSON.stringify(payload))
+    console.log("[v0] verifyAuth - userId extraido:", userId)
+    return userId
+  } catch (err) {
+    console.log("[v0] verifyAuth - erro:", err)
     return null
   }
 }
@@ -29,6 +33,8 @@ async function verifyAuth(): Promise<string | null> {
 // GET - Buscar tenant do usuario
 export async function GET() {
   const userId = await verifyAuth()
+  console.log("[v0] White Label API - userId:", userId)
+  
   if (!userId) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
@@ -37,6 +43,11 @@ export async function GET() {
     const result = await sql`
       SELECT * FROM white_label_tenants WHERE user_id = ${userId} LIMIT 1
     `
+    
+    console.log("[v0] White Label API - result count:", result.length)
+    if (result.length > 0) {
+      console.log("[v0] White Label API - tenant setup_paid:", result[0].setup_paid)
+    }
     
     const tenant = result[0] || null
     
