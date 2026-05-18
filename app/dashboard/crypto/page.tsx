@@ -108,7 +108,7 @@ export default function CryptoPage() {
   }
 
   const selectedCoinInfo = coins.find((c) => c.id === selectedCoin)
-  const fee = withdrawAmount ? parseFloat(withdrawAmount) * 0.02 : 0
+  const fee = withdrawAmount ? parseFloat(withdrawAmount) * 0.03 : 0 // 3% taxa de saque
   const total = withdrawAmount ? parseFloat(withdrawAmount) + fee : 0
 
   // Menu principal

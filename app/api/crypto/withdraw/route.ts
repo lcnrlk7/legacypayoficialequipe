@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { jwtVerify } from "jose"
 import { neon } from "@neondatabase/serverless"
-import { withdrawCrypto, validateAddress, convertBRLtoCrypto, SUPPORTED_COINS } from "@/lib/coinremitter"
+import { withdrawCrypto, validateAddress, convertBRLtoCrypto, SUPPORTED_COINS, CRYPTO_FEES } from "@/lib/coinremitter"
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "fallback-secret-change-in-production"
 )
 
-// Taxa de saque crypto (2%)
-const CRYPTO_WITHDRAW_FEE_PERCENT = 2
+// Taxa de saque crypto (3% - inclui 0.23% do CoinRemitter)
+const CRYPTO_WITHDRAW_FEE_PERCENT = CRYPTO_FEES.WITHDRAW_FEE_PERCENT
 
 // Verificar autenticacao
 async function verifyAuth(): Promise<string | null> {
@@ -51,9 +51,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Valor minimo R$ 50
-    if (amountBRL < 50) {
+    if (amountBRL < CRYPTO_FEES.MIN_WITHDRAW_BRL) {
       return NextResponse.json(
-        { error: "Valor minimo para saque crypto: R$ 50,00" },
+        { error: `Valor minimo para saque crypto: R$ ${CRYPTO_FEES.MIN_WITHDRAW_BRL},00` },
         { status: 400 }
       )
     }

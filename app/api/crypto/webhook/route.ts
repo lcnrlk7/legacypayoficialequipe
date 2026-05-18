@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
+import { CRYPTO_FEES } from "@/lib/coinremitter"
 
 const sql = neon(process.env.DATABASE_URL!)
 
@@ -68,9 +69,10 @@ export async function POST(request: NextRequest) {
       WHERE id = ${depositRecord.id}
     `
     
-    // Creditar saldo do usuario (converter crypto para BRL)
-    // Aqui voce pode implementar a logica de conversao
-    const amountBRL = Number(depositRecord.amount_brl)
+    // Creditar saldo do usuario (converter crypto para BRL e aplicar taxa)
+    const amountBRLBruto = Number(depositRecord.amount_brl)
+    const fee = amountBRLBruto * (CRYPTO_FEES.DEPOSIT_FEE_PERCENT / 100)
+    const amountBRL = amountBRLBruto - fee
     
     await sql`
       UPDATE profiles 
@@ -86,12 +88,29 @@ export async function POST(request: NextRequest) {
         'crypto_deposit', 
         ${amountBRL}, 
         'paid', 
-        ${'Deposito ' + coin + ' - ' + amount},
+        ${'Deposito ' + coin + ' - ' + amount + ' (Taxa: R$ ' + fee.toFixed(2) + ')'},
         ${transaction_id}
       )
     `
     
-    console.log(`[Crypto Webhook] Deposito confirmado: ${depositRecord.id}, creditado R$ ${amountBRL}`)
+    // Registrar na tabela crypto_transactions
+    await sql`
+      INSERT INTO crypto_transactions (user_id, type, coin, amount_crypto, amount_brl, fee_brl, fee_crypto, wallet_address, tx_hash, status)
+      VALUES (
+        ${depositRecord.user_id},
+        'deposit',
+        ${coin},
+        ${amount},
+        ${amountBRL},
+        ${fee},
+        0,
+        ${address},
+        ${transaction_id},
+        'confirmed'
+      )
+    `
+    
+    console.log(`[Crypto Webhook] Deposito confirmado: ${depositRecord.id}, creditado R$ ${amountBRL} (taxa R$ ${fee})`)
     
     return NextResponse.json({ status: "success" })
   } catch (error) {

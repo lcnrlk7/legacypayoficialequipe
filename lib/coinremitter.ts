@@ -31,6 +31,14 @@ export const SUPPORTED_COINS = [
   { id: "LTC", name: "Litecoin", icon: "Ł", color: "#345D9D" },
 ]
 
+// Taxas da plataforma (em cima dos 0.23% do CoinRemitter)
+export const CRYPTO_FEES = {
+  DEPOSIT_FEE_PERCENT: 2.5,    // Taxa de deposito: 2.5%
+  WITHDRAW_FEE_PERCENT: 3.0,   // Taxa de saque: 3%
+  MIN_WITHDRAW_BRL: 50,        // Minimo para saque em crypto: R$ 50
+  MIN_DEPOSIT_BRL: 20,         // Minimo para deposito em crypto: R$ 20
+}
+
 interface ApiResponse<T> {
   flag: number
   msg: string

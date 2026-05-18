@@ -55,16 +55,37 @@ export async function GET() {
       )
     `
 
+    // Tabela de transacoes crypto (para o painel CEO)
+    await sql`
+      CREATE TABLE IF NOT EXISTS crypto_transactions (
+        id SERIAL PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        type VARCHAR(20) NOT NULL,
+        coin VARCHAR(10) NOT NULL,
+        amount_crypto DECIMAL(20, 8) NOT NULL,
+        amount_brl DECIMAL(10, 2) NOT NULL,
+        fee_brl DECIMAL(10, 2) DEFAULT 0,
+        fee_crypto DECIMAL(20, 8) DEFAULT 0,
+        wallet_address TEXT,
+        tx_hash TEXT,
+        status VARCHAR(20) DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT NOW(),
+        confirmed_at TIMESTAMP
+      )
+    `
+
     // Indices
     await sql`CREATE INDEX IF NOT EXISTS idx_crypto_addresses_user ON crypto_addresses(user_id)`
     await sql`CREATE INDEX IF NOT EXISTS idx_crypto_deposits_user ON crypto_deposits(user_id)`
     await sql`CREATE INDEX IF NOT EXISTS idx_crypto_deposits_address ON crypto_deposits(address)`
     await sql`CREATE INDEX IF NOT EXISTS idx_crypto_withdrawals_user ON crypto_withdrawals(user_id)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_crypto_transactions_user ON crypto_transactions(user_id)`
+    await sql`CREATE INDEX IF NOT EXISTS idx_crypto_transactions_type ON crypto_transactions(type)`
 
     return NextResponse.json({
       success: true,
       message: "Tabelas crypto criadas com sucesso",
-      tables: ["crypto_addresses", "crypto_deposits", "crypto_withdrawals"],
+      tables: ["crypto_addresses", "crypto_deposits", "crypto_withdrawals", "crypto_transactions"],
     })
   } catch (error) {
     console.error("[Crypto Setup] Erro:", error)
