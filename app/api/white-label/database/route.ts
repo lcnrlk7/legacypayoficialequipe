@@ -17,7 +17,7 @@ async function verifyAuth(): Promise<string | null> {
     const token = cookieStore.get("auth-token")?.value
     if (!token) return null
     const { payload } = await jwtVerify(token, JWT_SECRET)
-    return payload.sub as string
+    return (payload.id || payload.sub) as string
   } catch {
     return null
   }
