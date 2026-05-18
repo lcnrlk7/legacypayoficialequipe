@@ -189,9 +189,9 @@ export async function validateWithdrawal(
       return { valid: false, reason: `Saldo insuficiente. Disponivel: R$ ${currentBalance.toFixed(2)}` };
     }
 
-    // 6. Verificar valor minimo (R$ 1) e maximo (R$ 50.000)
-    if (amount < 1) {
-      return { valid: false, reason: "Valor minimo de saque: R$ 1,00" };
+    // 6. Verificar valor minimo (R$ 20) e maximo (R$ 50.000)
+    if (amount < 20) {
+      return { valid: false, reason: "Valor minimo de saque: R$ 20,00" };
     }
 
     if (amount > 50000) {
