@@ -39,6 +39,7 @@ import {
   Bot,
   Split,
   Activity,
+  Bitcoin,
   type LucideIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -73,6 +74,7 @@ const menuCategories = [
     items: [
       { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
       { href: "/dashboard/wallet", icon: Wallet, label: "Carteira" },
+      { href: "/dashboard/crypto", icon: Bitcoin, label: "Crypto" },
       { href: "/dashboard/transfer", icon: Send, label: "Transferir" },
       { href: "/dashboard/split-payment", icon: Split, label: "Pag. Dividido" },
       { href: "/dashboard/transactions", icon: TrendingUp, label: "Transacoes" },

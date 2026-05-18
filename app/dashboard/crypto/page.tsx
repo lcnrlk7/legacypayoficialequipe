@@ -29,10 +29,28 @@ export default function CryptoPage() {
   const [withdrawResult, setWithdrawResult] = useState<any>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const [transactions, setTransactions] = useState<any[]>([])
+  const [loadingTx, setLoadingTx] = useState(false)
+
   // Carregar cotacoes
   useEffect(() => {
     loadRates()
+    loadTransactions()
   }, [])
+
+  const loadTransactions = async () => {
+    setLoadingTx(true)
+    try {
+      const response = await fetch("/api/crypto/transactions")
+      const data = await response.json()
+      if (data.success) {
+        setTransactions(data.transactions || [])
+      }
+    } catch (err) {
+      console.error("Erro ao carregar transacoes:", err)
+    }
+    setLoadingTx(false)
+  }
 
   const loadRates = async () => {
     setLoading(true)
@@ -174,6 +192,57 @@ export default function CryptoPage() {
               <ArrowUpFromLine className="w-5 h-5" />
               <span className="font-semibold">Sacar em Crypto</span>
             </button>
+          </div>
+
+          {/* Historico de Transacoes */}
+          <div className="mt-6">
+            <h2 className="font-semibold text-foreground mb-4">Historico de Transacoes</h2>
+            {loadingTx ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : transactions.length === 0 ? (
+              <div className="bg-card border border-border rounded-xl p-6 text-center">
+                <p className="text-muted-foreground">Nenhuma transacao crypto ainda</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {transactions.map((tx) => (
+                  <div key={`${tx.type}-${tx.id}`} className="bg-card border border-border rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        {tx.type === "deposit" ? (
+                          <ArrowDownToLine className="w-4 h-4 text-green-500" />
+                        ) : (
+                          <ArrowUpFromLine className="w-4 h-4 text-red-500" />
+                        )}
+                        <span className="font-medium text-foreground">
+                          {tx.type === "deposit" ? "Deposito" : "Saque"} {tx.coin}
+                        </span>
+                      </div>
+                      <span className={`text-sm font-medium ${
+                        tx.status === "confirmed" || tx.status === "completed" ? "text-green-500" :
+                        tx.status === "pending" ? "text-yellow-500" : "text-red-500"
+                      }`}>
+                        {tx.status === "confirmed" || tx.status === "completed" ? "Confirmado" :
+                         tx.status === "pending" ? "Pendente" : tx.status}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        {Number(tx.amount_crypto).toFixed(8)} {tx.coin}
+                      </span>
+                      <span className="text-foreground font-medium">
+                        R$ {Number(tx.amount_brl).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-2">
+                      {new Date(tx.created_at).toLocaleString("pt-BR")}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -389,7 +458,7 @@ export default function CryptoPage() {
                       <span className="text-foreground">R$ {parseFloat(withdrawAmount).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Taxa (2%):</span>
+                      <span className="text-muted-foreground">Taxa (3%):</span>
                       <span className="text-foreground">R$ {fee.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm font-semibold border-t border-border pt-2">
