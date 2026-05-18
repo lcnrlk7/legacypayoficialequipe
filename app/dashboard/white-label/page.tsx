@@ -120,16 +120,87 @@ const DEFAULT_CEO_MODULES = {
 }
 
 const DEFAULT_TEXTS = {
+  // Identidade
   site_name: "",
+  site_slogan: "",
   site_description: "",
+  
+  // Pagina de Login
   login_title: "Bem-vindo de volta",
   login_subtitle: "Acesse sua conta para continuar",
+  login_button: "Entrar",
+  login_forgot_password: "Esqueceu sua senha?",
+  login_no_account: "Nao tem uma conta?",
+  login_register_link: "Cadastre-se",
+  
+  // Pagina de Registro
   register_title: "Criar conta",
   register_subtitle: "Comece a receber pagamentos hoje",
+  register_button: "Criar minha conta",
+  register_has_account: "Ja tem uma conta?",
+  register_login_link: "Faca login",
+  register_terms_text: "Ao criar sua conta, voce concorda com nossos",
+  
+  // Dashboard
   dashboard_welcome: "Bem-vindo ao seu painel",
+  dashboard_subtitle: "Acompanhe suas transacoes e gerencie seu negocio",
+  dashboard_balance_title: "Saldo Disponivel",
+  dashboard_pending_title: "Saldo Pendente",
+  dashboard_today_title: "Vendas Hoje",
+  
+  // Carteira
+  wallet_title: "Minha Carteira",
+  wallet_withdraw_button: "Solicitar Saque",
+  wallet_history_title: "Historico de Saques",
+  
+  // Checkout
+  checkout_title: "Pagamento",
+  checkout_subtitle: "Finalize sua compra",
+  checkout_pix_title: "Pagar com PIX",
+  checkout_pix_instruction: "Escaneie o QR Code ou copie o codigo",
+  checkout_success_title: "Pagamento Confirmado!",
+  checkout_success_message: "Seu pagamento foi processado com sucesso",
+  checkout_pending_title: "Aguardando Pagamento",
+  checkout_pending_message: "Estamos aguardando a confirmacao do seu pagamento",
+  checkout_expired_title: "Pagamento Expirado",
+  checkout_expired_message: "O tempo para pagamento expirou. Tente novamente.",
+  
+  // Suporte
+  support_title: "Central de Ajuda",
+  support_subtitle: "Como podemos ajudar?",
+  support_ticket_button: "Abrir Ticket",
+  support_faq_title: "Perguntas Frequentes",
+  
+  // Footer
   footer_text: "",
+  footer_copyright: "Todos os direitos reservados",
+  
+  // Contato
   support_email: "",
   support_phone: "",
+  support_hours: "Seg a Sex, 9h as 18h",
+  
+  // Mensagens do Sistema
+  msg_loading: "Carregando...",
+  msg_saving: "Salvando...",
+  msg_success: "Operacao realizada com sucesso!",
+  msg_error: "Ocorreu um erro. Tente novamente.",
+  msg_session_expired: "Sua sessao expirou. Faca login novamente.",
+  msg_no_results: "Nenhum resultado encontrado",
+  msg_confirm_action: "Tem certeza que deseja continuar?",
+  
+  // Botoes Gerais
+  btn_save: "Salvar",
+  btn_cancel: "Cancelar",
+  btn_confirm: "Confirmar",
+  btn_back: "Voltar",
+  btn_next: "Proximo",
+  btn_copy: "Copiar",
+  btn_copied: "Copiado!",
+  btn_view_more: "Ver mais",
+  btn_download: "Baixar",
+  
+  // Redes Sociais e Links
   terms_url: "",
   privacy_url: "",
   whatsapp_number: "",
@@ -138,6 +209,19 @@ const DEFAULT_TEXTS = {
   facebook_url: "",
   youtube_url: "",
   tiktok_url: "",
+  twitter_url: "",
+  linkedin_url: "",
+  discord_url: "",
+  
+  // Emails Transacionais
+  email_welcome_subject: "Bem-vindo a {site_name}!",
+  email_welcome_body: "Ola {name}, seja bem-vindo! Estamos felizes em ter voce conosco.",
+  email_withdraw_subject: "Saque solicitado",
+  email_withdraw_body: "Seu saque de R$ {amount} foi solicitado e esta sendo processado.",
+  email_payment_subject: "Pagamento recebido",
+  email_payment_body: "Voce recebeu um pagamento de R$ {amount}.",
+  email_kyc_approved_subject: "Verificacao aprovada",
+  email_kyc_rejected_subject: "Verificacao reprovada",
 }
 
 const DEFAULT_FEATURES = {
@@ -877,20 +961,155 @@ export default function WhiteLabelPage() {
 
             {/* Aba Visual */}
             <TabsContent value="visual">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Identidade Visual</CardTitle>
-                  <CardDescription>Personalize a aparencia da sua plataforma</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Imagens */}
-                  <div>
-                    <h3 className="font-semibold mb-4 flex items-center gap-2">
-                      <ImageIcon className="w-5 h-5" /> Imagens
-                    </h3>
+              <div className="space-y-6">
+                {/* Temas Predefinidos */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-primary" />
+                      Temas Predefinidos
+                    </CardTitle>
+                    <CardDescription>Escolha um tema base ou personalize suas cores</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <button
+                        onClick={() => {
+                          setPrimaryColor("#FF5500")
+                          setSecondaryColor("#1A1A1A")
+                          setTextColor("#FFFFFF")
+                          setAccentColor("#3B82F6")
+                          setSuccessColor("#22C55E")
+                          setWarningColor("#F59E0B")
+                          setErrorColor("#EF4444")
+                        }}
+                        className="p-4 rounded-xl border-2 border-transparent hover:border-primary transition-all"
+                        style={{ background: "linear-gradient(135deg, #FF5500 0%, #1A1A1A 100%)" }}
+                      >
+                        <span className="text-white font-semibold text-sm">Hyperion (Padrao)</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPrimaryColor("#8B5CF6")
+                          setSecondaryColor("#0F0F23")
+                          setTextColor("#FFFFFF")
+                          setAccentColor("#A78BFA")
+                          setSuccessColor("#10B981")
+                          setWarningColor("#FBBF24")
+                          setErrorColor("#F43F5E")
+                        }}
+                        className="p-4 rounded-xl border-2 border-transparent hover:border-primary transition-all"
+                        style={{ background: "linear-gradient(135deg, #8B5CF6 0%, #0F0F23 100%)" }}
+                      >
+                        <span className="text-white font-semibold text-sm">Roxo Escuro</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPrimaryColor("#06B6D4")
+                          setSecondaryColor("#0C1222")
+                          setTextColor("#E2E8F0")
+                          setAccentColor("#22D3EE")
+                          setSuccessColor("#34D399")
+                          setWarningColor("#FCD34D")
+                          setErrorColor("#FB7185")
+                        }}
+                        className="p-4 rounded-xl border-2 border-transparent hover:border-primary transition-all"
+                        style={{ background: "linear-gradient(135deg, #06B6D4 0%, #0C1222 100%)" }}
+                      >
+                        <span className="text-white font-semibold text-sm">Ciano Tech</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPrimaryColor("#10B981")
+                          setSecondaryColor("#111827")
+                          setTextColor("#F9FAFB")
+                          setAccentColor("#34D399")
+                          setSuccessColor("#22C55E")
+                          setWarningColor("#F59E0B")
+                          setErrorColor("#EF4444")
+                        }}
+                        className="p-4 rounded-xl border-2 border-transparent hover:border-primary transition-all"
+                        style={{ background: "linear-gradient(135deg, #10B981 0%, #111827 100%)" }}
+                      >
+                        <span className="text-white font-semibold text-sm">Verde Moderno</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPrimaryColor("#EC4899")
+                          setSecondaryColor("#1F1F1F")
+                          setTextColor("#FAFAFA")
+                          setAccentColor("#F472B6")
+                          setSuccessColor("#4ADE80")
+                          setWarningColor("#FDE047")
+                          setErrorColor("#F87171")
+                        }}
+                        className="p-4 rounded-xl border-2 border-transparent hover:border-primary transition-all"
+                        style={{ background: "linear-gradient(135deg, #EC4899 0%, #1F1F1F 100%)" }}
+                      >
+                        <span className="text-white font-semibold text-sm">Rosa Vibrante</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPrimaryColor("#F97316")
+                          setSecondaryColor("#18181B")
+                          setTextColor("#FAFAFA")
+                          setAccentColor("#FB923C")
+                          setSuccessColor("#4ADE80")
+                          setWarningColor("#FACC15")
+                          setErrorColor("#F87171")
+                        }}
+                        className="p-4 rounded-xl border-2 border-transparent hover:border-primary transition-all"
+                        style={{ background: "linear-gradient(135deg, #F97316 0%, #18181B 100%)" }}
+                      >
+                        <span className="text-white font-semibold text-sm">Laranja Energy</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPrimaryColor("#3B82F6")
+                          setSecondaryColor("#FFFFFF")
+                          setTextColor("#1F2937")
+                          setAccentColor("#60A5FA")
+                          setSuccessColor("#22C55E")
+                          setWarningColor("#F59E0B")
+                          setErrorColor("#EF4444")
+                        }}
+                        className="p-4 rounded-xl border-2 border-transparent hover:border-primary transition-all"
+                        style={{ background: "linear-gradient(135deg, #3B82F6 0%, #FFFFFF 100%)" }}
+                      >
+                        <span className="text-gray-800 font-semibold text-sm">Azul Claro</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setPrimaryColor("#FBBF24")
+                          setSecondaryColor("#0A0A0A")
+                          setTextColor("#FAFAFA")
+                          setAccentColor("#FCD34D")
+                          setSuccessColor("#4ADE80")
+                          setWarningColor("#FB923C")
+                          setErrorColor("#F87171")
+                        }}
+                        className="p-4 rounded-xl border-2 border-transparent hover:border-primary transition-all"
+                        style={{ background: "linear-gradient(135deg, #FBBF24 0%, #0A0A0A 100%)" }}
+                      >
+                        <span className="text-white font-semibold text-sm">Dourado Premium</span>
+                      </button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Imagens */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ImageIcon className="w-5 h-5 text-primary" />
+                      Imagens e Logos
+                    </CardTitle>
+                    <CardDescription>Configure as imagens da sua plataforma</CardDescription>
+                  </CardHeader>
+                  <CardContent>
                     <div className="grid md:grid-cols-3 gap-4">
                       <div>
-                        <Label>Logo (URL)</Label>
+                        <Label>Logo Principal (URL)</Label>
                         <Input
                           value={logoUrl}
                           onChange={(e) => setLogoUrl(e.target.value)}
@@ -934,7 +1153,7 @@ export default function WhiteLabelPage() {
                         )}
                       </div>
                       <div>
-                        <Label>Banner (URL)</Label>
+                        <Label>Banner Principal (URL)</Label>
                         <Input
                           value={bannerUrl}
                           onChange={(e) => setBannerUrl(e.target.value)}
@@ -945,7 +1164,7 @@ export default function WhiteLabelPage() {
                         )}
                       </div>
                       <div>
-                        <Label>Fundo Login (URL)</Label>
+                        <Label>Fundo do Login (URL)</Label>
                         <Input
                           value={loginBgUrl}
                           onChange={(e) => setLoginBgUrl(e.target.value)}
@@ -956,13 +1175,19 @@ export default function WhiteLabelPage() {
                         )}
                       </div>
                     </div>
-                  </div>
+                  </CardContent>
+                </Card>
 
-                  {/* Cores */}
-                  <div>
-                    <h3 className="font-semibold mb-4 flex items-center gap-2">
-                      <Palette className="w-5 h-5" /> Cores
-                    </h3>
+                {/* Cores Personalizadas */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Palette className="w-5 h-5 text-primary" />
+                      Cores Personalizadas
+                    </CardTitle>
+                    <CardDescription>Ajuste as cores manualmente ou use um tema acima</CardDescription>
+                  </CardHeader>
+                  <CardContent>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div>
                         <Label>Cor Primaria</Label>
@@ -981,7 +1206,7 @@ export default function WhiteLabelPage() {
                         </div>
                       </div>
                       <div>
-                        <Label>Cor Secundaria</Label>
+                        <Label>Cor de Fundo</Label>
                         <div className="flex gap-2 items-center">
                           <input
                             type="color"
@@ -1077,58 +1302,112 @@ export default function WhiteLabelPage() {
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </CardContent>
+                </Card>
 
-                  {/* Preview */}
-                  <div>
-                    <h3 className="font-semibold mb-4">Preview</h3>
+                {/* Preview Completo */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Monitor className="w-5 h-5 text-primary" />
+                      Preview ao Vivo
+                    </CardTitle>
+                    <CardDescription>Visualize como sua plataforma vai ficar</CardDescription>
+                  </CardHeader>
+                  <CardContent>
                     <div 
-                      className="rounded-xl p-6"
+                      className="rounded-xl overflow-hidden border"
                       style={{ backgroundColor: secondaryColor }}
                     >
-                      <div className="flex items-center gap-4 mb-4">
-                        {logoUrl && <img src={logoUrl} alt="Logo" className="h-8" />}
-                        <span style={{ color: textColor }} className="font-bold text-xl">{name || "Sua Plataforma"}</span>
+                      {/* Header Preview */}
+                      <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: `${textColor}20` }}>
+                        <div className="flex items-center gap-3">
+                          {logoUrl ? (
+                            <img src={logoUrl} alt="Logo" className="h-8" />
+                          ) : (
+                            <div className="w-8 h-8 rounded" style={{ backgroundColor: primaryColor }} />
+                          )}
+                          <span style={{ color: textColor }} className="font-bold text-lg">
+                            {name || customTexts.site_name || "Sua Plataforma"}
+                          </span>
+                        </div>
+                        <div className="flex gap-2">
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: successColor }} />
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: warningColor }} />
+                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: errorColor }} />
+                        </div>
                       </div>
-                      <div className="flex gap-2 flex-wrap">
-                        <button style={{ backgroundColor: primaryColor, color: textColor }} className="px-4 py-2 rounded-lg font-semibold">
-                          Primario
-                        </button>
-                        <button style={{ backgroundColor: accentColor, color: "#fff" }} className="px-4 py-2 rounded-lg font-semibold">
-                          Destaque
-                        </button>
-                        <button style={{ backgroundColor: successColor, color: "#fff" }} className="px-4 py-2 rounded-lg font-semibold">
-                          Sucesso
-                        </button>
-                        <button style={{ backgroundColor: warningColor, color: "#000" }} className="px-4 py-2 rounded-lg font-semibold">
-                          Aviso
-                        </button>
-                        <button style={{ backgroundColor: errorColor, color: "#fff" }} className="px-4 py-2 rounded-lg font-semibold">
-                          Erro
-                        </button>
+                      
+                      {/* Content Preview */}
+                      <div className="p-6">
+                        <h3 style={{ color: textColor }} className="text-xl font-bold mb-2">
+                          {customTexts.dashboard_welcome || "Bem-vindo ao seu painel"}
+                        </h3>
+                        <p style={{ color: `${textColor}80` }} className="mb-4">
+                          {customTexts.site_slogan || "Sua plataforma de pagamentos"}
+                        </p>
+                        
+                        {/* Cards Preview */}
+                        <div className="grid grid-cols-3 gap-4 mb-6">
+                          <div className="p-4 rounded-lg" style={{ backgroundColor: `${primaryColor}20` }}>
+                            <p style={{ color: `${textColor}80` }} className="text-sm">Saldo</p>
+                            <p style={{ color: primaryColor }} className="text-2xl font-bold">R$ 1.250,00</p>
+                          </div>
+                          <div className="p-4 rounded-lg" style={{ backgroundColor: `${successColor}20` }}>
+                            <p style={{ color: `${textColor}80` }} className="text-sm">Entradas</p>
+                            <p style={{ color: successColor }} className="text-2xl font-bold">R$ 3.420,00</p>
+                          </div>
+                          <div className="p-4 rounded-lg" style={{ backgroundColor: `${accentColor}20` }}>
+                            <p style={{ color: `${textColor}80` }} className="text-sm">Pendente</p>
+                            <p style={{ color: accentColor }} className="text-2xl font-bold">R$ 890,00</p>
+                          </div>
+                        </div>
+                        
+                        {/* Buttons Preview */}
+                        <div className="flex gap-2 flex-wrap">
+                          <button style={{ backgroundColor: primaryColor, color: "#fff" }} className="px-4 py-2 rounded-lg font-semibold">
+                            {customTexts.btn_save || "Salvar"}
+                          </button>
+                          <button style={{ backgroundColor: accentColor, color: "#fff" }} className="px-4 py-2 rounded-lg font-semibold">
+                            {customTexts.btn_confirm || "Confirmar"}
+                          </button>
+                          <button style={{ backgroundColor: successColor, color: "#fff" }} className="px-4 py-2 rounded-lg font-semibold">
+                            Sucesso
+                          </button>
+                          <button style={{ backgroundColor: warningColor, color: "#000" }} className="px-4 py-2 rounded-lg font-semibold">
+                            Aviso
+                          </button>
+                          <button style={{ backgroundColor: errorColor, color: "#fff" }} className="px-4 py-2 rounded-lg font-semibold">
+                            Erro
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </CardContent>
+                </Card>
 
-                  <Button onClick={saveTenant} disabled={saving}>
-                    {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                    Salvar Configuracoes
-                  </Button>
-                </CardContent>
-              </Card>
+                <Button onClick={saveTenant} disabled={saving} className="w-full">
+                  {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                  Salvar Configuracoes Visuais
+                </Button>
+              </div>
             </TabsContent>
 
             {/* Aba Textos */}
             <TabsContent value="textos">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Textos e Contatos</CardTitle>
-                  <CardDescription>Personalize os textos e informacoes de contato</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-6">
+                {/* Identidade */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-primary" />
+                      Identidade da Marca
+                    </CardTitle>
+                    <CardDescription>Nome, slogan e descricao da sua plataforma</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <Label>Nome do Site</Label>
+                      <Label>Nome da Plataforma</Label>
                       <Input
                         value={customTexts.site_name}
                         onChange={(e) => updateText("site_name", e.target.value)}
@@ -1136,15 +1415,37 @@ export default function WhiteLabelPage() {
                       />
                     </div>
                     <div>
-                      <Label>Descricao do Site</Label>
+                      <Label>Slogan</Label>
                       <Input
-                        value={customTexts.site_description}
-                        onChange={(e) => updateText("site_description", e.target.value)}
-                        placeholder="A melhor plataforma de pagamentos"
+                        value={customTexts.site_slogan}
+                        onChange={(e) => updateText("site_slogan", e.target.value)}
+                        placeholder="Pagamentos simples e rapidos"
                       />
                     </div>
+                    <div className="md:col-span-2">
+                      <Label>Descricao do Site</Label>
+                      <Textarea
+                        value={customTexts.site_description}
+                        onChange={(e) => updateText("site_description", e.target.value)}
+                        placeholder="A melhor plataforma de pagamentos do Brasil. Receba via PIX de forma rapida e segura."
+                        rows={3}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Pagina de Login */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Lock className="w-5 h-5 text-primary" />
+                      Pagina de Login
+                    </CardTitle>
+                    <CardDescription>Textos exibidos na tela de login</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <Label>Titulo do Login</Label>
+                      <Label>Titulo</Label>
                       <Input
                         value={customTexts.login_title}
                         onChange={(e) => updateText("login_title", e.target.value)}
@@ -1152,15 +1453,60 @@ export default function WhiteLabelPage() {
                       />
                     </div>
                     <div>
-                      <Label>Subtitulo do Login</Label>
+                      <Label>Subtitulo</Label>
                       <Input
                         value={customTexts.login_subtitle}
                         onChange={(e) => updateText("login_subtitle", e.target.value)}
-                        placeholder="Acesse sua conta"
+                        placeholder="Acesse sua conta para continuar"
                       />
                     </div>
                     <div>
-                      <Label>Titulo do Cadastro</Label>
+                      <Label>Botao de Login</Label>
+                      <Input
+                        value={customTexts.login_button}
+                        onChange={(e) => updateText("login_button", e.target.value)}
+                        placeholder="Entrar"
+                      />
+                    </div>
+                    <div>
+                      <Label>Esqueci a Senha</Label>
+                      <Input
+                        value={customTexts.login_forgot_password}
+                        onChange={(e) => updateText("login_forgot_password", e.target.value)}
+                        placeholder="Esqueceu sua senha?"
+                      />
+                    </div>
+                    <div>
+                      <Label>Nao tem conta?</Label>
+                      <Input
+                        value={customTexts.login_no_account}
+                        onChange={(e) => updateText("login_no_account", e.target.value)}
+                        placeholder="Nao tem uma conta?"
+                      />
+                    </div>
+                    <div>
+                      <Label>Link Cadastro</Label>
+                      <Input
+                        value={customTexts.login_register_link}
+                        onChange={(e) => updateText("login_register_link", e.target.value)}
+                        placeholder="Cadastre-se"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Pagina de Registro */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-primary" />
+                      Pagina de Cadastro
+                    </CardTitle>
+                    <CardDescription>Textos exibidos na tela de registro</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Titulo</Label>
                       <Input
                         value={customTexts.register_title}
                         onChange={(e) => updateText("register_title", e.target.value)}
@@ -1168,13 +1514,50 @@ export default function WhiteLabelPage() {
                       />
                     </div>
                     <div>
-                      <Label>Subtitulo do Cadastro</Label>
+                      <Label>Subtitulo</Label>
                       <Input
                         value={customTexts.register_subtitle}
                         onChange={(e) => updateText("register_subtitle", e.target.value)}
-                        placeholder="Comece a receber pagamentos"
+                        placeholder="Comece a receber pagamentos hoje"
                       />
                     </div>
+                    <div>
+                      <Label>Botao de Cadastro</Label>
+                      <Input
+                        value={customTexts.register_button}
+                        onChange={(e) => updateText("register_button", e.target.value)}
+                        placeholder="Criar minha conta"
+                      />
+                    </div>
+                    <div>
+                      <Label>Ja tem conta?</Label>
+                      <Input
+                        value={customTexts.register_has_account}
+                        onChange={(e) => updateText("register_has_account", e.target.value)}
+                        placeholder="Ja tem uma conta?"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label>Texto de Termos</Label>
+                      <Input
+                        value={customTexts.register_terms_text}
+                        onChange={(e) => updateText("register_terms_text", e.target.value)}
+                        placeholder="Ao criar sua conta, voce concorda com nossos"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Dashboard */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <LayoutDashboard className="w-5 h-5 text-primary" />
+                      Dashboard e Painel
+                    </CardTitle>
+                    <CardDescription>Textos exibidos no painel do usuario</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid md:grid-cols-2 gap-4">
                     <div>
                       <Label>Mensagem de Boas-vindas</Label>
                       <Input
@@ -1184,20 +1567,208 @@ export default function WhiteLabelPage() {
                       />
                     </div>
                     <div>
-                      <Label>Texto do Rodape</Label>
+                      <Label>Subtitulo do Dashboard</Label>
                       <Input
-                        value={customTexts.footer_text}
-                        onChange={(e) => updateText("footer_text", e.target.value)}
-                        placeholder="2024 Minha Plataforma. Todos os direitos reservados."
+                        value={customTexts.dashboard_subtitle}
+                        onChange={(e) => updateText("dashboard_subtitle", e.target.value)}
+                        placeholder="Acompanhe suas transacoes"
                       />
                     </div>
-                  </div>
+                    <div>
+                      <Label>Titulo Saldo Disponivel</Label>
+                      <Input
+                        value={customTexts.dashboard_balance_title}
+                        onChange={(e) => updateText("dashboard_balance_title", e.target.value)}
+                        placeholder="Saldo Disponivel"
+                      />
+                    </div>
+                    <div>
+                      <Label>Titulo Saldo Pendente</Label>
+                      <Input
+                        value={customTexts.dashboard_pending_title}
+                        onChange={(e) => updateText("dashboard_pending_title", e.target.value)}
+                        placeholder="Saldo Pendente"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
 
-                  <div className="border-t pt-6">
-                    <h3 className="font-semibold mb-4 flex items-center gap-2">
-                      <Phone className="w-5 h-5" /> Contatos e Redes Sociais
-                    </h3>
-                    <div className="grid md:grid-cols-2 gap-4">
+                {/* Checkout */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 text-primary" />
+                      Checkout e Pagamento
+                    </CardTitle>
+                    <CardDescription>Textos exibidos nas telas de pagamento</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Titulo do Checkout</Label>
+                      <Input
+                        value={customTexts.checkout_title}
+                        onChange={(e) => updateText("checkout_title", e.target.value)}
+                        placeholder="Pagamento"
+                      />
+                    </div>
+                    <div>
+                      <Label>Subtitulo</Label>
+                      <Input
+                        value={customTexts.checkout_subtitle}
+                        onChange={(e) => updateText("checkout_subtitle", e.target.value)}
+                        placeholder="Finalize sua compra"
+                      />
+                    </div>
+                    <div>
+                      <Label>Titulo PIX</Label>
+                      <Input
+                        value={customTexts.checkout_pix_title}
+                        onChange={(e) => updateText("checkout_pix_title", e.target.value)}
+                        placeholder="Pagar com PIX"
+                      />
+                    </div>
+                    <div>
+                      <Label>Instrucao PIX</Label>
+                      <Input
+                        value={customTexts.checkout_pix_instruction}
+                        onChange={(e) => updateText("checkout_pix_instruction", e.target.value)}
+                        placeholder="Escaneie o QR Code ou copie o codigo"
+                      />
+                    </div>
+                    <div>
+                      <Label>Titulo Sucesso</Label>
+                      <Input
+                        value={customTexts.checkout_success_title}
+                        onChange={(e) => updateText("checkout_success_title", e.target.value)}
+                        placeholder="Pagamento Confirmado!"
+                      />
+                    </div>
+                    <div>
+                      <Label>Mensagem Sucesso</Label>
+                      <Input
+                        value={customTexts.checkout_success_message}
+                        onChange={(e) => updateText("checkout_success_message", e.target.value)}
+                        placeholder="Seu pagamento foi processado"
+                      />
+                    </div>
+                    <div>
+                      <Label>Titulo Pendente</Label>
+                      <Input
+                        value={customTexts.checkout_pending_title}
+                        onChange={(e) => updateText("checkout_pending_title", e.target.value)}
+                        placeholder="Aguardando Pagamento"
+                      />
+                    </div>
+                    <div>
+                      <Label>Mensagem Pendente</Label>
+                      <Input
+                        value={customTexts.checkout_pending_message}
+                        onChange={(e) => updateText("checkout_pending_message", e.target.value)}
+                        placeholder="Aguardando confirmacao"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Botoes e Mensagens */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <MessageSquare className="w-5 h-5 text-primary" />
+                      Botoes e Mensagens do Sistema
+                    </CardTitle>
+                    <CardDescription>Textos de botoes e mensagens gerais</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid md:grid-cols-3 gap-4">
+                    <div>
+                      <Label>Salvar</Label>
+                      <Input
+                        value={customTexts.btn_save}
+                        onChange={(e) => updateText("btn_save", e.target.value)}
+                        placeholder="Salvar"
+                      />
+                    </div>
+                    <div>
+                      <Label>Cancelar</Label>
+                      <Input
+                        value={customTexts.btn_cancel}
+                        onChange={(e) => updateText("btn_cancel", e.target.value)}
+                        placeholder="Cancelar"
+                      />
+                    </div>
+                    <div>
+                      <Label>Confirmar</Label>
+                      <Input
+                        value={customTexts.btn_confirm}
+                        onChange={(e) => updateText("btn_confirm", e.target.value)}
+                        placeholder="Confirmar"
+                      />
+                    </div>
+                    <div>
+                      <Label>Voltar</Label>
+                      <Input
+                        value={customTexts.btn_back}
+                        onChange={(e) => updateText("btn_back", e.target.value)}
+                        placeholder="Voltar"
+                      />
+                    </div>
+                    <div>
+                      <Label>Proximo</Label>
+                      <Input
+                        value={customTexts.btn_next}
+                        onChange={(e) => updateText("btn_next", e.target.value)}
+                        placeholder="Proximo"
+                      />
+                    </div>
+                    <div>
+                      <Label>Copiar</Label>
+                      <Input
+                        value={customTexts.btn_copy}
+                        onChange={(e) => updateText("btn_copy", e.target.value)}
+                        placeholder="Copiar"
+                      />
+                    </div>
+                    <div className="md:col-span-3 border-t pt-4 mt-2">
+                      <Label className="text-muted-foreground">Mensagens do Sistema</Label>
+                    </div>
+                    <div>
+                      <Label>Carregando</Label>
+                      <Input
+                        value={customTexts.msg_loading}
+                        onChange={(e) => updateText("msg_loading", e.target.value)}
+                        placeholder="Carregando..."
+                      />
+                    </div>
+                    <div>
+                      <Label>Sucesso</Label>
+                      <Input
+                        value={customTexts.msg_success}
+                        onChange={(e) => updateText("msg_success", e.target.value)}
+                        placeholder="Operacao realizada com sucesso!"
+                      />
+                    </div>
+                    <div>
+                      <Label>Erro</Label>
+                      <Input
+                        value={customTexts.msg_error}
+                        onChange={(e) => updateText("msg_error", e.target.value)}
+                        placeholder="Ocorreu um erro. Tente novamente."
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Contatos e Redes Sociais */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Phone className="w-5 h-5 text-primary" />
+                      Contatos e Redes Sociais
+                    </CardTitle>
+                    <CardDescription>Informacoes de contato e links de redes sociais</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid md:grid-cols-3 gap-4">
                       <div>
                         <Label>Email de Suporte</Label>
                         <Input
@@ -1215,86 +1786,145 @@ export default function WhiteLabelPage() {
                         />
                       </div>
                       <div>
-                        <Label>WhatsApp</Label>
+                        <Label>Horario de Atendimento</Label>
                         <Input
-                          value={customTexts.whatsapp_number}
-                          onChange={(e) => updateText("whatsapp_number", e.target.value)}
-                          placeholder="5511999999999"
-                        />
-                      </div>
-                      <div>
-                        <Label>Canal Telegram</Label>
-                        <Input
-                          value={customTexts.telegram_channel}
-                          onChange={(e) => updateText("telegram_channel", e.target.value)}
-                          placeholder="@meucanal"
-                        />
-                      </div>
-                      <div>
-                        <Label>Instagram</Label>
-                        <Input
-                          value={customTexts.instagram_url}
-                          onChange={(e) => updateText("instagram_url", e.target.value)}
-                          placeholder="https://instagram.com/..."
-                        />
-                      </div>
-                      <div>
-                        <Label>Facebook</Label>
-                        <Input
-                          value={customTexts.facebook_url}
-                          onChange={(e) => updateText("facebook_url", e.target.value)}
-                          placeholder="https://facebook.com/..."
-                        />
-                      </div>
-                      <div>
-                        <Label>YouTube</Label>
-                        <Input
-                          value={customTexts.youtube_url}
-                          onChange={(e) => updateText("youtube_url", e.target.value)}
-                          placeholder="https://youtube.com/..."
-                        />
-                      </div>
-                      <div>
-                        <Label>TikTok</Label>
-                        <Input
-                          value={customTexts.tiktok_url}
-                          onChange={(e) => updateText("tiktok_url", e.target.value)}
-                          placeholder="https://tiktok.com/..."
+                          value={customTexts.support_hours}
+                          onChange={(e) => updateText("support_hours", e.target.value)}
+                          placeholder="Seg a Sex, 9h as 18h"
                         />
                       </div>
                     </div>
-                  </div>
-
-                  <div className="border-t pt-6">
-                    <h3 className="font-semibold mb-4 flex items-center gap-2">
-                      <FileText className="w-5 h-5" /> Paginas Legais
-                    </h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>URL Termos de Uso</Label>
-                        <Input
-                          value={customTexts.terms_url}
-                          onChange={(e) => updateText("terms_url", e.target.value)}
-                          placeholder="https://minhaplatforma.com/termos"
-                        />
-                      </div>
-                      <div>
-                        <Label>URL Politica de Privacidade</Label>
-                        <Input
-                          value={customTexts.privacy_url}
-                          onChange={(e) => updateText("privacy_url", e.target.value)}
-                          placeholder="https://minhaplatforma.com/privacidade"
-                        />
+                    
+                    <div className="border-t pt-4">
+                      <Label className="text-muted-foreground mb-3 block">Redes Sociais</Label>
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <div>
+                          <Label>WhatsApp</Label>
+                          <Input
+                            value={customTexts.whatsapp_number}
+                            onChange={(e) => updateText("whatsapp_number", e.target.value)}
+                            placeholder="5511999999999"
+                          />
+                        </div>
+                        <div>
+                          <Label>Canal Telegram</Label>
+                          <Input
+                            value={customTexts.telegram_channel}
+                            onChange={(e) => updateText("telegram_channel", e.target.value)}
+                            placeholder="@meucanal"
+                          />
+                        </div>
+                        <div>
+                          <Label>Instagram</Label>
+                          <Input
+                            value={customTexts.instagram_url}
+                            onChange={(e) => updateText("instagram_url", e.target.value)}
+                            placeholder="https://instagram.com/..."
+                          />
+                        </div>
+                        <div>
+                          <Label>Facebook</Label>
+                          <Input
+                            value={customTexts.facebook_url}
+                            onChange={(e) => updateText("facebook_url", e.target.value)}
+                            placeholder="https://facebook.com/..."
+                          />
+                        </div>
+                        <div>
+                          <Label>YouTube</Label>
+                          <Input
+                            value={customTexts.youtube_url}
+                            onChange={(e) => updateText("youtube_url", e.target.value)}
+                            placeholder="https://youtube.com/..."
+                          />
+                        </div>
+                        <div>
+                          <Label>TikTok</Label>
+                          <Input
+                            value={customTexts.tiktok_url}
+                            onChange={(e) => updateText("tiktok_url", e.target.value)}
+                            placeholder="https://tiktok.com/..."
+                          />
+                        </div>
+                        <div>
+                          <Label>Twitter / X</Label>
+                          <Input
+                            value={customTexts.twitter_url}
+                            onChange={(e) => updateText("twitter_url", e.target.value)}
+                            placeholder="https://x.com/..."
+                          />
+                        </div>
+                        <div>
+                          <Label>LinkedIn</Label>
+                          <Input
+                            value={customTexts.linkedin_url}
+                            onChange={(e) => updateText("linkedin_url", e.target.value)}
+                            placeholder="https://linkedin.com/..."
+                          />
+                        </div>
+                        <div>
+                          <Label>Discord</Label>
+                          <Input
+                            value={customTexts.discord_url}
+                            onChange={(e) => updateText("discord_url", e.target.value)}
+                            placeholder="https://discord.gg/..."
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </CardContent>
+                </Card>
 
-                  <Button onClick={saveTenant} disabled={saving}>
-                    {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
-                    Salvar Configuracoes
-                  </Button>
-                </CardContent>
-              </Card>
+                {/* Paginas Legais e Rodape */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-primary" />
+                      Paginas Legais e Rodape
+                    </CardTitle>
+                    <CardDescription>Links para termos e texto do rodape</CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>URL Termos de Uso</Label>
+                      <Input
+                        value={customTexts.terms_url}
+                        onChange={(e) => updateText("terms_url", e.target.value)}
+                        placeholder="https://minhaplatforma.com/termos"
+                      />
+                    </div>
+                    <div>
+                      <Label>URL Politica de Privacidade</Label>
+                      <Input
+                        value={customTexts.privacy_url}
+                        onChange={(e) => updateText("privacy_url", e.target.value)}
+                        placeholder="https://minhaplatforma.com/privacidade"
+                      />
+                    </div>
+                    <div>
+                      <Label>Texto do Rodape</Label>
+                      <Input
+                        value={customTexts.footer_text}
+                        onChange={(e) => updateText("footer_text", e.target.value)}
+                        placeholder="Sua plataforma de pagamentos confiavel"
+                      />
+                    </div>
+                    <div>
+                      <Label>Copyright</Label>
+                      <Input
+                        value={customTexts.footer_copyright}
+                        onChange={(e) => updateText("footer_copyright", e.target.value)}
+                        placeholder="Todos os direitos reservados"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Button onClick={saveTenant} disabled={saving} className="w-full">
+                  {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                  Salvar Todas as Configuracoes de Texto
+                </Button>
+              </div>
             </TabsContent>
 
             {/* Aba Modulos */}
