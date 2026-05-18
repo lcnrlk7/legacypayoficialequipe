@@ -1,21 +1,32 @@
 import { NextRequest, NextResponse } from "next/server"
-import { 
-  testDatabaseConnection, 
-  setupTenantDatabase 
-} from "@/lib/white-label"
 import { neon } from "@neondatabase/serverless"
-import { getSession } from "@/lib/auth"
+import { cookies } from "next/headers"
+import { jwtVerify } from "jose"
+import { testDatabaseConnection, setupTenantDatabase } from "@/lib/white-label"
 
 const sql = neon(process.env.DATABASE_URL!)
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || "fallback-secret-change-in-production"
+)
+
+async function getUserId(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies()
+    const token = cookieStore.get("auth-token")?.value
+    if (!token) return null
+    const { payload } = await jwtVerify(token, JWT_SECRET)
+    return payload.id as string
+  } catch {
+    return null
+  }
+}
 
 // POST - Testar conexao com banco
 export async function POST(request: NextRequest) {
-  const session = await getSession()
-  if (!session) {
+  const userId = await getUserId()
+  if (!userId) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
-  
-  const userId = session.userId
   
   try {
     const { database_url, action } = await request.json()
@@ -46,16 +57,11 @@ export async function POST(request: NextRequest) {
       }
       
       // Atualizar tenant
-      const tenantResult = await sql`
-        SELECT id FROM white_label_tenants WHERE user_id = ${userId} LIMIT 1
+      await sql`
+        UPDATE white_label_tenants
+        SET database_configured = true, database_url = ${database_url}, updated_at = NOW()
+        WHERE user_id = ${userId}
       `
-      if (tenantResult.length > 0) {
-        await sql`
-          UPDATE white_label_tenants
-          SET database_configured = true, updated_at = NOW()
-          WHERE id = ${tenantResult[0].id}
-        `
-      }
       
       return NextResponse.json({ 
         success: true, 
@@ -63,10 +69,7 @@ export async function POST(request: NextRequest) {
       })
     }
     
-    return NextResponse.json({ 
-      success: true, 
-      message: "Conexao bem sucedida" 
-    })
+    return NextResponse.json({ success: true, message: "Conexao bem sucedida" })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }

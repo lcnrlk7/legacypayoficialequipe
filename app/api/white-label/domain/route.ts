@@ -1,22 +1,32 @@
 import { NextRequest, NextResponse } from "next/server"
-import { 
-  addDomainToVercel,
-  removeDomainFromVercel,
-  checkDomainStatus
-} from "@/lib/white-label"
 import { neon } from "@neondatabase/serverless"
-import { getSession } from "@/lib/auth"
+import { cookies } from "next/headers"
+import { jwtVerify } from "jose"
+import { addDomainToVercel, removeDomainFromVercel, checkDomainStatus } from "@/lib/white-label"
 
 const sql = neon(process.env.DATABASE_URL!)
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || "fallback-secret-change-in-production"
+)
+
+async function getUserId(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies()
+    const token = cookieStore.get("auth-token")?.value
+    if (!token) return null
+    const { payload } = await jwtVerify(token, JWT_SECRET)
+    return payload.id as string
+  } catch {
+    return null
+  }
+}
 
 // POST - Adicionar dominio
 export async function POST(request: NextRequest) {
-  const session = await getSession()
-  if (!session) {
+  const userId = await getUserId()
+  if (!userId) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
-  
-  const userId = session.userId
   
   try {
     const { domain, type } = await request.json()
@@ -44,40 +54,20 @@ export async function POST(request: NextRequest) {
     const result = await addDomainToVercel(domain)
     
     if (!result.success) {
-      return NextResponse.json({ 
-        success: false, 
-        error: result.error 
-      }, { status: 400 })
+      return NextResponse.json({ success: false, error: result.error }, { status: 400 })
     }
     
-    // Buscar e atualizar tenant
-    const tenantResult = await sql`
-      SELECT id FROM white_label_tenants WHERE user_id = ${userId} LIMIT 1
-    `
-    if (tenantResult.length > 0) {
-      if (type === "app") {
-        await sql`
-          UPDATE white_label_tenants
-          SET domain_app = ${domain}, updated_at = NOW()
-          WHERE id = ${tenantResult[0].id}
-        `
-      } else {
-        await sql`
-          UPDATE white_label_tenants
-          SET domain_admin = ${domain}, updated_at = NOW()
-          WHERE id = ${tenantResult[0].id}
-        `
-      }
+    // Atualizar tenant
+    if (type === "app") {
+      await sql`UPDATE white_label_tenants SET domain_app = ${domain}, updated_at = NOW() WHERE user_id = ${userId}`
+    } else {
+      await sql`UPDATE white_label_tenants SET domain_admin = ${domain}, updated_at = NOW() WHERE user_id = ${userId}`
     }
     
     return NextResponse.json({ 
       success: true, 
       message: "Dominio adicionado. Configure o DNS apontando para cname.vercel-dns.com",
-      dns_instruction: {
-        type: "CNAME",
-        name: domain.split(".")[0],
-        value: "cname.vercel-dns.com"
-      }
+      dns_instruction: { type: "CNAME", name: domain.split(".")[0], value: "cname.vercel-dns.com" }
     })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
@@ -86,8 +76,8 @@ export async function POST(request: NextRequest) {
 
 // GET - Verificar status do dominio
 export async function GET(request: NextRequest) {
-  const session = await getSession()
-  if (!session) {
+  const userId = await getUserId()
+  if (!userId) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
   
@@ -100,12 +90,7 @@ export async function GET(request: NextRequest) {
     }
     
     const status = await checkDomainStatus(domain)
-    
-    return NextResponse.json({ 
-      success: true, 
-      domain,
-      ...status
-    })
+    return NextResponse.json({ success: true, domain, ...status })
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
@@ -113,12 +98,10 @@ export async function GET(request: NextRequest) {
 
 // DELETE - Remover dominio
 export async function DELETE(request: NextRequest) {
-  const session = await getSession()
-  if (!session) {
+  const userId = await getUserId()
+  if (!userId) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
-  
-  const userId = session.userId
   
   try {
     const { domain, type } = await request.json()
@@ -127,27 +110,12 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: "Dominio e tipo sao obrigatorios" }, { status: 400 })
     }
     
-    // Remover da Vercel
     await removeDomainFromVercel(domain)
     
-    // Buscar e atualizar tenant
-    const tenantResult = await sql`
-      SELECT id FROM white_label_tenants WHERE user_id = ${userId} LIMIT 1
-    `
-    if (tenantResult.length > 0) {
-      if (type === "app") {
-        await sql`
-          UPDATE white_label_tenants
-          SET domain_app = NULL, updated_at = NOW()
-          WHERE id = ${tenantResult[0].id}
-        `
-      } else {
-        await sql`
-          UPDATE white_label_tenants
-          SET domain_admin = NULL, updated_at = NOW()
-          WHERE id = ${tenantResult[0].id}
-        `
-      }
+    if (type === "app") {
+      await sql`UPDATE white_label_tenants SET domain_app = NULL, updated_at = NOW() WHERE user_id = ${userId}`
+    } else {
+      await sql`UPDATE white_label_tenants SET domain_admin = NULL, updated_at = NOW() WHERE user_id = ${userId}`
     }
     
     return NextResponse.json({ success: true, message: "Dominio removido" })

@@ -1,25 +1,32 @@
 import { NextRequest, NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
-import { getSession } from "@/lib/auth"
-import { 
-  testDatabaseConnection, 
-  setupTenantDatabase,
-  addDomainToVercel,
-  removeDomainFromVercel,
-  checkDomainStatus
-} from "@/lib/white-label"
+import { cookies } from "next/headers"
+import { jwtVerify } from "jose"
 
 const sql = neon(process.env.DATABASE_URL!)
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || "fallback-secret-change-in-production"
+)
+
+async function getUserId(): Promise<string | null> {
+  try {
+    const cookieStore = await cookies()
+    const token = cookieStore.get("auth-token")?.value
+    if (!token) return null
+    const { payload } = await jwtVerify(token, JWT_SECRET)
+    return payload.id as string
+  } catch {
+    return null
+  }
+}
 
 // GET - Buscar tenant do usuario
 export async function GET() {
-  const session = await getSession()
+  const userId = await getUserId()
   
-  if (!session) {
+  if (!userId) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
-  
-  const userId = session.userId
   
   try {
     const result = await sql`
@@ -28,32 +35,9 @@ export async function GET() {
     
     const tenant = result[0] || null
     
-    if (!tenant) {
-      return NextResponse.json({ success: true, tenant: null })
-    }
-    
-    // Verificar status dos dominios (com tratamento de erro)
-    let domainAppStatus = { configured: false, verified: false }
-    let domainAdminStatus = { configured: false, verified: false }
-    
-    try {
-      if (tenant.domain_app) {
-        domainAppStatus = await checkDomainStatus(tenant.domain_app)
-      }
-      if (tenant.domain_admin) {
-        domainAdminStatus = await checkDomainStatus(tenant.domain_admin)
-      }
-    } catch (domainError) {
-      console.error("[White Label] Erro ao verificar dominios:", domainError)
-    }
-    
     return NextResponse.json({ 
       success: true,
-      tenant,
-      domainStatus: {
-        app: domainAppStatus,
-        admin: domainAdminStatus,
-      }
+      tenant
     })
   } catch (error: any) {
     console.error("[White Label] Erro ao buscar tenant:", error)
@@ -63,12 +47,10 @@ export async function GET() {
 
 // POST - Criar tenant
 export async function POST(request: NextRequest) {
-  const session = await getSession()
-  if (!session) {
+  const userId = await getUserId()
+  if (!userId) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
-  
-  const userId = session.userId
   
   try {
     const body = await request.json()
@@ -110,41 +92,13 @@ export async function POST(request: NextRequest) {
 
 // PUT - Atualizar tenant
 export async function PUT(request: NextRequest) {
-  const session = await getSession()
-  if (!session) {
+  const userId = await getUserId()
+  if (!userId) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
   
-  const userId = session.userId
-  
   try {
     const body = await request.json()
-    const {
-      name,
-      slug,
-      domain_app,
-      domain_admin,
-      database_url,
-      logo_url,
-      mascot_url,
-      favicon_url,
-      badge_url,
-      banner_url,
-      login_bg_url,
-      primary_color,
-      secondary_color,
-      text_color,
-      use_hyperion_gateway,
-      gateway_provider,
-      gateway_client_id,
-      gateway_client_secret,
-      transaction_fee,
-      withdraw_fee,
-      min_withdraw,
-      modules_config,
-      ceo_modules_config,
-      custom_texts,
-    } = body
     
     // Verificar se usuario tem tenant
     const existing = await sql`
@@ -157,45 +111,34 @@ export async function PUT(request: NextRequest) {
     
     const tenantId = existing[0].id
     
-    // Verificar se slug ja existe (se estiver mudando)
-    if (slug) {
-      const slugExists = await sql`
-        SELECT id FROM white_label_tenants WHERE slug = ${slug} AND id != ${tenantId}
-      `
-      
-      if (slugExists.length > 0) {
-        return NextResponse.json({ error: "Slug ja existe" }, { status: 400 })
-      }
-    }
-    
-    // Atualizar tenant
+    // Atualizar campos
     await sql`
       UPDATE white_label_tenants
       SET
-        name = COALESCE(${name}, name),
-        slug = COALESCE(${slug}, slug),
-        domain_app = ${domain_app},
-        domain_admin = ${domain_admin},
-        database_url = ${database_url},
-        logo_url = ${logo_url},
-        mascot_url = ${mascot_url},
-        favicon_url = ${favicon_url},
-        badge_url = ${badge_url},
-        banner_url = ${banner_url},
-        login_bg_url = ${login_bg_url},
-        primary_color = COALESCE(${primary_color}, primary_color),
-        secondary_color = COALESCE(${secondary_color}, secondary_color),
-        text_color = COALESCE(${text_color}, text_color),
-        use_hyperion_gateway = COALESCE(${use_hyperion_gateway}, use_hyperion_gateway),
-        gateway_provider = ${gateway_provider},
-        gateway_client_id = ${gateway_client_id},
-        gateway_client_secret = ${gateway_client_secret},
-        transaction_fee = COALESCE(${transaction_fee}, transaction_fee),
-        withdraw_fee = COALESCE(${withdraw_fee}, withdraw_fee),
-        min_withdraw = COALESCE(${min_withdraw}, min_withdraw),
-        modules_config = COALESCE(${JSON.stringify(modules_config)}, modules_config),
-        ceo_modules_config = COALESCE(${JSON.stringify(ceo_modules_config)}, ceo_modules_config),
-        custom_texts = COALESCE(${JSON.stringify(custom_texts)}, custom_texts),
+        name = COALESCE(${body.name}, name),
+        slug = COALESCE(${body.slug}, slug),
+        domain_app = ${body.domain_app || null},
+        domain_admin = ${body.domain_admin || null},
+        database_url = ${body.database_url || null},
+        logo_url = ${body.logo_url || null},
+        mascot_url = ${body.mascot_url || null},
+        favicon_url = ${body.favicon_url || null},
+        badge_url = ${body.badge_url || null},
+        banner_url = ${body.banner_url || null},
+        login_bg_url = ${body.login_bg_url || null},
+        primary_color = COALESCE(${body.primary_color}, primary_color),
+        secondary_color = COALESCE(${body.secondary_color}, secondary_color),
+        text_color = COALESCE(${body.text_color}, text_color),
+        use_hyperion_gateway = COALESCE(${body.use_hyperion_gateway}, use_hyperion_gateway),
+        gateway_provider = ${body.gateway_provider || null},
+        gateway_client_id = ${body.gateway_client_id || null},
+        gateway_client_secret = ${body.gateway_client_secret || null},
+        transaction_fee = COALESCE(${body.transaction_fee}, transaction_fee),
+        withdraw_fee = COALESCE(${body.withdraw_fee}, withdraw_fee),
+        min_withdraw = COALESCE(${body.min_withdraw}, min_withdraw),
+        modules_config = COALESCE(${body.modules_config ? JSON.stringify(body.modules_config) : null}::jsonb, modules_config),
+        ceo_modules_config = COALESCE(${body.ceo_modules_config ? JSON.stringify(body.ceo_modules_config) : null}::jsonb, ceo_modules_config),
+        custom_texts = COALESCE(${body.custom_texts ? JSON.stringify(body.custom_texts) : null}::jsonb, custom_texts),
         updated_at = NOW()
       WHERE id = ${tenantId}
     `
@@ -209,40 +152,30 @@ export async function PUT(request: NextRequest) {
 
 // DELETE - Remover tenant
 export async function DELETE() {
-  const session = await getSession()
-  if (!session) {
+  const userId = await getUserId()
+  if (!userId) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
   
-  const userId = session.userId
-  
   try {
     const result = await sql`
-      SELECT * FROM white_label_tenants WHERE user_id = ${userId} LIMIT 1
+      SELECT id FROM white_label_tenants WHERE user_id = ${userId} LIMIT 1
     `
     
-    const tenant = result[0]
-    
-    if (!tenant) {
+    if (result.length === 0) {
       return NextResponse.json({ error: "Tenant nao encontrado" }, { status: 404 })
     }
     
-    // Remover dominios da Vercel
-    if (tenant.domain_app) {
-      await removeDomainFromVercel(tenant.domain_app)
-    }
-    if (tenant.domain_admin) {
-      await removeDomainFromVercel(tenant.domain_admin)
-    }
+    const tenantId = result[0].id
     
     // Remover pagamentos
-    await sql`DELETE FROM white_label_payments WHERE tenant_id = ${tenant.id}`
+    await sql`DELETE FROM white_label_payments WHERE tenant_id = ${tenantId}`
     
     // Remover logs
-    await sql`DELETE FROM white_label_logs WHERE tenant_id = ${tenant.id}`
+    await sql`DELETE FROM white_label_logs WHERE tenant_id = ${tenantId}`
     
     // Remover tenant
-    await sql`DELETE FROM white_label_tenants WHERE id = ${tenant.id}`
+    await sql`DELETE FROM white_label_tenants WHERE id = ${tenantId}`
     
     return NextResponse.json({ success: true, message: "Tenant removido" })
   } catch (error: any) {
