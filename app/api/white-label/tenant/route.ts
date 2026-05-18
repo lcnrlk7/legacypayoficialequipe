@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { cookies } from "next/headers"
-import { jwtVerify } from "jose"
 import { neon } from "@neondatabase/serverless"
+import { getSession } from "@/lib/auth"
 import { 
-  getTenantByUserId, 
   testDatabaseConnection, 
   setupTenantDatabase,
   addDomainToVercel,
@@ -12,42 +10,21 @@ import {
 } from "@/lib/white-label"
 
 const sql = neon(process.env.DATABASE_URL!)
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || "fallback-secret")
-
-async function verifyAuth(): Promise<string | null> {
-  try {
-    const cookieStore = await cookies()
-    const token = cookieStore.get("auth-token")?.value
-    if (!token) return null
-    const { payload } = await jwtVerify(token, JWT_SECRET)
-    const userId = payload.id as string
-    console.log("[v0] verifyAuth - payload:", JSON.stringify(payload))
-    console.log("[v0] verifyAuth - userId extraido:", userId)
-    return userId
-  } catch (err) {
-    console.log("[v0] verifyAuth - erro:", err)
-    return null
-  }
-}
 
 // GET - Buscar tenant do usuario
 export async function GET() {
-  const userId = await verifyAuth()
-  console.log("[v0] White Label API - userId:", userId)
+  const session = await getSession()
   
-  if (!userId) {
+  if (!session) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
+  
+  const userId = session.id
   
   try {
     const result = await sql`
       SELECT * FROM white_label_tenants WHERE user_id = ${userId} LIMIT 1
     `
-    
-    console.log("[v0] White Label API - result count:", result.length)
-    if (result.length > 0) {
-      console.log("[v0] White Label API - tenant setup_paid:", result[0].setup_paid)
-    }
     
     const tenant = result[0] || null
     
@@ -86,10 +63,12 @@ export async function GET() {
 
 // POST - Criar tenant
 export async function POST(request: NextRequest) {
-  const userId = await verifyAuth()
-  if (!userId) {
+  const session = await getSession()
+  if (!session) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
+  
+  const userId = session.id
   
   try {
     const body = await request.json()
@@ -131,10 +110,12 @@ export async function POST(request: NextRequest) {
 
 // PUT - Atualizar tenant
 export async function PUT(request: NextRequest) {
-  const userId = await verifyAuth()
-  if (!userId) {
+  const session = await getSession()
+  if (!session) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
+  
+  const userId = session.id
   
   try {
     const body = await request.json()

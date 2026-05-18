@@ -1,32 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
-import { cookies } from "next/headers"
-import { jwtVerify } from "jose"
 import { neon } from "@neondatabase/serverless"
-
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "fallback-secret-change-in-production"
-)
+import { getSession } from "@/lib/auth"
 
 const sql = neon(process.env.DATABASE_URL!)
 
-async function verifyAuth(): Promise<string | null> {
-  try {
-    const cookieStore = await cookies()
-    const token = cookieStore.get("auth-token")?.value
-    if (!token) return null
-    const { payload } = await jwtVerify(token, JWT_SECRET)
-    return (payload.id || payload.sub) as string
-  } catch {
-    return null
-  }
-}
-
 // POST - Aceitar contrato e gerar pagamento
 export async function POST(request: NextRequest) {
-  const userId = await verifyAuth()
-  if (!userId) {
+  const session = await getSession()
+  if (!session) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
+  
+  const userId = session.id
 
   try {
     const { accepted } = await request.json()
