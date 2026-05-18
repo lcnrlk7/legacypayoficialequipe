@@ -5,7 +5,15 @@ const sql = neon(process.env.DATABASE_URL!)
 
 // GET - Para validacao do CoinRemitter
 export async function GET() {
-  return NextResponse.json({ status: "ok" }, { status: 200 })
+  return new Response("OK", { 
+    status: 200,
+    headers: { "Content-Type": "text/plain" }
+  })
+}
+
+// HEAD - Alguns servicos validam com HEAD
+export async function HEAD() {
+  return new Response(null, { status: 200 })
 }
 
 // POST - Recebe notificacoes de deposito/saque do CoinRemitter
