@@ -1,8 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { ArrowLeft, Bitcoin, Copy, Check, Loader2, ArrowDownToLine, ArrowUpFromLine, RefreshCw } from "lucide-react"
+import { ArrowLeft, Loader2, RefreshCw, Coins } from "lucide-react"
 import Link from "next/link"
+import useSWR from "swr"
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 interface CoinInfo {
   id: string
@@ -11,501 +14,313 @@ interface CoinInfo {
   color: string
   rate: number
   formatted: string
+  network: string
+  networkFee: number
 }
 
-export default function CryptoPage() {
-  const [coins, setCoins] = useState<CoinInfo[]>([])
-  const [loading, setLoading] = useState(true)
-  const [selectedCoin, setSelectedCoin] = useState<string | null>(null)
-  const [mode, setMode] = useState<"menu" | "deposit" | "withdraw">("menu")
-  const [depositAddress, setDepositAddress] = useState<string | null>(null)
-  const [copied, setCopied] = useState(false)
-  const [loadingAddress, setLoadingAddress] = useState(false)
-  
-  // Saque
+// Configuracao das moedas com taxas de rede
+const COINS_CONFIG = [
+  { id: "BTC", name: "Bitcoin", icon: "₿", network: "Bitcoin", networkFee: 5.00, minWithdraw: 20, maxWithdraw: 50000 },
+  { id: "LTC", name: "Litecoin", icon: "Ł", network: "Litecoin", networkFee: 2.00, minWithdraw: 20, maxWithdraw: 50000 },
+]
+
+export default function CryptoWithdrawPage() {
+  const [selectedCoin, setSelectedCoin] = useState(COINS_CONFIG[0])
   const [withdrawAddress, setWithdrawAddress] = useState("")
   const [withdrawAmount, setWithdrawAmount] = useState("")
   const [withdrawLoading, setWithdrawLoading] = useState(false)
-  const [withdrawResult, setWithdrawResult] = useState<any>(null)
+  const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [rates, setRates] = useState<Record<string, number>>({})
 
-  const [transactions, setTransactions] = useState<any[]>([])
-  const [loadingTx, setLoadingTx] = useState(false)
+  // Carregar saldo do usuario
+  const { data: userData } = useSWR("/api/user/balance", fetcher, {
+    refreshInterval: 10000,
+  })
 
   // Carregar cotacoes
   useEffect(() => {
     loadRates()
-    loadTransactions()
   }, [])
 
-  const loadTransactions = async () => {
-    setLoadingTx(true)
-    try {
-      const response = await fetch("/api/crypto/transactions")
-      const data = await response.json()
-      if (data.success) {
-        setTransactions(data.transactions || [])
-      }
-    } catch (err) {
-      console.error("Erro ao carregar transacoes:", err)
-    }
-    setLoadingTx(false)
-  }
-
   const loadRates = async () => {
-    setLoading(true)
     try {
       const response = await fetch("/api/crypto/rates")
       const data = await response.json()
-      if (data.success) {
-        setCoins(data.rates)
+      if (data.success && data.rates) {
+        const ratesMap: Record<string, number> = {}
+        data.rates.forEach((r: any) => {
+          ratesMap[r.id] = r.rate
+        })
+        setRates(ratesMap)
       }
     } catch (err) {
       console.error("Erro ao carregar cotacoes:", err)
     }
-    setLoading(false)
   }
 
-  // Criar endereco de deposito
-  const createDeposit = async (coin: string) => {
-    setLoadingAddress(true)
-    setError(null)
-    try {
-      const response = await fetch("/api/crypto/deposit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ coin }),
-      })
-      const data = await response.json()
-      if (data.success) {
-        setDepositAddress(data.address)
-      } else {
-        setError(data.error || "Erro ao criar endereco")
-      }
-    } catch (err) {
-      setError("Erro ao criar endereco de deposito")
-    }
-    setLoadingAddress(false)
-  }
+  const balance = userData?.balance || 0
+  const currentRate = rates[selectedCoin.id] || 0
+  const platformFee = withdrawAmount ? parseFloat(withdrawAmount) * 0.03 : 0 // 3% taxa
+  const totalDebit = withdrawAmount ? parseFloat(withdrawAmount) + platformFee + selectedCoin.networkFee : 0
+  const cryptoAmount = currentRate > 0 && withdrawAmount ? parseFloat(withdrawAmount) / currentRate : 0
 
   // Processar saque
   const processWithdraw = async () => {
-    if (!selectedCoin || !withdrawAddress || !withdrawAmount) return
-    
+    if (!withdrawAddress || !withdrawAmount) {
+      setError("Preencha todos os campos")
+      return
+    }
+
+    const amount = parseFloat(withdrawAmount)
+    if (amount < selectedCoin.minWithdraw) {
+      setError(`Valor minimo: R$ ${selectedCoin.minWithdraw.toFixed(2)}`)
+      return
+    }
+    if (amount > selectedCoin.maxWithdraw) {
+      setError(`Valor maximo: R$ ${selectedCoin.maxWithdraw.toFixed(2)}`)
+      return
+    }
+    if (totalDebit > balance) {
+      setError("Saldo insuficiente")
+      return
+    }
+
     setWithdrawLoading(true)
     setError(null)
+
     try {
       const response = await fetch("/api/crypto/withdraw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          coin: selectedCoin,
+          coin: selectedCoin.id,
           address: withdrawAddress,
-          amountBRL: parseFloat(withdrawAmount),
+          amountBRL: amount,
         }),
       })
+
       const data = await response.json()
+
       if (data.success) {
-        setWithdrawResult(data.withdrawal)
+        setSuccess(true)
+        setWithdrawAmount("")
+        setWithdrawAddress("")
       } else {
         setError(data.error || "Erro ao processar saque")
       }
     } catch (err) {
-      setError("Erro ao processar saque")
+      setError("Erro de conexao. Tente novamente.")
     }
+
     setWithdrawLoading(false)
   }
 
-  // Copiar endereco
-  const copyAddress = () => {
-    if (depositAddress) {
-      navigator.clipboard.writeText(depositAddress)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
-
-  const selectedCoinInfo = coins.find((c) => c.id === selectedCoin)
-  const fee = withdrawAmount ? parseFloat(withdrawAmount) * 0.03 : 0 // 3% taxa de saque
-  const total = withdrawAmount ? parseFloat(withdrawAmount) + fee : 0
-
-  // Menu principal
-  if (mode === "menu") {
+  if (success) {
     return (
       <div className="min-h-screen bg-background p-4">
-        <div className="max-w-md mx-auto">
-          <Link href="/dashboard/wallet" className="flex items-center gap-2 text-muted-foreground mb-6">
-            <ArrowLeft className="w-5 h-5" />
-            <span>Voltar</span>
+        <div className="max-w-lg mx-auto">
+          <div className="bg-card border border-border rounded-2xl p-8 text-center">
+            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Coins className="w-8 h-8 text-green-500" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground mb-2">Saque Solicitado!</h2>
+            <p className="text-muted-foreground mb-6">
+              Seu saque de {cryptoAmount.toFixed(8)} {selectedCoin.id} foi enviado para processamento.
+              Voce recebera na carteira informada em alguns minutos.
+            </p>
+            <Link
+              href="/dashboard/wallet"
+              className="inline-block bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl px-6 py-3 font-semibold transition-colors"
+            >
+              Voltar para Carteira
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-background p-4">
+      <div className="max-w-lg mx-auto">
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6">
+          <Link href="/dashboard/wallet" className="text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="w-6 h-6" />
           </Link>
-
-          <h1 className="text-2xl font-bold text-foreground mb-2">Crypto</h1>
-          <p className="text-muted-foreground mb-6">Deposite ou saque em criptomoedas</p>
-
-          {/* Cotacoes */}
-          <div className="bg-card border border-border rounded-xl p-4 mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-foreground">Cotacoes</h2>
-              <button onClick={loadRates} className="text-primary">
-                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-              </button>
-            </div>
-            
-            {loading ? (
-              <div className="flex justify-center py-4">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {coins.map((coin) => (
-                  <div key={coin.id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div 
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold"
-                        style={{ backgroundColor: coin.color }}
-                      >
-                        {coin.icon}
-                      </div>
-                      <span className="font-medium text-foreground">{coin.name}</span>
-                    </div>
-                    <span className="text-muted-foreground">{coin.formatted}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Opcoes */}
-          <div className="space-y-3">
-            <button
-              onClick={() => setMode("deposit")}
-              className="w-full bg-green-600 hover:bg-green-700 text-white rounded-xl p-4 flex items-center justify-center gap-3 transition-colors"
-            >
-              <ArrowDownToLine className="w-5 h-5" />
-              <span className="font-semibold">Depositar Crypto</span>
-            </button>
-
-            <button
-              onClick={() => setMode("withdraw")}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl p-4 flex items-center justify-center gap-3 transition-colors"
-            >
-              <ArrowUpFromLine className="w-5 h-5" />
-              <span className="font-semibold">Sacar em Crypto</span>
-            </button>
-          </div>
-
-          {/* Historico de Transacoes */}
-          <div className="mt-6">
-            <h2 className="font-semibold text-foreground mb-4">Historico de Transacoes</h2>
-            {loadingTx ? (
-              <div className="flex justify-center py-4">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              </div>
-            ) : transactions.length === 0 ? (
-              <div className="bg-card border border-border rounded-xl p-6 text-center">
-                <p className="text-muted-foreground">Nenhuma transacao crypto ainda</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {transactions.map((tx) => (
-                  <div key={`${tx.type}-${tx.id}`} className="bg-card border border-border rounded-xl p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        {tx.type === "deposit" ? (
-                          <ArrowDownToLine className="w-4 h-4 text-green-500" />
-                        ) : (
-                          <ArrowUpFromLine className="w-4 h-4 text-red-500" />
-                        )}
-                        <span className="font-medium text-foreground">
-                          {tx.type === "deposit" ? "Deposito" : "Saque"} {tx.coin}
-                        </span>
-                      </div>
-                      <span className={`text-sm font-medium ${
-                        tx.status === "confirmed" || tx.status === "completed" ? "text-green-500" :
-                        tx.status === "pending" ? "text-yellow-500" : "text-red-500"
-                      }`}>
-                        {tx.status === "confirmed" || tx.status === "completed" ? "Confirmado" :
-                         tx.status === "pending" ? "Pendente" : tx.status}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">
-                        {Number(tx.amount_crypto).toFixed(8)} {tx.coin}
-                      </span>
-                      <span className="text-foreground font-medium">
-                        R$ {Number(tx.amount_brl).toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-2">
-                      {new Date(tx.created_at).toLocaleString("pt-BR")}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Saque em Criptomoeda</h1>
+            <p className="text-muted-foreground text-sm">Converta seu saldo em {selectedCoin.id} ({selectedCoin.network})</p>
           </div>
         </div>
-      </div>
-    )
-  }
 
-  // Deposito
-  if (mode === "deposit") {
-    return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="max-w-md mx-auto">
-          <button onClick={() => { setMode("menu"); setSelectedCoin(null); setDepositAddress(null); }} className="flex items-center gap-2 text-muted-foreground mb-6">
-            <ArrowLeft className="w-5 h-5" />
-            <span>Voltar</span>
-          </button>
+        {/* Card Principal */}
+        <div className="bg-card border border-border rounded-2xl p-6 space-y-6">
+          {/* Titulo da Secao */}
+          <div className="flex items-center gap-3">
+            <Coins className="w-5 h-5 text-primary" />
+            <div>
+              <h2 className="font-semibold text-foreground">Saque em Criptomoeda ({selectedCoin.id})</h2>
+              <p className="text-sm text-muted-foreground">
+                Converta seu saldo em BRL para {selectedCoin.id} na rede {selectedCoin.network}
+              </p>
+            </div>
+          </div>
 
-          <h1 className="text-2xl font-bold text-foreground mb-2">Depositar Crypto</h1>
-          <p className="text-muted-foreground mb-6">Selecione a moeda e envie para o endereco</p>
+          {/* Saldo Disponivel */}
+          <div className="bg-muted/50 rounded-xl p-4">
+            <p className="text-sm text-muted-foreground">Saldo disponivel</p>
+            <p className="text-2xl font-bold text-foreground">
+              R$ {balance.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+            </p>
+          </div>
 
-          {!selectedCoin ? (
-            <div className="space-y-3">
-              {coins.map((coin) => (
+          {/* Selecao de Moeda */}
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">Moeda</label>
+            <div className="grid grid-cols-2 gap-3">
+              {COINS_CONFIG.map((coin) => (
                 <button
                   key={coin.id}
-                  onClick={() => { setSelectedCoin(coin.id); createDeposit(coin.id); }}
-                  className="w-full bg-card border border-border rounded-xl p-4 flex items-center gap-4 hover:border-primary transition-colors"
+                  onClick={() => setSelectedCoin(coin)}
+                  className={`p-3 rounded-xl border transition-all ${
+                    selectedCoin.id === coin.id
+                      ? "border-primary bg-primary/10"
+                      : "border-border bg-muted/30 hover:border-muted-foreground"
+                  }`}
                 >
-                  <div 
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                    style={{ backgroundColor: coin.color }}
-                  >
-                    {coin.icon}
-                  </div>
-                  <div className="text-left">
-                    <div className="font-semibold text-foreground">{coin.name}</div>
-                    <div className="text-sm text-muted-foreground">{coin.id}</div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">{coin.icon}</span>
+                    <div className="text-left">
+                      <p className="font-medium text-foreground">{coin.id}</p>
+                      <p className="text-xs text-muted-foreground">{coin.network}</p>
+                    </div>
                   </div>
                 </button>
               ))}
             </div>
-          ) : (
-            <div className="bg-card border border-border rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div 
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                  style={{ backgroundColor: selectedCoinInfo?.color }}
-                >
-                  {selectedCoinInfo?.icon}
-                </div>
-                <div>
-                  <div className="font-semibold text-foreground">{selectedCoinInfo?.name}</div>
-                  <div className="text-sm text-muted-foreground">Cotacao: {selectedCoinInfo?.formatted}</div>
-                </div>
-              </div>
+          </div>
 
-              {loadingAddress ? (
-                <div className="flex flex-col items-center py-8">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
-                  <span className="text-muted-foreground">Gerando endereco...</span>
-                </div>
-              ) : error ? (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-4 text-red-500 text-center">
-                  {error}
-                </div>
-              ) : depositAddress ? (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Envie {selectedCoin} para o endereco abaixo:
-                  </p>
-                  <div className="bg-muted rounded-lg p-3 break-all font-mono text-sm text-foreground mb-3">
-                    {depositAddress}
-                  </div>
-                  <button
-                    onClick={copyAddress}
-                    className="w-full bg-primary text-primary-foreground rounded-lg p-3 flex items-center justify-center gap-2"
-                  >
-                    {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                    {copied ? "Copiado!" : "Copiar Endereco"}
-                  </button>
-                  <p className="text-xs text-muted-foreground mt-4 text-center">
-                    O deposito sera creditado apos 1 confirmacao na rede.
-                  </p>
-                </div>
-              ) : null}
+          {/* Cotacao e Taxa */}
+          <div className="bg-muted/50 rounded-xl p-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-4 h-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-foreground">
+                  <span className="font-medium">Cotacao:</span> 1 {selectedCoin.id} = R$ {currentRate.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  <span className="font-medium">Taxa da rede:</span> R$ {selectedCoin.networkFee.toFixed(2)}
+                </p>
+              </div>
+            </div>
+            <button onClick={loadRates} className="text-primary hover:text-primary/80">
+              <RefreshCw className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Valor do Saque */}
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">Valor do saque (BRL)</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
+              <input
+                type="number"
+                value={withdrawAmount}
+                onChange={(e) => {
+                  setWithdrawAmount(e.target.value)
+                  setError(null)
+                }}
+                placeholder="0,00"
+                className="w-full bg-muted border border-border rounded-xl p-4 pl-12 text-foreground text-lg"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Valor minimo: R$ {selectedCoin.minWithdraw.toFixed(2)} | Valor maximo: R$ {selectedCoin.maxWithdraw.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+            </p>
+          </div>
+
+          {/* Endereco da Wallet */}
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">Wallet {selectedCoin.network} ({selectedCoin.id})</label>
+            <input
+              type="text"
+              value={withdrawAddress}
+              onChange={(e) => {
+                setWithdrawAddress(e.target.value)
+                setError(null)
+              }}
+              placeholder={selectedCoin.id === "BTC" ? "bc1q..." : "L..."}
+              className="w-full bg-muted border border-border rounded-xl p-4 text-foreground font-mono text-sm"
+            />
+            <p className="text-xs text-muted-foreground mt-2">
+              Endereco da sua wallet compativel com {selectedCoin.id} ({selectedCoin.network})
+            </p>
+          </div>
+
+          {/* Resumo */}
+          {withdrawAmount && parseFloat(withdrawAmount) > 0 && (
+            <div className="bg-muted/50 rounded-xl p-4 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Valor do saque:</span>
+                <span className="text-foreground">R$ {parseFloat(withdrawAmount).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Taxa da plataforma (3%):</span>
+                <span className="text-foreground">R$ {platformFee.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Taxa da rede:</span>
+                <span className="text-foreground">R$ {selectedCoin.networkFee.toFixed(2)}</span>
+              </div>
+              <hr className="border-border" />
+              <div className="flex justify-between text-sm font-semibold">
+                <span className="text-muted-foreground">Total debitado:</span>
+                <span className="text-foreground">R$ {totalDebit.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-sm font-semibold">
+                <span className="text-muted-foreground">Voce recebe:</span>
+                <span className="text-primary">{cryptoAmount.toFixed(8)} {selectedCoin.id}</span>
+              </div>
             </div>
           )}
-        </div>
-      </div>
-    )
-  }
 
-  // Saque
-  if (mode === "withdraw") {
-    return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="max-w-md mx-auto">
-          <button onClick={() => { setMode("menu"); setSelectedCoin(null); setWithdrawResult(null); setWithdrawAddress(""); setWithdrawAmount(""); }} className="flex items-center gap-2 text-muted-foreground mb-6">
-            <ArrowLeft className="w-5 h-5" />
-            <span>Voltar</span>
+          {/* Erro */}
+          {error && (
+            <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+              <p className="text-red-500 text-sm">{error}</p>
+            </div>
+          )}
+
+          {/* Botao Confirmar */}
+          <button
+            onClick={processWithdraw}
+            disabled={withdrawLoading || !withdrawAddress || !withdrawAmount || parseFloat(withdrawAmount) < selectedCoin.minWithdraw}
+            className="w-full bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground rounded-xl p-4 font-semibold transition-colors flex items-center justify-center gap-2"
+          >
+            {withdrawLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Processando...
+              </>
+            ) : (
+              <>
+                <Coins className="w-5 h-5" />
+                Confirmar saque
+              </>
+            )}
           </button>
+        </div>
 
-          <h1 className="text-2xl font-bold text-foreground mb-2">Sacar em Crypto</h1>
-          <p className="text-muted-foreground mb-6">Converta seu saldo para criptomoeda</p>
-
-          {withdrawResult ? (
-            <div className="bg-card border border-green-500 rounded-xl p-6">
-              <div className="text-center mb-4">
-                <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Check className="w-8 h-8 text-green-500" />
-                </div>
-                <h2 className="text-xl font-bold text-foreground">Saque Enviado!</h2>
-              </div>
-              
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Moeda:</span>
-                  <span className="text-foreground font-medium">{withdrawResult.coin}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Valor:</span>
-                  <span className="text-foreground font-medium">{withdrawResult.amountCrypto.toFixed(8)} {withdrawResult.coin}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Debitado:</span>
-                  <span className="text-foreground font-medium">R$ {withdrawResult.totalDebit.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Status:</span>
-                  <span className="text-yellow-500 font-medium">Processando</span>
-                </div>
-              </div>
-
-              {withdrawResult.explorerUrl && (
-                <a 
-                  href={withdrawResult.explorerUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block w-full bg-primary text-primary-foreground rounded-lg p-3 text-center mt-4"
-                >
-                  Ver na Blockchain
-                </a>
-              )}
-            </div>
-          ) : !selectedCoin ? (
-            <div className="space-y-3">
-              {coins.map((coin) => (
-                <button
-                  key={coin.id}
-                  onClick={() => setSelectedCoin(coin.id)}
-                  className="w-full bg-card border border-border rounded-xl p-4 flex items-center gap-4 hover:border-primary transition-colors"
-                >
-                  <div 
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg"
-                    style={{ backgroundColor: coin.color }}
-                  >
-                    {coin.icon}
-                  </div>
-                  <div className="text-left">
-                    <div className="font-semibold text-foreground">{coin.name}</div>
-                    <div className="text-sm text-muted-foreground">Cotacao: {coin.formatted}</div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-card border border-border rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div 
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
-                  style={{ backgroundColor: selectedCoinInfo?.color }}
-                >
-                  {selectedCoinInfo?.icon}
-                </div>
-                <div>
-                  <div className="font-semibold text-foreground">{selectedCoinInfo?.name}</div>
-                  <div className="text-sm text-muted-foreground">Cotacao: {selectedCoinInfo?.formatted}</div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-muted-foreground mb-2">
-                    Endereco {selectedCoin} de destino
-                  </label>
-                  <input
-                    type="text"
-                    value={withdrawAddress}
-                    onChange={(e) => setWithdrawAddress(e.target.value)}
-                    placeholder={`Cole seu endereco ${selectedCoin} aqui`}
-                    className="w-full bg-muted border border-border rounded-lg p-3 text-foreground"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-muted-foreground mb-2">
-                    Valor em Reais (R$)
-                  </label>
-                  <input
-                    type="number"
-                    value={withdrawAmount}
-                    onChange={(e) => setWithdrawAmount(e.target.value)}
-                    placeholder="0,00"
-                    min="1"
-                    className="w-full bg-muted border border-border rounded-lg p-3 text-foreground"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Minimo: {selectedCoin === "BTC" ? "0.0001 BTC" : "0.01 LTC"}
-                  </p>
-                </div>
-
-                {withdrawAmount && parseFloat(withdrawAmount) >= 1 && (
-                  <div className="bg-muted rounded-lg p-4 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Valor:</span>
-                      <span className="text-foreground">R$ {parseFloat(withdrawAmount).toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Taxa (3%):</span>
-                      <span className="text-foreground">R$ {fee.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm font-semibold border-t border-border pt-2">
-                      <span className="text-foreground">Total debitado:</span>
-                      <span className="text-foreground">R$ {total.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Voce recebe:</span>
-                      <span className="text-primary font-medium">
-                        ~{(parseFloat(withdrawAmount) / (selectedCoinInfo?.rate || 1)).toFixed(8)} {selectedCoin}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {error && (
-                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-red-500 text-sm">
-                    {error}
-                  </div>
-                )}
-
-                <button
-                  onClick={processWithdraw}
-                  disabled={!withdrawAddress || !withdrawAmount || parseFloat(withdrawAmount) < 50 || withdrawLoading}
-                  className="w-full bg-primary hover:bg-primary/90 disabled:bg-muted disabled:text-muted-foreground text-primary-foreground rounded-lg p-4 font-semibold flex items-center justify-center gap-2 transition-colors"
-                >
-                  {withdrawLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Processando...
-                    </>
-                  ) : (
-                    <>
-                      <ArrowUpFromLine className="w-5 h-5" />
-                      Confirmar Saque
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          )}
+        {/* Aviso */}
+        <div className="mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+          <p className="text-yellow-500 text-sm">
+            <strong>Atencao:</strong> Verifique o endereco da carteira antes de confirmar. 
+            Transacoes em blockchain sao irreversiveis.
+          </p>
         </div>
       </div>
-    )
-  }
-
-  return null
+    </div>
+  )
 }
