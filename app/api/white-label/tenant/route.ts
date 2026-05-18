@@ -44,15 +44,19 @@ export async function GET() {
       return NextResponse.json({ success: true, tenant: null })
     }
     
-    // Verificar status dos dominios
+    // Verificar status dos dominios (com tratamento de erro)
     let domainAppStatus = { configured: false, verified: false }
     let domainAdminStatus = { configured: false, verified: false }
     
-    if (tenant.domain_app) {
-      domainAppStatus = await checkDomainStatus(tenant.domain_app)
-    }
-    if (tenant.domain_admin) {
-      domainAdminStatus = await checkDomainStatus(tenant.domain_admin)
+    try {
+      if (tenant.domain_app) {
+        domainAppStatus = await checkDomainStatus(tenant.domain_app)
+      }
+      if (tenant.domain_admin) {
+        domainAdminStatus = await checkDomainStatus(tenant.domain_admin)
+      }
+    } catch (domainError) {
+      console.error("[White Label] Erro ao verificar dominios:", domainError)
     }
     
     return NextResponse.json({ 
@@ -64,6 +68,7 @@ export async function GET() {
       }
     })
   } catch (error: any) {
+    console.error("[White Label] Erro ao buscar tenant:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 }
