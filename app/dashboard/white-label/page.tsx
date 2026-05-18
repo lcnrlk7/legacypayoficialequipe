@@ -158,7 +158,10 @@ export default function WhiteLabelPage() {
       const response = await fetch("/api/white-label/tenant")
       const data = await response.json()
       
+      console.log("[v0] API response:", data)
+      
       if (data.success && data.tenant) {
+        console.log("[v0] Tenant encontrado:", data.tenant.name, "setup_paid:", data.tenant.setup_paid)
         setTenant(data.tenant)
         setName(data.tenant.name || "")
         setSlug(data.tenant.slug || "")
