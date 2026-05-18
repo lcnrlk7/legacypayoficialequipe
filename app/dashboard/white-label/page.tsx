@@ -149,16 +149,20 @@ export default function WhiteLabelPage() {
   const [addingDomain, setAddingDomain] = useState<"app" | "admin" | null>(null)
 
   useEffect(() => {
+    console.log("[v0] White Label page loaded")
     loadTenant()
   }, [])
 
   const loadTenant = async () => {
+    console.log("[v0] Loading tenant...")
     setLoading(true)
     try {
       const response = await fetch("/api/white-label/tenant")
       const data = await response.json()
+      console.log("[v0] API response:", data)
       
       if (data.success && data.tenant) {
+        console.log("[v0] Tenant found, setup_paid:", data.tenant.setup_paid)
         setTenant(data.tenant)
         setName(data.tenant.name || "")
         setSlug(data.tenant.slug || "")
