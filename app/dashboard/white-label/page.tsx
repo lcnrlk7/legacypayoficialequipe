@@ -183,10 +183,36 @@ export default function WhiteLabelPage() {
         setMinWithdraw(String(data.tenant.min_withdraw || 10))
         
         if (data.tenant.modules_config) {
-          setModules({ ...DEFAULT_MODULES, ...data.tenant.modules_config })
+          // Mesclar config do banco com defaults mantendo os labels
+          const mergedModules = { ...DEFAULT_MODULES }
+          const dbConfig = typeof data.tenant.modules_config === 'string' 
+            ? JSON.parse(data.tenant.modules_config) 
+            : data.tenant.modules_config
+          Object.keys(dbConfig).forEach(key => {
+            if (mergedModules[key as keyof typeof mergedModules]) {
+              mergedModules[key as keyof typeof mergedModules] = {
+                ...mergedModules[key as keyof typeof mergedModules],
+                enabled: typeof dbConfig[key] === 'boolean' ? dbConfig[key] : dbConfig[key]?.enabled ?? true
+              }
+            }
+          })
+          setModules(mergedModules)
         }
         if (data.tenant.ceo_modules_config) {
-          setCeoModules({ ...DEFAULT_CEO_MODULES, ...data.tenant.ceo_modules_config })
+          // Mesclar config do banco com defaults mantendo os labels
+          const mergedCeoModules = { ...DEFAULT_CEO_MODULES }
+          const dbCeoConfig = typeof data.tenant.ceo_modules_config === 'string'
+            ? JSON.parse(data.tenant.ceo_modules_config)
+            : data.tenant.ceo_modules_config
+          Object.keys(dbCeoConfig).forEach(key => {
+            if (mergedCeoModules[key as keyof typeof mergedCeoModules]) {
+              mergedCeoModules[key as keyof typeof mergedCeoModules] = {
+                ...mergedCeoModules[key as keyof typeof mergedCeoModules],
+                enabled: typeof dbCeoConfig[key] === 'boolean' ? dbCeoConfig[key] : dbCeoConfig[key]?.enabled ?? true
+              }
+            }
+          })
+          setCeoModules(mergedCeoModules)
         }
         if (data.tenant.custom_texts) {
           setCustomTexts({ ...DEFAULT_TEXTS, ...data.tenant.custom_texts })
