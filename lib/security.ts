@@ -168,10 +168,10 @@ export async function validateWithdrawal(
       return { valid: false, reason: "Conta bloqueada" };
     }
 
-    // 3. KYC - apenas avisa, nao bloqueia (muitos usuarios nao tem KYC)
-    // if (user[0].kyc_status !== "approved") {
-    //   return { valid: false, reason: "KYC nao aprovado" };
-    // }
+    // 3. KYC obrigatorio para sacar
+    if (user[0].kyc_status !== "approved") {
+      return { valid: false, reason: "KYC nao aprovado. Complete a verificacao de identidade para sacar." };
+    }
 
     // 4. Conta muito nova - reduzido para 1 hora (era 24h)
     const createdAt = new Date(user[0].created_at);
