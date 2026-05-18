@@ -105,8 +105,10 @@ export default function StatusPage() {
   const [loading, setLoading] = useState(true);
 
   const iconMap: Record<string, React.ElementType> = {
+    "api": Server,
     "api-gateway": Server,
     "database": Database,
+    "payments": CreditCard,
     "pix-in": CreditCard,
     "pix-out": CreditCard,
     "webhooks": Zap,
@@ -116,7 +118,8 @@ export default function StatusPage() {
 
   const loadStatus = async () => {
     try {
-      const response = await fetch("/api/admin/status?simple=true");
+      // Usa API publica segura que nao expoe dados sensiveis
+      const response = await fetch("/api/public/status");
       
       if (!response.ok) throw new Error("Erro ao carregar status");
       
@@ -131,15 +134,12 @@ export default function StatusPage() {
         name: s.name,
         status: s.status,
         latency: s.latency,
-        uptime: s.status === "operational" ? 99.9 + Math.random() * 0.09 : 98 + Math.random(),
+        uptime: data.uptime || (s.status === "operational" ? 99.9 : 98),
         icon: iconMap[s.id] || Server,
-        description: s.id === "api-gateway" ? "Servidor principal da API" :
+        description: s.id === "api" ? "Servidor principal da API" :
                      s.id === "database" ? "PostgreSQL - Armazenamento de dados" :
-                     s.id === "pix-in" ? "Recebimento de pagamentos PIX" :
-                     s.id === "pix-out" ? "Processamento de saques PIX" :
+                     s.id === "payments" ? "Processamento de pagamentos PIX" :
                      s.id === "webhooks" ? "Notificacoes em tempo real" :
-                     s.id === "telegram" ? "Bot de notificacoes" :
-                     s.id === "checkout" ? "Pagina de pagamento" :
                      "Servico do sistema",
       }));
 
