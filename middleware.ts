@@ -7,6 +7,41 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || 'fallback-secret-change-in-production'
 )
 
+// Cache de White Label tenants
+interface WhiteLabelCache {
+  domain: string
+  tenant: any
+  timestamp: number
+}
+const whiteLabelCache = new Map<string, WhiteLabelCache>()
+const WL_CACHE_TTL = 60000 // 1 minuto
+
+async function getWhiteLabelTenant(domain: string): Promise<any | null> {
+  const cached = whiteLabelCache.get(domain)
+  if (cached && Date.now() - cached.timestamp < WL_CACHE_TTL) {
+    return cached.tenant
+  }
+  
+  const databaseUrl = process.env.DATABASE_URL
+  if (!databaseUrl) return null
+  
+  try {
+    const sql = neon(databaseUrl)
+    const result = await sql`
+      SELECT * FROM white_label_tenants 
+      WHERE (domain_app = ${domain} OR domain_admin = ${domain})
+      AND is_active = true
+      LIMIT 1
+    `
+    
+    const tenant = result[0] || null
+    whiteLabelCache.set(domain, { domain, tenant, timestamp: Date.now() })
+    return tenant
+  } catch (error) {
+    return null
+  }
+}
+
 // Cache de bloqueios (atualiza a cada 60 segundos)
 interface BlockCache {
   ips: Set<string>
@@ -339,6 +374,48 @@ export async function middleware(request: NextRequest) {
     }
     
     return NextResponse.next()
+  }
+  
+  // Outro dominio desconhecido - pode ser White Label
+  const cleanHostname = hostname.replace(/^www\./, '').split(':')[0]
+  const whiteLabelTenant = await getWhiteLabelTenant(cleanHostname)
+  
+  if (whiteLabelTenant) {
+    // E um dominio White Label
+    const isAdminDomain = whiteLabelTenant.domain_admin === cleanHostname
+    
+    // Adicionar header com info do tenant para as APIs usarem
+    const response = await handleAuth(request)
+    response.headers.set('x-tenant-id', whiteLabelTenant.id)
+    response.headers.set('x-tenant-database', whiteLabelTenant.database_url || '')
+    response.headers.set('x-tenant-is-admin', isAdminDomain ? 'true' : 'false')
+    
+    // Se acessar a raiz
+    if (pathname === '/' || pathname === '') {
+      const url = request.nextUrl.clone()
+      
+      if (isAdminDomain) {
+        // Admin domain - redireciona para painel CEO
+        const teamUser = request.cookies.get('team_session')?.value
+        if (teamUser) {
+          url.pathname = '/lp-x7k9m2-internal/ceo'
+        } else {
+          url.pathname = '/lp-x7k9m2-internal/team-login'
+        }
+      } else {
+        // App domain - redireciona para dashboard ou login
+        const user = request.cookies.get('auth-token')?.value
+        if (user) {
+          url.pathname = '/dashboard'
+        } else {
+          url.pathname = '/auth/login'
+        }
+      }
+      
+      return NextResponse.redirect(url)
+    }
+    
+    return response
   }
   
   // Outro dominio desconhecido - segue fluxo normal

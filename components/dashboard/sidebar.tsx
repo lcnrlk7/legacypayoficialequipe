@@ -39,6 +39,7 @@ import {
   Bot,
   Split,
   Activity,
+  Globe,
   type LucideIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -117,6 +118,7 @@ const menuCategories = [
       { href: "/dashboard/integration", icon: Code, label: "Integracao API" },
       { href: "/dashboard/security", icon: Shield, label: "Seguranca" },
       { href: "/dashboard/settings", icon: Settings, label: "Preferencias" },
+      { href: "/dashboard/white-label", icon: Globe, label: "White Label" },
     ],
   },
 ]
