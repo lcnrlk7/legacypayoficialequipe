@@ -46,12 +46,14 @@ export async function POST(request: NextRequest) {
       }
       
       // Atualizar tenant
-      const tenant = await getTenantByUserId(userId)
-      if (tenant) {
+      const tenantResult = await sql`
+        SELECT id FROM white_label_tenants WHERE user_id = ${userId} LIMIT 1
+      `
+      if (tenantResult.length > 0) {
         await sql`
           UPDATE white_label_tenants
           SET database_configured = true, updated_at = NOW()
-          WHERE id = ${tenant.id}
+          WHERE id = ${tenantResult[0].id}
         `
       }
       
