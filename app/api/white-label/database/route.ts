@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
   
-  const userId = session.id
+  const userId = session.userId
   
   try {
     const { database_url, action } = await request.json()
