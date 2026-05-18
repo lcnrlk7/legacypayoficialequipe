@@ -209,10 +209,12 @@ export async function PUT(request: NextRequest) {
 
 // DELETE - Remover tenant
 export async function DELETE() {
-  const userId = await verifyAuth()
-  if (!userId) {
+  const session = await getSession()
+  if (!session) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
+  
+  const userId = session.userId
   
   try {
     const result = await sql`
