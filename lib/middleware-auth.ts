@@ -102,7 +102,6 @@ export async function handleAuth(request: NextRequest) {
     '/api/push/debug',
     '/api/push/test',
     '/api/public/',
-    '/api/crypto/',
     '/api/admin/update-white-route',
     '/api/admin/all-routes',
     '/api/admin/update-routes-fees',

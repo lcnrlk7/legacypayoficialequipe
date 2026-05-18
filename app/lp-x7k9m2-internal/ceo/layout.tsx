@@ -33,7 +33,6 @@ import {
   Bot,
   Ban,
   Gauge,
-  Bitcoin,
 } from "lucide-react";
 
 // Menu organizado em categorias com cores
@@ -63,7 +62,6 @@ const menuCategories = [
       { label: "Dashboard", href: "/lp-x7k9m2-internal/ceo/financial", icon: DollarSign },
       { label: "Transacoes", href: "/lp-x7k9m2-internal/ceo/transactions", icon: ArrowLeftRight },
       { label: "Saques", href: "/lp-x7k9m2-internal/ceo/withdrawals", icon: Wallet },
-      { label: "Crypto", href: "/lp-x7k9m2-internal/ceo/crypto", icon: Bitcoin },
       { label: "Taxas", href: "/lp-x7k9m2-internal/ceo/fees", icon: Percent },
     ],
   },
