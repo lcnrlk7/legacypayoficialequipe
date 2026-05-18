@@ -50,20 +50,22 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
     
-    // Atualizar tenant
-    const tenant = await getTenantByUserId(userId)
-    if (tenant) {
+    // Buscar e atualizar tenant
+    const tenantResult = await sql`
+      SELECT id FROM white_label_tenants WHERE user_id = ${userId} LIMIT 1
+    `
+    if (tenantResult.length > 0) {
       if (type === "app") {
         await sql`
           UPDATE white_label_tenants
           SET domain_app = ${domain}, updated_at = NOW()
-          WHERE id = ${tenant.id}
+          WHERE id = ${tenantResult[0].id}
         `
       } else {
         await sql`
           UPDATE white_label_tenants
           SET domain_admin = ${domain}, updated_at = NOW()
-          WHERE id = ${tenant.id}
+          WHERE id = ${tenantResult[0].id}
         `
       }
     }
@@ -84,8 +86,8 @@ export async function POST(request: NextRequest) {
 
 // GET - Verificar status do dominio
 export async function GET(request: NextRequest) {
-  const userId = await verifyAuth()
-  if (!userId) {
+  const session = await getSession()
+  if (!session) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
   
@@ -111,10 +113,12 @@ export async function GET(request: NextRequest) {
 
 // DELETE - Remover dominio
 export async function DELETE(request: NextRequest) {
-  const userId = await verifyAuth()
-  if (!userId) {
+  const session = await getSession()
+  if (!session) {
     return NextResponse.json({ error: "Nao autorizado" }, { status: 401 })
   }
+  
+  const userId = session.userId
   
   try {
     const { domain, type } = await request.json()
@@ -126,20 +130,22 @@ export async function DELETE(request: NextRequest) {
     // Remover da Vercel
     await removeDomainFromVercel(domain)
     
-    // Atualizar tenant
-    const tenant = await getTenantByUserId(userId)
-    if (tenant) {
+    // Buscar e atualizar tenant
+    const tenantResult = await sql`
+      SELECT id FROM white_label_tenants WHERE user_id = ${userId} LIMIT 1
+    `
+    if (tenantResult.length > 0) {
       if (type === "app") {
         await sql`
           UPDATE white_label_tenants
           SET domain_app = NULL, updated_at = NOW()
-          WHERE id = ${tenant.id}
+          WHERE id = ${tenantResult[0].id}
         `
       } else {
         await sql`
           UPDATE white_label_tenants
           SET domain_admin = NULL, updated_at = NOW()
-          WHERE id = ${tenant.id}
+          WHERE id = ${tenantResult[0].id}
         `
       }
     }
