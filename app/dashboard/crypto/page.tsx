@@ -445,13 +445,15 @@ export default function CryptoPage() {
                     value={withdrawAmount}
                     onChange={(e) => setWithdrawAmount(e.target.value)}
                     placeholder="0,00"
-                    min="50"
+                    min="1"
                     className="w-full bg-muted border border-border rounded-lg p-3 text-foreground"
                   />
-                  <p className="text-xs text-muted-foreground mt-1">Minimo: R$ 50,00</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Minimo: {selectedCoin === "BTC" ? "0.0001 BTC" : "0.01 LTC"}
+                  </p>
                 </div>
 
-                {withdrawAmount && parseFloat(withdrawAmount) >= 50 && (
+                {withdrawAmount && parseFloat(withdrawAmount) >= 1 && (
                   <div className="bg-muted rounded-lg p-4 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Valor:</span>

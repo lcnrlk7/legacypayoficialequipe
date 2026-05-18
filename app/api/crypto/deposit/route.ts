@@ -64,10 +64,16 @@ export async function POST(request: NextRequest) {
     const addressData = await createDepositAddress(coin, label)
     const rate = await getCoinRate(coin, "BRL")
 
-    // Salvar no banco
+    // Salvar endereco no banco
     await sql`
       INSERT INTO crypto_addresses (user_id, coin, address, label, created_at, is_active)
       VALUES (${userId}, ${coin}, ${addressData.address}, ${label}, NOW(), true)
+    `
+    
+    // Criar registro de deposito pendente para o webhook encontrar
+    await sql`
+      INSERT INTO crypto_deposits (user_id, coin, address, amount_crypto, amount_brl, rate, status, created_at)
+      VALUES (${userId}, ${coin}, ${addressData.address}, 0, 0, ${rate}, 'pending', NOW())
     `
 
     return NextResponse.json({

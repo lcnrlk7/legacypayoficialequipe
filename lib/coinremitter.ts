@@ -35,8 +35,15 @@ export const SUPPORTED_COINS = [
 export const CRYPTO_FEES = {
   DEPOSIT_FEE_PERCENT: 2.5,    // Taxa de deposito: 2.5%
   WITHDRAW_FEE_PERCENT: 3.0,   // Taxa de saque: 3%
-  MIN_WITHDRAW_BRL: 50,        // Minimo para saque em crypto: R$ 50
-  MIN_DEPOSIT_BRL: 20,         // Minimo para deposito em crypto: R$ 20
+  // Minimos em crypto (valores baixos para permitir transacoes pequenas)
+  MIN_WITHDRAW_CRYPTO: {
+    BTC: 0.0001,   // ~R$ 50 em BTC
+    LTC: 0.01,     // ~R$ 5 em LTC
+  },
+  MIN_DEPOSIT_CRYPTO: {
+    BTC: 0.00005,  // ~R$ 25 em BTC
+    LTC: 0.005,    // ~R$ 2.50 em LTC
+  },
 }
 
 interface ApiResponse<T> {

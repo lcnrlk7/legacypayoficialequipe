@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { neon } from "@neondatabase/serverless"
-import { CRYPTO_FEES } from "@/lib/coinremitter"
+import { CRYPTO_FEES, getCoinRate } from "@/lib/coinremitter"
 
 const sql = neon(process.env.DATABASE_URL!)
 
@@ -43,52 +43,67 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ status: "ignored" })
     }
     
-    // Buscar deposito pendente pelo endereco ou invoice
-    const deposit = await sql`
-      SELECT * FROM crypto_deposits 
-      WHERE (address = ${address} OR external_id = ${invoice_id})
-      AND status = 'pending'
+    // Buscar endereco cadastrado para este usuario
+    const addressRecord = await sql`
+      SELECT ca.*, cd.id as deposit_id, cd.user_id 
+      FROM crypto_addresses ca
+      LEFT JOIN crypto_deposits cd ON ca.address = cd.address AND cd.status = 'pending'
+      WHERE ca.address = ${address}
       LIMIT 1
     `
     
-    if (deposit.length === 0) {
-      console.log("[Crypto Webhook] Deposito nao encontrado")
-      return NextResponse.json({ status: "not_found" })
+    if (addressRecord.length === 0) {
+      console.log("[Crypto Webhook] Endereco nao encontrado:", address)
+      return NextResponse.json({ status: "address_not_found" })
     }
     
-    const depositRecord = deposit[0]
+    const record = addressRecord[0]
+    const userId = record.user_id
     
-    // Atualizar deposito como confirmado
-    await sql`
-      UPDATE crypto_deposits 
-      SET 
-        status = 'confirmed',
-        confirmations = ${confirmations},
-        tx_hash = ${transaction_id},
-        confirmed_at = NOW()
-      WHERE id = ${depositRecord.id}
-    `
-    
-    // Creditar saldo do usuario (converter crypto para BRL e aplicar taxa)
-    const amountBRLBruto = Number(depositRecord.amount_brl)
+    // Calcular valor em BRL baseado na cotacao atual
+    const rate = await getCoinRate(coin, "BRL")
+    const amountCrypto = parseFloat(amount)
+    const amountBRLBruto = amountCrypto * rate
     const fee = amountBRLBruto * (CRYPTO_FEES.DEPOSIT_FEE_PERCENT / 100)
     const amountBRL = amountBRLBruto - fee
     
+    // Atualizar deposito como confirmado ou criar novo se nao existir
+    if (record.deposit_id) {
+      await sql`
+        UPDATE crypto_deposits 
+        SET 
+          status = 'confirmed',
+          amount_crypto = ${amountCrypto},
+          amount_brl = ${amountBRL},
+          rate = ${rate},
+          confirmations = ${confirmations},
+          tx_hash = ${transaction_id},
+          confirmed_at = NOW()
+        WHERE id = ${record.deposit_id}
+      `
+    } else {
+      await sql`
+        INSERT INTO crypto_deposits (user_id, coin, address, amount_crypto, amount_brl, rate, status, tx_hash, confirmations, created_at, confirmed_at)
+        VALUES (${userId}, ${coin}, ${address}, ${amountCrypto}, ${amountBRL}, ${rate}, 'confirmed', ${transaction_id}, ${confirmations}, NOW(), NOW())
+      `
+    }
+    
+    // Creditar saldo do usuario
     await sql`
       UPDATE profiles 
       SET balance = balance + ${amountBRL}
-      WHERE id = ${depositRecord.user_id}
+      WHERE id = ${userId}
     `
     
     // Registrar transacao
     await sql`
       INSERT INTO transactions (user_id, type, amount, status, description, external_id)
       VALUES (
-        ${depositRecord.user_id}, 
+        ${userId}, 
         'crypto_deposit', 
         ${amountBRL}, 
         'paid', 
-        ${'Deposito ' + coin + ' - ' + amount + ' (Taxa: R$ ' + fee.toFixed(2) + ')'},
+        ${'Deposito ' + coin + ' - ' + amountCrypto.toFixed(8) + ' ' + coin + ' (Taxa: R$ ' + fee.toFixed(2) + ')'},
         ${transaction_id}
       )
     `
@@ -97,10 +112,10 @@ export async function POST(request: NextRequest) {
     await sql`
       INSERT INTO crypto_transactions (user_id, type, coin, amount_crypto, amount_brl, fee_brl, fee_crypto, wallet_address, tx_hash, status)
       VALUES (
-        ${depositRecord.user_id},
+        ${userId},
         'deposit',
         ${coin},
-        ${amount},
+        ${amountCrypto},
         ${amountBRL},
         ${fee},
         0,
@@ -110,7 +125,7 @@ export async function POST(request: NextRequest) {
       )
     `
     
-    console.log(`[Crypto Webhook] Deposito confirmado: ${depositRecord.id}, creditado R$ ${amountBRL} (taxa R$ ${fee})`)
+    console.log(`[Crypto Webhook] Deposito confirmado para user ${userId}: ${amountCrypto} ${coin} = R$ ${amountBRL.toFixed(2)} (taxa R$ ${fee.toFixed(2)})`)
     
     return NextResponse.json({ status: "success" })
   } catch (error) {
