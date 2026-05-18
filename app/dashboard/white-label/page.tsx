@@ -429,13 +429,7 @@ export default function WhiteLabelPage() {
   }
 
   // Se nao tem tenant ou nao pagou setup, mostrar tela de assinatura
-  // Verificar setup_paid como boolean ou string
-  const setupPaid = tenant?.setup_paid === true || tenant?.setup_paid === "true"
-  const showSubscription = !tenant || !setupPaid
-  
-  console.log("[v0] tenant:", tenant)
-  console.log("[v0] setup_paid:", tenant?.setup_paid, "tipo:", typeof tenant?.setup_paid)
-  console.log("[v0] showSubscription:", showSubscription)
+  const showSubscription = !tenant || !tenant.setup_paid
 
   return (
     <div className="min-h-screen bg-background">
