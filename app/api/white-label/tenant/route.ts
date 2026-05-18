@@ -129,6 +129,10 @@ export async function PUT(request: NextRequest) {
         primary_color = COALESCE(${body.primary_color}, primary_color),
         secondary_color = COALESCE(${body.secondary_color}, secondary_color),
         text_color = COALESCE(${body.text_color}, text_color),
+        accent_color = COALESCE(${body.accent_color}, accent_color),
+        success_color = COALESCE(${body.success_color}, success_color),
+        warning_color = COALESCE(${body.warning_color}, warning_color),
+        error_color = COALESCE(${body.error_color}, error_color),
         use_hyperion_gateway = COALESCE(${body.use_hyperion_gateway}, use_hyperion_gateway),
         gateway_provider = ${body.gateway_provider || null},
         gateway_client_id = ${body.gateway_client_id || null},
@@ -139,6 +143,9 @@ export async function PUT(request: NextRequest) {
         modules_config = COALESCE(${body.modules_config ? JSON.stringify(body.modules_config) : null}::jsonb, modules_config),
         ceo_modules_config = COALESCE(${body.ceo_modules_config ? JSON.stringify(body.ceo_modules_config) : null}::jsonb, ceo_modules_config),
         custom_texts = COALESCE(${body.custom_texts ? JSON.stringify(body.custom_texts) : null}::jsonb, custom_texts),
+        features_config = COALESCE(${body.features_config ? JSON.stringify(body.features_config) : null}::jsonb, features_config),
+        seo_config = COALESCE(${body.seo_config ? JSON.stringify(body.seo_config) : null}::jsonb, seo_config),
+        email_config = COALESCE(${body.email_config ? JSON.stringify(body.email_config) : null}::jsonb, email_config),
         updated_at = NOW()
       WHERE id = ${tenantId}
     `
