@@ -35,7 +35,9 @@ import {
   Bell,
   Lock,
   Eye,
-  Sparkles
+  Sparkles,
+  Wallet,
+  Users
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -73,6 +75,7 @@ interface Tenant {
   seo_config: any
   email_config: any
   social_config: any
+  system_config: any
   use_hyperion_gateway: boolean
   gateway_provider: string | null
   gateway_client_id: string | null
@@ -117,6 +120,90 @@ const DEFAULT_CEO_MODULES = {
   settings: { label: "Configuracoes", enabled: true },
   logs: { label: "Logs do Sistema", enabled: true },
   reports: { label: "Relatorios", enabled: true },
+}
+
+// Configuracoes do Sistema
+const DEFAULT_SYSTEM_CONFIG = {
+  // KYC e Verificacao
+  kyc_required: true,
+  kyc_required_for_withdraw: true,
+  kyc_required_for_deposit: false,
+  kyc_auto_approve: false,
+  kyc_documents_required: ["cpf", "selfie", "address"],
+  
+  // Limites de Saque
+  withdraw_enabled: true,
+  withdraw_min: 10,
+  withdraw_max: 50000,
+  withdraw_daily_limit: 100000,
+  withdraw_auto_approve: false,
+  withdraw_auto_approve_limit: 500,
+  withdraw_schedule: "24h", // "24h", "business_days", "instant"
+  
+  // Limites de Deposito/Transacao
+  deposit_min: 1,
+  deposit_max: 100000,
+  transaction_daily_limit: 500000,
+  
+  // Taxas
+  fee_type: "percentage", // "percentage", "fixed", "mixed"
+  fee_percentage: 2.99,
+  fee_fixed: 0,
+  fee_withdraw_type: "percentage",
+  fee_withdraw_percentage: 1,
+  fee_withdraw_fixed: 2,
+  
+  // PIX
+  pix_enabled: true,
+  pix_expiration_minutes: 30,
+  pix_qrcode_size: 256,
+  
+  // Seguranca
+  two_factor_required: false,
+  two_factor_for_withdraw: true,
+  session_timeout_minutes: 60,
+  max_login_attempts: 5,
+  password_min_length: 8,
+  password_require_special: true,
+  
+  // Notificacoes
+  notify_new_user: true,
+  notify_new_transaction: true,
+  notify_withdraw_request: true,
+  notify_kyc_pending: true,
+  notify_via_email: true,
+  notify_via_telegram: false,
+  notify_via_whatsapp: false,
+  
+  // Afiliados
+  affiliate_enabled: true,
+  affiliate_commission_type: "percentage",
+  affiliate_commission_value: 5,
+  affiliate_min_withdraw: 50,
+  affiliate_cookie_days: 30,
+  
+  // Checkout
+  checkout_logo_position: "top", // "top", "left", "none"
+  checkout_show_timer: true,
+  checkout_show_secure_badge: true,
+  checkout_allow_copy_paste: true,
+  checkout_custom_css: "",
+  
+  // Sistema
+  maintenance_mode: false,
+  registration_enabled: true,
+  registration_require_invite: false,
+  default_language: "pt-BR",
+  timezone: "America/Sao_Paulo",
+  currency: "BRL",
+  currency_symbol: "R$",
+  date_format: "DD/MM/YYYY",
+  
+  // Integracao
+  api_enabled: true,
+  api_rate_limit: 100,
+  webhook_enabled: true,
+  webhook_retry_count: 3,
 }
 
 const DEFAULT_TEXTS = {
@@ -301,6 +388,7 @@ export default function WhiteLabelPage() {
   const [features, setFeatures] = useState(DEFAULT_FEATURES)
   const [seoConfig, setSeoConfig] = useState(DEFAULT_SEO)
   const [emailConfig, setEmailConfig] = useState(DEFAULT_EMAIL)
+  const [systemConfig, setSystemConfig] = useState(DEFAULT_SYSTEM_CONFIG)
   
   // Action states
   const [testingDb, setTestingDb] = useState(false)
@@ -416,6 +504,13 @@ export default function WhiteLabelPage() {
           setEmailConfig({ ...DEFAULT_EMAIL, ...dbEmail })
         }
         
+        if (data.tenant.system_config) {
+          const dbSystem = typeof data.tenant.system_config === 'string'
+            ? JSON.parse(data.tenant.system_config)
+            : data.tenant.system_config
+          setSystemConfig({ ...DEFAULT_SYSTEM_CONFIG, ...dbSystem })
+        }
+        
         // Mudar aba se setup pago
         if (data.tenant.setup_paid) {
           setActiveTab("geral")
@@ -514,6 +609,7 @@ export default function WhiteLabelPage() {
           features_config: featuresForDb,
           seo_config: seoConfig,
           email_config: emailConfig,
+          system_config: systemConfig,
         })
       })
       
@@ -673,6 +769,10 @@ export default function WhiteLabelPage() {
     setEmailConfig(prev => ({ ...prev, [key]: value }))
   }
 
+  const updateSystem = (key: string, value: any) => {
+    setSystemConfig(prev => ({ ...prev, [key]: value }))
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -792,11 +892,12 @@ export default function WhiteLabelPage() {
         ) : (
           // Painel de configuracoes
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-3 md:grid-cols-8 mb-6">
+            <TabsList className="grid grid-cols-3 md:grid-cols-9 mb-6">
               <TabsTrigger value="geral"><Settings className="w-4 h-4 mr-1" /> Geral</TabsTrigger>
               <TabsTrigger value="visual"><Palette className="w-4 h-4 mr-1" /> Visual</TabsTrigger>
               <TabsTrigger value="textos"><Type className="w-4 h-4 mr-1" /> Textos</TabsTrigger>
               <TabsTrigger value="modulos"><LayoutDashboard className="w-4 h-4 mr-1" /> Modulos</TabsTrigger>
+              <TabsTrigger value="sistema"><Shield className="w-4 h-4 mr-1" /> Sistema</TabsTrigger>
               <TabsTrigger value="features"><Sparkles className="w-4 h-4 mr-1" /> Recursos</TabsTrigger>
               <TabsTrigger value="dominio"><Globe className="w-4 h-4 mr-1" /> Dominio</TabsTrigger>
               <TabsTrigger value="database"><Database className="w-4 h-4 mr-1" /> Banco</TabsTrigger>
@@ -1971,6 +2072,543 @@ export default function WhiteLabelPage() {
                 <Button onClick={saveTenant} disabled={saving}>
                   {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
                   Salvar Configuracoes
+                </Button>
+              </div>
+            </TabsContent>
+
+            {/* Aba Sistema - Configuracoes Avancadas */}
+            <TabsContent value="sistema">
+              <div className="space-y-6">
+                {/* KYC e Verificacao */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="w-5 h-5 text-primary" />
+                      KYC e Verificacao
+                    </CardTitle>
+                    <CardDescription>Configure as regras de verificacao de usuarios</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">KYC Obrigatorio</p>
+                          <p className="text-sm text-muted-foreground">Exigir verificacao de identidade</p>
+                        </div>
+                        <Switch
+                          checked={systemConfig.kyc_required}
+                          onCheckedChange={(v) => updateSystem("kyc_required", v)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">KYC para Saques</p>
+                          <p className="text-sm text-muted-foreground">Exigir KYC para solicitar saques</p>
+                        </div>
+                        <Switch
+                          checked={systemConfig.kyc_required_for_withdraw}
+                          onCheckedChange={(v) => updateSystem("kyc_required_for_withdraw", v)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">KYC para Depositos</p>
+                          <p className="text-sm text-muted-foreground">Exigir KYC para receber pagamentos</p>
+                        </div>
+                        <Switch
+                          checked={systemConfig.kyc_required_for_deposit}
+                          onCheckedChange={(v) => updateSystem("kyc_required_for_deposit", v)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">Aprovacao Automatica</p>
+                          <p className="text-sm text-muted-foreground">Aprovar KYC automaticamente</p>
+                        </div>
+                        <Switch
+                          checked={systemConfig.kyc_auto_approve}
+                          onCheckedChange={(v) => updateSystem("kyc_auto_approve", v)}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Limites de Saque */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Wallet className="w-5 h-5 text-primary" />
+                      Limites de Saque
+                    </CardTitle>
+                    <CardDescription>Configure os limites e regras de saque</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-4 rounded-lg border mb-4">
+                      <div>
+                        <p className="font-medium">Saques Habilitados</p>
+                        <p className="text-sm text-muted-foreground">Permitir que usuarios solicitem saques</p>
+                      </div>
+                      <Switch
+                        checked={systemConfig.withdraw_enabled}
+                        onCheckedChange={(v) => updateSystem("withdraw_enabled", v)}
+                      />
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div>
+                        <Label>Saque Minimo (R$)</Label>
+                        <Input
+                          type="number"
+                          value={systemConfig.withdraw_min}
+                          onChange={(e) => updateSystem("withdraw_min", Number(e.target.value))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Saque Maximo (R$)</Label>
+                        <Input
+                          type="number"
+                          value={systemConfig.withdraw_max}
+                          onChange={(e) => updateSystem("withdraw_max", Number(e.target.value))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Limite Diario (R$)</Label>
+                        <Input
+                          type="number"
+                          value={systemConfig.withdraw_daily_limit}
+                          onChange={(e) => updateSystem("withdraw_daily_limit", Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4 mt-4">
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">Aprovacao Automatica</p>
+                          <p className="text-sm text-muted-foreground">Aprovar saques automaticamente</p>
+                        </div>
+                        <Switch
+                          checked={systemConfig.withdraw_auto_approve}
+                          onCheckedChange={(v) => updateSystem("withdraw_auto_approve", v)}
+                        />
+                      </div>
+                      <div>
+                        <Label>Limite p/ Aprovacao Auto (R$)</Label>
+                        <Input
+                          type="number"
+                          value={systemConfig.withdraw_auto_approve_limit}
+                          onChange={(e) => updateSystem("withdraw_auto_approve_limit", Number(e.target.value))}
+                          disabled={!systemConfig.withdraw_auto_approve}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">Saques ate este valor sao aprovados automaticamente</p>
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Prazo de Processamento</Label>
+                      <select
+                        value={systemConfig.withdraw_schedule}
+                        onChange={(e) => updateSystem("withdraw_schedule", e.target.value)}
+                        className="w-full mt-1 p-2 rounded-lg border bg-background"
+                      >
+                        <option value="instant">Instantaneo</option>
+                        <option value="24h">Ate 24 horas</option>
+                        <option value="business_days">Dias uteis (D+1)</option>
+                      </select>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Limites de Transacao */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <CreditCard className="w-5 h-5 text-primary" />
+                      Limites de Transacao
+                    </CardTitle>
+                    <CardDescription>Configure os limites de depositos e transacoes</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div>
+                        <Label>Deposito Minimo (R$)</Label>
+                        <Input
+                          type="number"
+                          value={systemConfig.deposit_min}
+                          onChange={(e) => updateSystem("deposit_min", Number(e.target.value))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Deposito Maximo (R$)</Label>
+                        <Input
+                          type="number"
+                          value={systemConfig.deposit_max}
+                          onChange={(e) => updateSystem("deposit_max", Number(e.target.value))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Limite Diario Total (R$)</Label>
+                        <Input
+                          type="number"
+                          value={systemConfig.transaction_daily_limit}
+                          onChange={(e) => updateSystem("transaction_daily_limit", Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Configuracoes PIX */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Zap className="w-5 h-5 text-primary" />
+                      Configuracoes PIX
+                    </CardTitle>
+                    <CardDescription>Configure as opcoes de pagamento via PIX</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-4 rounded-lg border">
+                      <div>
+                        <p className="font-medium">PIX Habilitado</p>
+                        <p className="text-sm text-muted-foreground">Permitir pagamentos via PIX</p>
+                      </div>
+                      <Switch
+                        checked={systemConfig.pix_enabled}
+                        onCheckedChange={(v) => updateSystem("pix_enabled", v)}
+                      />
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Tempo de Expiracao (minutos)</Label>
+                        <Input
+                          type="number"
+                          value={systemConfig.pix_expiration_minutes}
+                          onChange={(e) => updateSystem("pix_expiration_minutes", Number(e.target.value))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Tamanho QR Code (px)</Label>
+                        <Input
+                          type="number"
+                          value={systemConfig.pix_qrcode_size}
+                          onChange={(e) => updateSystem("pix_qrcode_size", Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Seguranca */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Lock className="w-5 h-5 text-primary" />
+                      Seguranca
+                    </CardTitle>
+                    <CardDescription>Configure as opcoes de seguranca da plataforma</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">2FA Obrigatorio</p>
+                          <p className="text-sm text-muted-foreground">Exigir autenticacao em 2 fatores</p>
+                        </div>
+                        <Switch
+                          checked={systemConfig.two_factor_required}
+                          onCheckedChange={(v) => updateSystem("two_factor_required", v)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">2FA para Saques</p>
+                          <p className="text-sm text-muted-foreground">Exigir 2FA ao solicitar saques</p>
+                        </div>
+                        <Switch
+                          checked={systemConfig.two_factor_for_withdraw}
+                          onCheckedChange={(v) => updateSystem("two_factor_for_withdraw", v)}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div>
+                        <Label>Timeout da Sessao (min)</Label>
+                        <Input
+                          type="number"
+                          value={systemConfig.session_timeout_minutes}
+                          onChange={(e) => updateSystem("session_timeout_minutes", Number(e.target.value))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Max Tentativas Login</Label>
+                        <Input
+                          type="number"
+                          value={systemConfig.max_login_attempts}
+                          onChange={(e) => updateSystem("max_login_attempts", Number(e.target.value))}
+                        />
+                      </div>
+                      <div>
+                        <Label>Tamanho Min. Senha</Label>
+                        <Input
+                          type="number"
+                          value={systemConfig.password_min_length}
+                          onChange={(e) => updateSystem("password_min_length", Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between p-4 rounded-lg border">
+                      <div>
+                        <p className="font-medium">Exigir Caractere Especial</p>
+                        <p className="text-sm text-muted-foreground">Senha deve ter caractere especial</p>
+                      </div>
+                      <Switch
+                        checked={systemConfig.password_require_special}
+                        onCheckedChange={(v) => updateSystem("password_require_special", v)}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Notificacoes */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Bell className="w-5 h-5 text-primary" />
+                      Notificacoes
+                    </CardTitle>
+                    <CardDescription>Configure quando e como receber notificacoes</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">Novo Usuario</p>
+                          <p className="text-sm text-muted-foreground">Notificar ao cadastrar usuario</p>
+                        </div>
+                        <Switch
+                          checked={systemConfig.notify_new_user}
+                          onCheckedChange={(v) => updateSystem("notify_new_user", v)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">Nova Transacao</p>
+                          <p className="text-sm text-muted-foreground">Notificar a cada transacao</p>
+                        </div>
+                        <Switch
+                          checked={systemConfig.notify_new_transaction}
+                          onCheckedChange={(v) => updateSystem("notify_new_transaction", v)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">Solicitacao de Saque</p>
+                          <p className="text-sm text-muted-foreground">Notificar pedidos de saque</p>
+                        </div>
+                        <Switch
+                          checked={systemConfig.notify_withdraw_request}
+                          onCheckedChange={(v) => updateSystem("notify_withdraw_request", v)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">KYC Pendente</p>
+                          <p className="text-sm text-muted-foreground">Notificar verificacoes pendentes</p>
+                        </div>
+                        <Switch
+                          checked={systemConfig.notify_kyc_pending}
+                          onCheckedChange={(v) => updateSystem("notify_kyc_pending", v)}
+                        />
+                      </div>
+                    </div>
+                    <div className="border-t pt-4">
+                      <Label className="text-muted-foreground mb-3 block">Canais de Notificacao</Label>
+                      <div className="grid md:grid-cols-3 gap-4">
+                        <div className="flex items-center justify-between p-4 rounded-lg border">
+                          <p className="font-medium">Email</p>
+                          <Switch
+                            checked={systemConfig.notify_via_email}
+                            onCheckedChange={(v) => updateSystem("notify_via_email", v)}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between p-4 rounded-lg border">
+                          <p className="font-medium">Telegram</p>
+                          <Switch
+                            checked={systemConfig.notify_via_telegram}
+                            onCheckedChange={(v) => updateSystem("notify_via_telegram", v)}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between p-4 rounded-lg border">
+                          <p className="font-medium">WhatsApp</p>
+                          <Switch
+                            checked={systemConfig.notify_via_whatsapp}
+                            onCheckedChange={(v) => updateSystem("notify_via_whatsapp", v)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Afiliados */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5 text-primary" />
+                      Sistema de Afiliados
+                    </CardTitle>
+                    <CardDescription>Configure o programa de afiliados</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-4 rounded-lg border">
+                      <div>
+                        <p className="font-medium">Afiliados Habilitados</p>
+                        <p className="text-sm text-muted-foreground">Ativar sistema de afiliados</p>
+                      </div>
+                      <Switch
+                        checked={systemConfig.affiliate_enabled}
+                        onCheckedChange={(v) => updateSystem("affiliate_enabled", v)}
+                      />
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Tipo de Comissao</Label>
+                        <select
+                          value={systemConfig.affiliate_commission_type}
+                          onChange={(e) => updateSystem("affiliate_commission_type", e.target.value)}
+                          className="w-full mt-1 p-2 rounded-lg border bg-background"
+                          disabled={!systemConfig.affiliate_enabled}
+                        >
+                          <option value="percentage">Porcentagem</option>
+                          <option value="fixed">Valor Fixo</option>
+                        </select>
+                      </div>
+                      <div>
+                        <Label>Valor da Comissao {systemConfig.affiliate_commission_type === "percentage" ? "(%)" : "(R$)"}</Label>
+                        <Input
+                          type="number"
+                          value={systemConfig.affiliate_commission_value}
+                          onChange={(e) => updateSystem("affiliate_commission_value", Number(e.target.value))}
+                          disabled={!systemConfig.affiliate_enabled}
+                        />
+                      </div>
+                      <div>
+                        <Label>Saque Minimo Afiliado (R$)</Label>
+                        <Input
+                          type="number"
+                          value={systemConfig.affiliate_min_withdraw}
+                          onChange={(e) => updateSystem("affiliate_min_withdraw", Number(e.target.value))}
+                          disabled={!systemConfig.affiliate_enabled}
+                        />
+                      </div>
+                      <div>
+                        <Label>Duracao do Cookie (dias)</Label>
+                        <Input
+                          type="number"
+                          value={systemConfig.affiliate_cookie_days}
+                          onChange={(e) => updateSystem("affiliate_cookie_days", Number(e.target.value))}
+                          disabled={!systemConfig.affiliate_enabled}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Configuracoes Gerais */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="w-5 h-5 text-primary" />
+                      Configuracoes Gerais
+                    </CardTitle>
+                    <CardDescription>Outras configuracoes do sistema</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">Modo Manutencao</p>
+                          <p className="text-sm text-muted-foreground">Bloquear acesso temporariamente</p>
+                        </div>
+                        <Switch
+                          checked={systemConfig.maintenance_mode}
+                          onCheckedChange={(v) => updateSystem("maintenance_mode", v)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">Cadastros Abertos</p>
+                          <p className="text-sm text-muted-foreground">Permitir novos cadastros</p>
+                        </div>
+                        <Switch
+                          checked={systemConfig.registration_enabled}
+                          onCheckedChange={(v) => updateSystem("registration_enabled", v)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">Exigir Convite</p>
+                          <p className="text-sm text-muted-foreground">Cadastro apenas por convite</p>
+                        </div>
+                        <Switch
+                          checked={systemConfig.registration_require_invite}
+                          onCheckedChange={(v) => updateSystem("registration_require_invite", v)}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between p-4 rounded-lg border">
+                        <div>
+                          <p className="font-medium">API Habilitada</p>
+                          <p className="text-sm text-muted-foreground">Permitir integracao via API</p>
+                        </div>
+                        <Switch
+                          checked={systemConfig.api_enabled}
+                          onCheckedChange={(v) => updateSystem("api_enabled", v)}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-4">
+                      <div>
+                        <Label>Idioma Padrao</Label>
+                        <select
+                          value={systemConfig.default_language}
+                          onChange={(e) => updateSystem("default_language", e.target.value)}
+                          className="w-full mt-1 p-2 rounded-lg border bg-background"
+                        >
+                          <option value="pt-BR">Portugues (BR)</option>
+                          <option value="en-US">English (US)</option>
+                          <option value="es-ES">Espanol</option>
+                        </select>
+                      </div>
+                      <div>
+                        <Label>Fuso Horario</Label>
+                        <select
+                          value={systemConfig.timezone}
+                          onChange={(e) => updateSystem("timezone", e.target.value)}
+                          className="w-full mt-1 p-2 rounded-lg border bg-background"
+                        >
+                          <option value="America/Sao_Paulo">Sao Paulo (GMT-3)</option>
+                          <option value="America/Manaus">Manaus (GMT-4)</option>
+                          <option value="America/Fortaleza">Fortaleza (GMT-3)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <Label>Formato de Data</Label>
+                        <select
+                          value={systemConfig.date_format}
+                          onChange={(e) => updateSystem("date_format", e.target.value)}
+                          className="w-full mt-1 p-2 rounded-lg border bg-background"
+                        >
+                          <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                          <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                          <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+                        </select>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Button onClick={saveTenant} disabled={saving} className="w-full">
+                  {saving && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                  Salvar Todas as Configuracoes do Sistema
                 </Button>
               </div>
             </TabsContent>
